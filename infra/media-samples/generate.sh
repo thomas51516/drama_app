@@ -27,11 +27,11 @@ RENDITIONS=(
 render_episode() {
   local n="$1" dir="$OUT/ep$n"
   mkdir -p "$dir"
-  local text="DRAMA\nÉpisode $n"
   # Source : mire animée verticale + titre + chrono, son sinusoïdal doux.
   local src="testsrc2=size=1080x1920:rate=$FPS,\
 drawbox=x=0:y=0:w=1080:h=1920:color=0x0f172a@0.55:t=fill,\
-drawtext=fontfile=$FONT:text='$text':fontcolor=white:fontsize=120:line_spacing=20:x=(w-text_w)/2:y=(h-text_h)/2-200,\
+drawtext=fontfile=$FONT:text='DRAMA':fontcolor=white:fontsize=160:x=(w-text_w)/2:y=(h-text_h)/2-320,\
+drawtext=fontfile=$FONT:text='Épisode $n':fontcolor=white:fontsize=96:x=(w-text_w)/2:y=(h-text_h)/2-120,\
 drawtext=fontfile=$FONT:text='%{pts\\:hms}':fontcolor=0xfbbf24:fontsize=80:x=(w-text_w)/2:y=(h-text_h)/2+120,\
 drawtext=fontfile=$FONT:text='9:16 · 1080x1920':fontcolor=0x94a3b8:fontsize=48:x=(w-text_w)/2:y=h-200"
 

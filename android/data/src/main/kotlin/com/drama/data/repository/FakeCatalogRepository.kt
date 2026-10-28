@@ -57,7 +57,7 @@ class FakeCatalogRepository
                 (1..SAMPLE_EPISODE_COUNT).map { index ->
                     hlsEpisode(
                         index = index,
-                        title = "Épisode $index — test vertical 9:16",
+                        title = "Test vertical 9:16",
                         url = "${BuildConfig.MEDIA_BASE_URL}/hls/samples/ep$index/master.m3u8",
                     )
                 }
