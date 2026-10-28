@@ -42,7 +42,7 @@ describe('auth store (mock API)', () => {
     expect(user.email).toBe(mockCredentials.email)
     expect(auth.isAuthenticated).toBe(true)
     expect(auth.token).toBe('mock-access-token')
-    expect(auth.user?.role).toBe('admin')
+    expect(auth.user?.role).toBe('ADMIN')
     expect(auth.step).toBe('credentials')
     // Cookie writes are flushed by a watcher: re-read document.cookie after a tick.
     await nextTick()

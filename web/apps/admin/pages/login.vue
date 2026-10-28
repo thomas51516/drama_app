@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ApiError } from '#base/utils/api-error'
+import { mockAccounts, mockCredentials } from '#base/mocks'
 
 definePageMeta({ layout: 'auth', public: true })
 
@@ -128,11 +129,22 @@ function backToCredentials(): void {
           fluid
         />
 
-        <p v-if="api.isMock" class="text-xs text-muted-color">
-          {{ t('common.mockBanner') }}
-          <br />
-          <code>admin@drama.local</code> / <code>Admin1234!</code> / TOTP <code>123456</code>
-        </p>
+        <div v-if="api.isMock" class="text-xs text-muted-color">
+          <p>{{ t('common.mockBanner') }}</p>
+          <p class="mt-1">
+            {{ t('auth.mockAccounts') }}
+            <code>{{ mockCredentials.password }}</code> / TOTP
+            <code>{{ mockCredentials.totpCode }}</code>
+          </p>
+          <ul class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+            <li v-for="account in mockAccounts" :key="account.email">
+              <button type="button" class="underline" @click="email = account.email">
+                {{ account.email }}
+              </button>
+              <span> ({{ t(`auth.roles.${account.role}`) }})</span>
+            </li>
+          </ul>
+        </div>
       </form>
 
       <!-- Step 2: TOTP code (verification or first enrolment) -->

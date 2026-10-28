@@ -39,6 +39,8 @@ export default defineNuxtConfig({
       // Overridable at runtime with NUXT_PUBLIC_API_BASE / NUXT_PUBLIC_API_MOCK.
       apiBase: 'http://localhost:3000',
       apiMock: process.env.NODE_ENV === 'development',
+      // Public base of media keys (HLS manifests, thumbnails): MinIO bucket in dev, CDN in prod.
+      cdnBaseUrl: 'http://localhost:9000/drama-media',
       appName: 'DRAMA',
     },
   },

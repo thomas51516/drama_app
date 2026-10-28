@@ -1,7 +1,9 @@
 import { FetchError } from 'ofetch'
 import { ApiError } from '../utils/api-error'
+import type { ApiErrorBody } from '../types/api'
 import { isAuthRoute, mockRequest, type MockMethod } from '../mocks'
 import { useAuthStore } from '../stores/auth'
+import { useNotify } from './useNotify'
 
 export interface ApiRequestOptions {
   method?: MockMethod
@@ -38,11 +40,15 @@ function toApiError(error: unknown): ApiError {
   if (ApiError.is(error)) return error
   if (error instanceof FetchError) {
     const status = error.response?.status ?? 0
-    const data = error.data as { message?: string | string[] } | undefined
+    // Backend errors follow ApiErrorDto; class-validator may still return `message: string[]`.
+    const data = error.data as (Partial<ApiErrorBody> & { message?: string | string[] }) | undefined
     const message = Array.isArray(data?.message)
       ? data.message.join(', ')
       : (data?.message ?? error.message)
     return new ApiError(status, message, error.data)
+  }
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return new ApiError(0, 'Request aborted', { code: 'ABORTED' })
   }
   return new ApiError(0, error instanceof Error ? error.message : 'Network error')
 }
@@ -52,6 +58,7 @@ function toApiError(error: unknown): ApiError {
  * - base URL from `runtimeConfig.public.apiBase`
  * - `Authorization: Bearer <token>` from the auth store
  * - a 401 outside the login flow clears the session and redirects to /login
+ * - a 403 shows the "Droits insuffisants" toast (the caller still receives the ApiError)
  * - `runtimeConfig.public.apiMock` switches to the in-memory fixtures (no network at all)
  */
 export function useApi(): ApiClient {
@@ -104,6 +111,8 @@ export function useApi(): ApiClient {
       const apiError = toApiError(error)
       if (apiError.status === 401) {
         await handleUnauthorized(path)
+      } else if (apiError.status === 403) {
+        useNotify().error(useNuxtApp().$i18n.t('errors.forbidden'), apiError.message)
       }
       throw apiError
     }

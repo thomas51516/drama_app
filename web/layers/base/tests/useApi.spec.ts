@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useApi } from '../composables/useApi'
 import { useAuthStore } from '../stores/auth'
 import { mockCredentials } from '../mocks'
-import type { Paginated, SeriesSummary } from '../types/api'
+import type { AdminSeries, Paginated } from '../types/api'
 
 async function signIn(): Promise<void> {
   const auth = useAuthStore()
@@ -23,7 +23,7 @@ describe('useApi() in mock mode', () => {
   it('returns the series fixtures when a session exists', async () => {
     await signIn()
     const api = useApi()
-    const page = await api.get<Paginated<SeriesSummary>>('/admin/series', {
+    const page = await api.get<Paginated<AdminSeries>>('/admin/series', {
       query: { page: 1, pageSize: 50 },
     })
 
@@ -32,9 +32,10 @@ describe('useApi() in mock mode', () => {
     expect(page.items[0]).toMatchObject({
       id: expect.any(String),
       title: expect.any(String),
-      episodesCount: expect.any(Number),
+      slug: expect.any(String),
+      episodeCount: expect.any(Number),
     })
-    expect(['draft', 'published', 'archived']).toContain(page.items[0]?.status)
+    expect(['DRAFT', 'PUBLISHED', 'ARCHIVED']).toContain(page.items[0]?.status)
   })
 
   it('rejects protected routes with 401 and clears the session when no token is set', async () => {

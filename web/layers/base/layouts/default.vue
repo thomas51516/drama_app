@@ -45,5 +45,9 @@ watch(
         <slot />
       </main>
     </div>
+
+    <!-- Global outlets: toasts (success/errors) and confirmation dialogs -->
+    <Toast position="top-right" />
+    <ConfirmDialog :style="{ width: 'min(28rem, 95vw)' }" />
   </div>
 </template>

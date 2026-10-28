@@ -22,6 +22,7 @@
     "back": "Back",
     "logout": "Sign out",
     "loggedInAs": "Signed in as",
+    "mockAccounts": "Demo accounts — password",
     "errors": {
       "invalidCredentials": "Invalid credentials.",
       "invalidTotp": "Invalid or expired code.",
@@ -29,10 +30,10 @@
       "generic": "Something went wrong ({status})."
     },
     "roles": {
-      "admin": "Administrator",
-      "editor": "Editor",
-      "monetization": "Monetization",
-      "support": "Support"
+      "ADMIN": "Administrator",
+      "EDITOR": "Editor",
+      "MONETIZATION": "Monetization",
+      "SUPPORT": "Support"
     }
   },
   "nav": {
@@ -50,36 +51,250 @@
     "rights": "Rights and contracts",
     "administration": "Administration"
   },
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "home": "Catalogue"
+  },
+  "common": {
+    "loading": "Loading…",
+    "mockBanner": "Demo mode: fixture data (NUXT_PUBLIC_API_MOCK=true).",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Retry",
+    "back": "Back",
+    "search": "Search",
+    "remove": "Remove",
+    "clear": "Clear all"
+  },
+  "errors": {
+    "title": "Error",
+    "network": "The server cannot be reached. Check your connection and retry.",
+    "forbidden": "Insufficient permissions",
+    "notFound": "Resource not found.",
+    "conflict": "The operation conflicts with the current state.",
+    "server": "Server error ({status}). Please retry shortly.",
+    "generic": "Something went wrong ({status}).",
+    "boundaryTitle": "This page ran into an error",
+    "boundaryHint": "The error has been logged. You can retry or go back to the catalogue.",
+    "goHome": "Back to catalogue",
+    "pageNotFound": "Page not found"
+  },
+  "validation": {
+    "required": "This field is required.",
+    "minLength": "At least {min} characters.",
+    "maxLength": "At most {max} characters.",
+    "atLeastOne": "Select at least one item.",
+    "unknownValue": "Unknown value.",
+    "maxItems": "At most {max} items.",
+    "tagLength": "Each tag must be 1 to {max} characters long.",
+    "nonNegativeInteger": "Enter a whole number greater than or equal to 0.",
+    "max": "The maximum value is {max}.",
+    "isoCountry": "\"{value}\" is not a two-letter ISO country code.",
+    "duplicate": "Some values are duplicated.",
+    "fixErrors": "Fix the highlighted fields before saving."
+  },
   "series": {
     "title": "Catalogue — series",
     "subtitle": "Series created in the back office (B-01).",
     "create": "New series",
+    "edit": "Edit series",
+    "episodes": "Episodes",
+    "episodesWithCount": "{count} episode | {count} episodes",
+    "notFound": "This series does not exist or was deleted.",
+    "loadError": "Could not load series.",
+    "count": "{count} series | {count} series",
     "columns": {
       "title": "Title",
       "status": "Status",
-      "episodesCount": "Episodes",
+      "language": "Language",
+      "episodeCount": "Episodes",
       "updatedAt": "Updated at"
     },
+    "filters": {
+      "searchPlaceholder": "Search a title…",
+      "allStatuses": "All statuses",
+      "reset": "Reset filters"
+    },
     "status": {
-      "draft": "Draft",
-      "published": "Published",
-      "archived": "Archived"
+      "DRAFT": "Draft",
+      "PUBLISHED": "Published",
+      "ARCHIVED": "Archived"
     },
     "empty": {
       "title": "No series yet",
-      "hint": "Create your first series to see it here."
+      "hint": "Create your first series to see it here.",
+      "filtered": "No series matches the filters."
     },
-    "loadError": "Could not load series.",
-    "retry": "Retry",
-    "count": "{count} series | {count} series"
+    "genres": {
+      "romance": "Romance",
+      "drame": "Drama",
+      "comedie": "Comedy",
+      "action": "Action",
+      "thriller": "Thriller",
+      "fantastique": "Fantasy",
+      "famille": "Family"
+    },
+    "languages": {
+      "fr": "French",
+      "en": "English",
+      "es": "Spanish",
+      "pt": "Portuguese"
+    },
+    "ageRatings": {
+      "ALL": "All audiences",
+      "PG12": "Not recommended under 12",
+      "PG16": "Not recommended under 16",
+      "R18": "Adults only (18+)"
+    },
+    "form": {
+      "readOnly": "Your role only allows viewing this series.",
+      "archivedLocked": "Archived series: fields can no longer be edited.",
+      "newSubtitle": "The series is created as a draft; add episodes, then publish it.",
+      "updatedAt": "updated on {date}",
+      "sections": {
+        "general": "General information",
+        "classification": "Classification",
+        "monetization": "Monetization",
+        "distribution": "Distribution",
+        "posters": "Posters"
+      },
+      "title": "Title",
+      "synopsis": "Synopsis",
+      "genres": "Genres",
+      "genresPlaceholder": "Pick one or more genres",
+      "tags": "Tags",
+      "tagsPlaceholder": "Type a tag then Enter",
+      "tagsHint": "Free keywords for search and featuring (Enter to confirm).",
+      "language": "Language",
+      "ageRating": "Age rating",
+      "monetizationLocked": "Restricted to the Monetization and Administrator roles.",
+      "freeEpisodeCount": "Free episodes",
+      "freeEpisodeHint": "Number of episodes available without coins at the start of the series.",
+      "coinCostPerEpisode": "Cost per episode",
+      "coins": "coins",
+      "territories": "Allowed territories",
+      "territoriesHint": "ISO 3166-1 alpha-2 country codes. Empty list: available everywhere.",
+      "posterVertical": "Vertical poster (2:3)",
+      "posterHorizontal": "Horizontal poster (16:9)"
+    },
+    "actions": {
+      "create": "Create series",
+      "publish": "Publish",
+      "archive": "Archive",
+      "publishConfirm": "Publish \"{title}\"? The series becomes visible in the app.",
+      "archiveConfirm": "Archive \"{title}\"? The series will no longer be visible in the app.",
+      "noReadyEpisode": "Publishing refused: the series needs at least one ready (transcoded) episode."
+    },
+    "toasts": {
+      "created": "Series \"{title}\" created.",
+      "saved": "Changes saved.",
+      "saveFailed": "Could not save",
+      "published": "Series published.",
+      "archived": "Series archived.",
+      "nothingToSave": "Nothing to save."
+    },
+    "poster": {
+      "choose": "Choose an image",
+      "replace": "Replace",
+      "uploaded": "Poster uploaded.",
+      "error": "Could not upload the poster",
+      "invalidType": "Unsupported format: JPEG, PNG or WebP only.",
+      "tooLarge": "Image too large (maximum {max}).",
+      "hint": "{ratio} ratio, JPEG/PNG/WebP, {max} maximum.",
+      "empty": "No poster",
+      "unavailable": "Preview unavailable"
+    },
+    "territories": {
+      "placeholder": "Country code or name…",
+      "count": "{count} territory | {count} territories",
+      "francophone": "+ Francophone"
+    }
+  },
+  "episodes": {
+    "title": "Episodes",
+    "subtitle": "{title} — {ready} ready out of {count}",
+    "add": "Add episodes",
+    "loadError": "Could not load episodes.",
+    "polling": "Transcoding in progress — the list refreshes every 5 seconds.",
+    "count": "{count} episode | {count} episodes",
+    "pickSeries": {
+      "title": "Series",
+      "hint": "Episodes are managed per series: pick a series to continue.",
+      "placeholder": "Pick a series…"
+    },
+    "columns": {
+      "number": "#",
+      "thumbnail": "Thumbnail",
+      "title": "Title",
+      "status": "Status",
+      "duration": "Duration",
+      "publishedAt": "Published"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "UPLOADED": "Uploaded",
+      "PROCESSING": "Transcoding",
+      "READY": "Ready",
+      "FAILED": "Failed"
+    },
+    "empty": {
+      "title": "No episodes",
+      "hint": "Drop your video files above: one episode is created per file, numbered automatically."
+    },
+    "dropzone": {
+      "title": "Drop your video files here or click to browse",
+      "hint": "One episode is created per file; the title is the file name (without extension).",
+      "limits": "MP4 or MOV, {max} maximum per file (direct upload to storage; resumable multipart coming later).",
+      "rejectedTitle": "File skipped",
+      "rejected": {
+        "type": "{name}: unsupported format (MP4 or MOV).",
+        "size": "{name}: file larger than 2 GB.",
+        "empty": "{name}: empty file."
+      }
+    },
+    "queue": {
+      "title": "Upload queue",
+      "summary": "{done}/{count} done — {percent}%",
+      "retryAll": "Retry failed",
+      "cancelAll": "Cancel all",
+      "clear": "Clear",
+      "leaveWarning": "Uploads are in progress. Leaving the page will interrupt them.",
+      "states": {
+        "queued": "Queued",
+        "preparing": "Preparing",
+        "uploading": "Uploading",
+        "finalizing": "Finalizing",
+        "done": "Done",
+        "error": "Failed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "actions": {
+      "rename": "Rename",
+      "delete": "Delete episode",
+      "deleteConfirm": "Delete episode {number} \"{title}\"? Its files will be removed.",
+      "retranscode": "Retry transcoding",
+      "preview": "Preview",
+      "reorder": "Reorder",
+      "reorderHint": "Drag rows to reorder"
+    },
+    "toasts": {
+      "queued": "{count} file added to the queue. | {count} files added to the queue.",
+      "uploadFailed": "Upload of {name} failed.",
+      "renamed": "Episode renamed.",
+      "deleted": "Episode deleted.",
+      "retranscodeQueued": "Transcoding restarted.",
+      "reordered": "Order saved."
+    },
+    "preview": {
+      "title": "Episode preview",
+      "unsupported": "HLS playback is not supported by this browser."
+    }
   },
   "module": {
     "comingSoon": "Module coming soon — ticket {ticket}",
     "hint": "This back-office module is planned for a later sprint. See the backlog for details.",
     "backToCatalogue": "Back to catalogue"
-  },
-  "common": {
-    "loading": "Loading…",
-    "mockBanner": "Demo mode: fixture data (NUXT_PUBLIC_API_MOCK=true)."
   }
 }

@@ -12,6 +12,7 @@
     "@primeuix/themes": "^1.2.5",
     "@primevue/nuxt-module": "^4.5.5",
     "@tailwindcss/vite": "^4.3.3",
+    "hls.js": "^1.7.4",
     "nuxt": "~3.21.11",
     "ofetch": "^1.5.1",
     "pinia": "^4.1.0",

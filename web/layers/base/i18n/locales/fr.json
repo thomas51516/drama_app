@@ -22,6 +22,7 @@
     "back": "Retour",
     "logout": "Se déconnecter",
     "loggedInAs": "Connecté en tant que",
+    "mockAccounts": "Comptes de démonstration — mot de passe",
     "errors": {
       "invalidCredentials": "Identifiants incorrects.",
       "invalidTotp": "Code incorrect ou expiré.",
@@ -29,10 +30,10 @@
       "generic": "Une erreur est survenue ({status})."
     },
     "roles": {
-      "admin": "Administrateur",
-      "editor": "Éditeur",
-      "monetization": "Monétisation",
-      "support": "Support"
+      "ADMIN": "Administrateur",
+      "EDITOR": "Éditeur",
+      "MONETIZATION": "Monétisation",
+      "SUPPORT": "Support"
     }
   },
   "nav": {
@@ -50,36 +51,250 @@
     "rights": "Droits et contrats",
     "administration": "Administration"
   },
+  "breadcrumb": {
+    "label": "Fil d'Ariane",
+    "home": "Catalogue"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "mockBanner": "Mode démonstration : données fictives (NUXT_PUBLIC_API_MOCK=true).",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "retry": "Réessayer",
+    "back": "Retour",
+    "search": "Rechercher",
+    "remove": "Retirer",
+    "clear": "Tout effacer"
+  },
+  "errors": {
+    "title": "Erreur",
+    "network": "Le serveur est injoignable. Vérifiez votre connexion puis réessayez.",
+    "forbidden": "Droits insuffisants",
+    "notFound": "Ressource introuvable.",
+    "conflict": "L'opération est en conflit avec l'état actuel.",
+    "server": "Erreur du serveur ({status}). Réessayez dans un instant.",
+    "generic": "Une erreur est survenue ({status}).",
+    "boundaryTitle": "Cette page a rencontré une erreur",
+    "boundaryHint": "L'erreur a été consignée. Vous pouvez réessayer ou revenir au catalogue.",
+    "goHome": "Retour au catalogue",
+    "pageNotFound": "Page introuvable"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire.",
+    "minLength": "Au moins {min} caractères.",
+    "maxLength": "Au plus {max} caractères.",
+    "atLeastOne": "Sélectionnez au moins un élément.",
+    "unknownValue": "Valeur non reconnue.",
+    "maxItems": "Au plus {max} éléments.",
+    "tagLength": "Chaque tag doit faire entre 1 et {max} caractères.",
+    "nonNegativeInteger": "Saisissez un nombre entier positif ou nul.",
+    "max": "La valeur maximale est {max}.",
+    "isoCountry": "« {value} » n'est pas un code pays ISO à deux lettres.",
+    "duplicate": "Des valeurs sont en double.",
+    "fixErrors": "Corrigez les champs en erreur avant d'enregistrer."
+  },
   "series": {
     "title": "Catalogue — séries",
     "subtitle": "Séries créées dans le back-office (B-01).",
     "create": "Nouvelle série",
+    "edit": "Modifier la série",
+    "episodes": "Épisodes",
+    "episodesWithCount": "{count} épisode | {count} épisodes",
+    "notFound": "Cette série n'existe pas ou a été supprimée.",
+    "loadError": "Impossible de charger les séries.",
+    "count": "{count} série | {count} séries",
     "columns": {
       "title": "Titre",
       "status": "Statut",
-      "episodesCount": "Épisodes",
+      "language": "Langue",
+      "episodeCount": "Épisodes",
       "updatedAt": "Mis à jour le"
     },
+    "filters": {
+      "searchPlaceholder": "Rechercher un titre…",
+      "allStatuses": "Tous les statuts",
+      "reset": "Réinitialiser les filtres"
+    },
     "status": {
-      "draft": "Brouillon",
-      "published": "Publié",
-      "archived": "Archivé"
+      "DRAFT": "Brouillon",
+      "PUBLISHED": "Publiée",
+      "ARCHIVED": "Archivée"
     },
     "empty": {
       "title": "Aucune série pour l'instant",
-      "hint": "Créez votre première série pour qu'elle apparaisse ici."
+      "hint": "Créez votre première série pour qu'elle apparaisse ici.",
+      "filtered": "Aucune série ne correspond aux filtres."
     },
-    "loadError": "Impossible de charger les séries.",
-    "retry": "Réessayer",
-    "count": "{count} série | {count} séries"
+    "genres": {
+      "romance": "Romance",
+      "drame": "Drame",
+      "comedie": "Comédie",
+      "action": "Action",
+      "thriller": "Thriller",
+      "fantastique": "Fantastique",
+      "famille": "Famille"
+    },
+    "languages": {
+      "fr": "Français",
+      "en": "Anglais",
+      "es": "Espagnol",
+      "pt": "Portugais"
+    },
+    "ageRatings": {
+      "ALL": "Tous publics",
+      "PG12": "Déconseillé aux moins de 12 ans",
+      "PG16": "Déconseillé aux moins de 16 ans",
+      "R18": "Interdit aux moins de 18 ans"
+    },
+    "form": {
+      "readOnly": "Votre rôle permet uniquement de consulter cette série.",
+      "archivedLocked": "Série archivée : les champs ne sont plus modifiables.",
+      "newSubtitle": "La série est créée en brouillon ; ajoutez ensuite des épisodes puis publiez-la.",
+      "updatedAt": "mise à jour le {date}",
+      "sections": {
+        "general": "Informations générales",
+        "classification": "Classification",
+        "monetization": "Monétisation",
+        "distribution": "Distribution",
+        "posters": "Affiches"
+      },
+      "title": "Titre",
+      "synopsis": "Synopsis",
+      "genres": "Genres",
+      "genresPlaceholder": "Choisir un ou plusieurs genres",
+      "tags": "Tags",
+      "tagsPlaceholder": "Saisir un tag puis Entrée",
+      "tagsHint": "Mots-clés libres pour la recherche et la mise en avant (Entrée pour valider).",
+      "language": "Langue",
+      "ageRating": "Classification d'âge",
+      "monetizationLocked": "Réservé aux rôles Monétisation et Administrateur.",
+      "freeEpisodeCount": "Épisodes gratuits",
+      "freeEpisodeHint": "Nombre d'épisodes accessibles sans pièces en début de série.",
+      "coinCostPerEpisode": "Coût par épisode",
+      "coins": "pièces",
+      "territories": "Territoires autorisés",
+      "territoriesHint": "Codes pays ISO 3166-1 alpha-2. Liste vide : disponible partout.",
+      "posterVertical": "Affiche verticale (2:3)",
+      "posterHorizontal": "Affiche horizontale (16:9)"
+    },
+    "actions": {
+      "create": "Créer la série",
+      "publish": "Publier",
+      "archive": "Archiver",
+      "publishConfirm": "Publier « {title} » ? La série devient visible dans l'application.",
+      "archiveConfirm": "Archiver « {title} » ? La série ne sera plus visible dans l'application.",
+      "noReadyEpisode": "Publication refusée : la série doit avoir au moins un épisode prêt (transcodé)."
+    },
+    "toasts": {
+      "created": "Série « {title} » créée.",
+      "saved": "Modifications enregistrées.",
+      "saveFailed": "Enregistrement impossible",
+      "published": "Série publiée.",
+      "archived": "Série archivée.",
+      "nothingToSave": "Aucune modification à enregistrer."
+    },
+    "poster": {
+      "choose": "Choisir une image",
+      "replace": "Remplacer",
+      "uploaded": "Affiche envoyée.",
+      "error": "Envoi de l'affiche impossible",
+      "invalidType": "Format non pris en charge : JPEG, PNG ou WebP uniquement.",
+      "tooLarge": "Image trop lourde (maximum {max}).",
+      "hint": "Ratio {ratio}, JPEG/PNG/WebP, {max} maximum.",
+      "empty": "Aucune affiche",
+      "unavailable": "Aperçu indisponible"
+    },
+    "territories": {
+      "placeholder": "Code ou nom de pays…",
+      "count": "{count} territoire | {count} territoires",
+      "francophone": "+ Francophonie"
+    }
+  },
+  "episodes": {
+    "title": "Épisodes",
+    "subtitle": "{title} — {ready} prêt(s) sur {count}",
+    "add": "Ajouter des épisodes",
+    "loadError": "Impossible de charger les épisodes.",
+    "polling": "Transcodage en cours — la liste s'actualise toutes les 5 secondes.",
+    "count": "{count} épisode | {count} épisodes",
+    "pickSeries": {
+      "title": "Série",
+      "hint": "Les épisodes se gèrent série par série : choisissez une série pour continuer.",
+      "placeholder": "Choisir une série…"
+    },
+    "columns": {
+      "number": "N°",
+      "thumbnail": "Vignette",
+      "title": "Titre",
+      "status": "Statut",
+      "duration": "Durée",
+      "publishedAt": "Publication"
+    },
+    "status": {
+      "PENDING": "En attente",
+      "UPLOADED": "Envoyé",
+      "PROCESSING": "Transcodage",
+      "READY": "Prêt",
+      "FAILED": "Échec"
+    },
+    "empty": {
+      "title": "Aucun épisode",
+      "hint": "Déposez vos fichiers vidéo ci-dessus : un épisode est créé par fichier, numéroté automatiquement."
+    },
+    "dropzone": {
+      "title": "Déposez vos fichiers vidéo ici ou cliquez pour parcourir",
+      "hint": "Un épisode est créé par fichier ; le titre reprend le nom du fichier (sans extension).",
+      "limits": "MP4 ou MOV, {max} maximum par fichier (envoi direct vers le stockage ; reprise multipart à venir).",
+      "rejectedTitle": "Fichier ignoré",
+      "rejected": {
+        "type": "{name} : format non pris en charge (MP4 ou MOV).",
+        "size": "{name} : fichier supérieur à 2 Go.",
+        "empty": "{name} : fichier vide."
+      }
+    },
+    "queue": {
+      "title": "File d'envoi",
+      "summary": "{done}/{count} terminé(s) — {percent} %",
+      "retryAll": "Relancer les échecs",
+      "cancelAll": "Tout annuler",
+      "clear": "Nettoyer",
+      "leaveWarning": "Des envois sont en cours. Quitter la page les interrompra.",
+      "states": {
+        "queued": "En file",
+        "preparing": "Préparation",
+        "uploading": "Envoi",
+        "finalizing": "Finalisation",
+        "done": "Terminé",
+        "error": "Échec",
+        "cancelled": "Annulé"
+      }
+    },
+    "actions": {
+      "rename": "Renommer",
+      "delete": "Supprimer l'épisode",
+      "deleteConfirm": "Supprimer l'épisode {number} « {title} » ? Les fichiers associés seront supprimés.",
+      "retranscode": "Relancer le transcodage",
+      "preview": "Aperçu",
+      "reorder": "Réordonner",
+      "reorderHint": "Glissez les lignes pour réordonner"
+    },
+    "toasts": {
+      "queued": "{count} fichier ajouté à la file. | {count} fichiers ajoutés à la file.",
+      "uploadFailed": "Échec de l'envoi de {name}.",
+      "renamed": "Épisode renommé.",
+      "deleted": "Épisode supprimé.",
+      "retranscodeQueued": "Transcodage relancé.",
+      "reordered": "Ordre enregistré."
+    },
+    "preview": {
+      "title": "Aperçu de l'épisode",
+      "unsupported": "La lecture HLS n'est pas prise en charge par ce navigateur."
+    }
   },
   "module": {
     "comingSoon": "Module à venir — ticket {ticket}",
     "hint": "Ce module du back-office est prévu dans un sprint ultérieur. Voir le backlog pour le détail des fonctions.",
     "backToCatalogue": "Retour au catalogue"
-  },
-  "common": {
-    "loading": "Chargement…",
-    "mockBanner": "Mode démonstration : données fictives (NUXT_PUBLIC_API_MOCK=true)."
   }
 }
