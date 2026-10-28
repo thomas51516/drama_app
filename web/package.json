@@ -1,0 +1,34 @@
+{
+  "name": "@drama/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DRAMA — back-office (admin) et site de recharge (recharge), deux apps Nuxt 3 sur une couche commune",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
+  "workspaces": [
+    "layers/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "prepare": "npm run prepare -w @drama/admin",
+    "dev:admin": "npm run dev -w @drama/admin",
+    "build:admin": "npm run build -w @drama/admin",
+    "preview:admin": "npm run preview -w @drama/admin",
+    "lint": "npm run lint -w @drama/admin && prettier --check .",
+    "lint:fix": "npm run lint:fix -w @drama/admin && prettier --write .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck -w @drama/admin",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "^4.3.4",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^21.0.4",
+    "prettier": "^3.9.10",
+    "vitest": "^5.0.5"
+  }
+}

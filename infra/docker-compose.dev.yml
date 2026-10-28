@@ -1,0 +1,89 @@
+# DRAMA — services de développement (S01-OPS-02)
+# Usage : docker compose -f infra/docker-compose.dev.yml up -d
+# Variables surchargeables via l'environnement ou un fichier infra/.env (voir infra/README.md).
+name: drama-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: drama-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-drama}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-drama}
+      POSTGRES_DB: ${POSTGRES_DB:-drama}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-drama} -d ${POSTGRES_DB:-drama}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: drama-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # NOTE : les images officielles `minio/minio` et `minio/mc` ont été retirées de Docker Hub
+  # (pull anonyme refusé en octobre 2026). On utilise l'image Bitnami figée (MinIO 2025.5.24,
+  # serveur + client `mc` inclus), suffisante pour le développement local.
+  minio:
+    image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+    container_name: drama-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Crée le bucket au démarrage (format bitnami : "nom:politique").
+      MINIO_DEFAULT_BUCKETS: ${S3_BUCKET:-drama-media}:download
+      MINIO_API_PORT_NUMBER: "9000"
+      MINIO_CONSOLE_PORT_NUMBER: "9001"
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # Service one-shot (idempotent) : garantit l'existence du bucket `drama-media` puis s'arrête.
+  # Relance manuelle : docker compose -f infra/docker-compose.dev.yml run --rm minio-init
+  minio-init:
+    image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+    container_name: drama-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-drama-media}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing "local/$$S3_BUCKET" &&
+        mc anonymous set download "local/$$S3_BUCKET" &&
+        echo "Bucket $$S3_BUCKET prêt"
+    restart: "no"
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

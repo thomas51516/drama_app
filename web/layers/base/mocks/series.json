@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+    "title": "Le Prince oublié",
+    "status": "published",
+    "episodesCount": 48,
+    "updatedAt": "2026-10-26T14:32:00.000Z"
+  },
+  {
+    "id": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+    "title": "Mariage sous contrat",
+    "status": "published",
+    "episodesCount": 60,
+    "updatedAt": "2026-10-24T09:05:00.000Z"
+  },
+  {
+    "id": "ser_01HZX0A1B2C3D4E5F6G7H8J9K2",
+    "title": "La Revanche de l'héritière",
+    "status": "draft",
+    "episodesCount": 12,
+    "updatedAt": "2026-10-27T18:47:00.000Z"
+  },
+  {
+    "id": "ser_01HZX0A1B2C3D4E5F6G7H8J9K3",
+    "title": "Retour à Abidjan",
+    "status": "archived",
+    "episodesCount": 30,
+    "updatedAt": "2026-08-02T11:20:00.000Z"
+  }
+]

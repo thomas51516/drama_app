@@ -1,0 +1,85 @@
+{
+  "app": {
+    "name": "DRAMA",
+    "backoffice": "Back office",
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "auth": {
+    "title": "Back-office sign in",
+    "subtitle": "Internal accounts only. Two-factor authentication is mandatory.",
+    "email": "Email address",
+    "password": "Password",
+    "signIn": "Sign in",
+    "totpTitle": "Verification code",
+    "totpHint": "Enter the 6-digit code shown by your authenticator app.",
+    "totpSetupTitle": "Enable two-factor authentication",
+    "totpSetupHint": "First sign in: add this account to your authenticator app, then enter the generated code.",
+    "totpSecret": "Secret key",
+    "totpCode": "6-digit code",
+    "verify": "Verify",
+    "back": "Back",
+    "logout": "Sign out",
+    "loggedInAs": "Signed in as",
+    "errors": {
+      "invalidCredentials": "Invalid credentials.",
+      "invalidTotp": "Invalid or expired code.",
+      "network": "The server cannot be reached. Please retry shortly.",
+      "generic": "Something went wrong ({status})."
+    },
+    "roles": {
+      "admin": "Administrator",
+      "editor": "Editor",
+      "monetization": "Monetization",
+      "support": "Support"
+    }
+  },
+  "nav": {
+    "catalogue": "Catalogue",
+    "episodes": "Episodes",
+    "subtitles": "Subtitles",
+    "scheduling": "Scheduling",
+    "featuring": "Featuring",
+    "monetization": "Monetization",
+    "offers": "Offers and promos",
+    "rewards": "Rewards",
+    "users": "Users",
+    "notifications": "Notifications",
+    "dashboards": "Dashboards",
+    "rights": "Rights and contracts",
+    "administration": "Administration"
+  },
+  "series": {
+    "title": "Catalogue — series",
+    "subtitle": "Series created in the back office (B-01).",
+    "create": "New series",
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "episodesCount": "Episodes",
+      "updatedAt": "Updated at"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "empty": {
+      "title": "No series yet",
+      "hint": "Create your first series to see it here."
+    },
+    "loadError": "Could not load series.",
+    "retry": "Retry",
+    "count": "{count} series | {count} series"
+  },
+  "module": {
+    "comingSoon": "Module coming soon — ticket {ticket}",
+    "hint": "This back-office module is planned for a later sprint. See the backlog for details.",
+    "backToCatalogue": "Back to catalogue"
+  },
+  "common": {
+    "loading": "Loading…",
+    "mockBanner": "Demo mode: fixture data (NUXT_PUBLIC_API_MOCK=true)."
+  }
+}

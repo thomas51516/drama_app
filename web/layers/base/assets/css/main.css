@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+@plugin 'tailwindcss-primeui';
+
+@layer base {
+  html,
+  body {
+    @apply h-full bg-surface-50 text-surface-900 antialiased;
+  }
+
+  #__nuxt {
+    @apply h-full;
+  }
+}

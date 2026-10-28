@@ -1,0 +1,85 @@
+{
+  "app": {
+    "name": "DRAMA",
+    "backoffice": "Back-office",
+    "skipToContent": "Aller au contenu",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu"
+  },
+  "auth": {
+    "title": "Connexion au back-office",
+    "subtitle": "Accès réservé aux comptes internes. La double authentification est obligatoire.",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "totpTitle": "Code de vérification",
+    "totpHint": "Saisissez le code à 6 chiffres affiché par votre application d'authentification.",
+    "totpSetupTitle": "Activer la double authentification",
+    "totpSetupHint": "Première connexion : ajoutez ce compte dans votre application d'authentification (Google Authenticator, Aegis, 1Password…) puis saisissez le code généré.",
+    "totpSecret": "Clé secrète",
+    "totpCode": "Code à 6 chiffres",
+    "verify": "Vérifier",
+    "back": "Retour",
+    "logout": "Se déconnecter",
+    "loggedInAs": "Connecté en tant que",
+    "errors": {
+      "invalidCredentials": "Identifiants incorrects.",
+      "invalidTotp": "Code incorrect ou expiré.",
+      "network": "Le serveur est injoignable. Réessayez dans un instant.",
+      "generic": "Une erreur est survenue ({status})."
+    },
+    "roles": {
+      "admin": "Administrateur",
+      "editor": "Éditeur",
+      "monetization": "Monétisation",
+      "support": "Support"
+    }
+  },
+  "nav": {
+    "catalogue": "Catalogue",
+    "episodes": "Épisodes",
+    "subtitles": "Sous-titres",
+    "scheduling": "Planification",
+    "featuring": "Mise en avant",
+    "monetization": "Monétisation",
+    "offers": "Offres et promos",
+    "rewards": "Récompenses",
+    "users": "Utilisateurs",
+    "notifications": "Notifications",
+    "dashboards": "Tableaux de bord",
+    "rights": "Droits et contrats",
+    "administration": "Administration"
+  },
+  "series": {
+    "title": "Catalogue — séries",
+    "subtitle": "Séries créées dans le back-office (B-01).",
+    "create": "Nouvelle série",
+    "columns": {
+      "title": "Titre",
+      "status": "Statut",
+      "episodesCount": "Épisodes",
+      "updatedAt": "Mis à jour le"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "published": "Publié",
+      "archived": "Archivé"
+    },
+    "empty": {
+      "title": "Aucune série pour l'instant",
+      "hint": "Créez votre première série pour qu'elle apparaisse ici."
+    },
+    "loadError": "Impossible de charger les séries.",
+    "retry": "Réessayer",
+    "count": "{count} série | {count} séries"
+  },
+  "module": {
+    "comingSoon": "Module à venir — ticket {ticket}",
+    "hint": "Ce module du back-office est prévu dans un sprint ultérieur. Voir le backlog pour le détail des fonctions.",
+    "backToCatalogue": "Retour au catalogue"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "mockBanner": "Mode démonstration : données fictives (NUXT_PUBLIC_API_MOCK=true)."
+  }
+}
