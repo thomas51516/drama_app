@@ -9,15 +9,15 @@ Contrat partagé : `docs/api/admin-contract-v1.md`.
 
 | ID | Lot | Ticket | Statut |
 | --- | --- | --- | --- |
-| S02-OPS-02 | OPS | Sentry (optionnel par DSN), métriques Prometheus, compose de supervision | En cours |
+| S02-OPS-02 | OPS | Sentry (optionnel par DSN), métriques Prometheus, compose de supervision | Terminé, vérifié, commité |
 | S02-BE-01 | BE | Auth invité et refresh | Terminé au sprint 1 |
-| S02-BE-02 | BE | Limitation de débit sur `/auth/*` | En cours |
-| S02-BE-03 | BE | OpenAPI v1 complète (tous les endpoints publics avec DTO) | En cours |
-| S02-BE-04 | BE | Stockage objet : URL pré-signée d'upload | En cours |
-| S02-BE-05 | BE | Transcodage : worker ffmpeg local + webhook fournisseur | En cours |
-| S03-BE-01 | BE | Admin séries (avancé) | En cours |
-| S03-BE-02 | BE | Admin épisodes et upload (avancé) | En cours |
-| S03-BE-04 | BE | Auth admin + TOTP (avancé) | En cours |
+| S02-BE-02 | BE | Limitation de débit sur `/auth/*` | Terminé, vérifié, commité |
+| S02-BE-03 | BE | OpenAPI v1 complète (tous les endpoints publics avec DTO) | Terminé, vérifié, commité |
+| S02-BE-04 | BE | Stockage objet : URL pré-signée d'upload | Terminé, vérifié, commité |
+| S02-BE-05 | BE | Transcodage : worker ffmpeg local + webhook fournisseur | Terminé, vérifié, commité |
+| S03-BE-01 | BE | Admin séries (avancé) | Terminé, vérifié, commité |
+| S03-BE-02 | BE | Admin épisodes et upload (avancé) | Terminé, vérifié, commité |
+| S03-BE-04 | BE | Auth admin + TOTP (avancé) | Terminé, vérifié, commité |
 | S02-A1-01 | A1 | Couche réseau branchée sur l'API réelle, erreurs et retry | En cours |
 | S02-A1-02 | A1 | Compte invité au premier lancement, session DataStore | En cours |
 | S02-A1-03 | A1 | Room : progression, historique, cache catalogue | En cours |
@@ -44,6 +44,13 @@ Contrat partagé : `docs/api/admin-contract-v1.md`.
 - **Transcodage local par ffmpeg en dev** : permet de tester l'ingestion de bout en bout sans fournisseur. L'adaptateur fournisseur géré reste prévu derrière le même port.
 - **Admin auth et catalogue avancés au sprint 2** : le web n'avait aucun backend à consommer.
 - **Pas de serveur de mocks séparé** : l'app Android consomme directement le backend local, les exemples OpenAPI servent de référence.
+
+## Ingestion vidéo de bout en bout (28 octobre 2026)
+
+Vérifié sur le poste de dev : connexion admin avec TOTP, création de série et d'épisode dans le back-office,
+upload direct d'un fichier 1080x1920 vers MinIO par URL pré-signée, transcodage par le worker ffmpeg local,
+statut READY après 4 s, manifeste HLS en 4 qualités servi par MinIO. Pas de fournisseur vidéo nécessaire pour
+développer les sprints 3 à 6.
 
 ## Compte rendu de fin de sprint
 
