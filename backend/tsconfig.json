@@ -16,7 +16,12 @@
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
     "strictPropertyInitialization": false,
     "types": ["vitest/globals", "node"]
-  }
+  },
+  "include": ["src", "test", "prisma", "*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

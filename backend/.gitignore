@@ -1,0 +1,17 @@
+# Dépendances et sorties de build
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Client Prisma généré (regénéré par `npm run prisma:generate`)
+src/generated/
+
+# Secrets locaux
+.env
+.env.*
+!.env.example
+
+# Divers
+*.log
+.DS_Store

@@ -1,28 +1,39 @@
 {
-  "name": "backend",
+  "name": "@drama/backend",
   "version": "0.0.1",
-  "description": "",
+  "description": "API DRAMA — micro-séries verticales (NestJS, Prisma, PostgreSQL, Redis)",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
-    "lint": "oxlint src/ test/",
+    "start:prod": "node dist/main.js",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
-    "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "dev": "nest start --watch",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/**/*.ts\"",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:reset": "prisma migrate reset",
+    "prisma:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "openapi:export": "nest build && node dist/openapi-export.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
-    "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.0.1",
     "@nestjs/jwt": "^12.0.3",
     "@nestjs/platform-express": "^12.0.1",
@@ -61,7 +72,9 @@
     "tsx": "^4.23.15",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.72.1",
-    "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

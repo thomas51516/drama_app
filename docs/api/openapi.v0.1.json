@@ -1,0 +1,1426 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Vérifie PostgreSQL et Redis. Renvoie 503 si un composant est indisponible.",
+        "operationId": "check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReportDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReportDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "État de santé (readiness)",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Vivacité du processus (liveness), sans dépendance externe",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/auth/guest": {
+      "post": {
+        "description": "Appelé au premier lancement (M-50). Crée un utilisateur `GUEST` avec son portefeuille et renvoie une paire de jetons. Chaque appel crée un nouveau compte : l'app doit conserver le jeton de rafraîchissement.",
+        "operationId": "guest",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestAuthDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Créer un compte invité",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "Émet un nouveau JWT d'accès et un nouveau jeton de rafraîchissement ; l'ancien jeton est révoqué (rotation). Réutiliser un jeton révoqué révoque toute la session (401 `REFRESH_TOKEN_REUSED`).",
+        "operationId": "refresh",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_REFRESH_TOKEN | REFRESH_TOKEN_REUSED | REFRESH_TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Renouveler les jetons",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/home": {
+      "get": {
+        "operationId": "home",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Écran d'accueil : bannières et rangées (M-01)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/series": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "genre",
+            "required": false,
+            "in": "query",
+            "description": "Filtre par genre",
+            "schema": {
+              "example": "romance",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSeriesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lister les séries publiées (paginé, filtre par genre)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/series/{id}": {
+      "get": {
+        "operationId": "detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fiche série (M-10)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/series/{id}/episodes": {
+      "get": {
+        "operationId": "episodes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EpisodeSummaryDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Grille des épisodes avec statut gratuit / débloqué / verrouillé (M-10)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/feed": {
+      "get": {
+        "operationId": "feed",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Curseur opaque renvoyé par l’appel précédent",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Flux vertical « Pour vous » (M-02), pagination par curseur",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/episodes/{id}/play": {
+      "post": {
+        "description": "Vérifie le droit (gratuit, débloqué, VIP) puis renvoie le manifeste HLS, les sous-titres, la position de reprise et l'épisode suivant. Le serveur fait foi (§8.4).",
+        "operationId": "play",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaySessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "EPISODE_LOCKED (details.coinCost)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EPISODE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtenir l'URL de lecture d'un épisode",
+        "tags": [
+          "playback"
+        ]
+      }
+    },
+    "/progress": {
+      "put": {
+        "operationId": "progress",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProgressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchProgressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enregistrer la position de lecture (M-15)",
+        "tags": [
+          "playback"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "DRAMA API",
+    "description": "API du MVP de micro-séries verticales (Android).\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique).",
+    "version": "0.1.0",
+    "contact": {
+      "name": "Équipe backend DRAMA",
+      "url": "",
+      "email": ""
+    }
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "Supervision"
+    },
+    {
+      "name": "auth",
+      "description": "Compte invité et jetons (M-50)"
+    },
+    {
+      "name": "catalog",
+      "description": "Accueil, séries, épisodes, flux (M-01, M-02, M-10)"
+    },
+    {
+      "name": "playback",
+      "description": "Lecture et progression (M-11, M-15)"
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Développement local"
+    },
+    {
+      "url": "https://api.staging.drama.example",
+      "description": "Recette (S01-OPS-03)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "JWT d'accès (15 min)"
+      }
+    },
+    "schemas": {
+      "ComponentHealthDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ]
+          },
+          "latencyMs": {
+            "type": "number",
+            "example": 2.3
+          },
+          "error": {
+            "type": "string",
+            "example": "connect ECONNREFUSED 127.0.0.1:6379"
+          }
+        },
+        "required": [
+          "status",
+          "latencyMs"
+        ]
+      },
+      "HealthChecksDto": {
+        "type": "object",
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/ComponentHealthDto"
+          },
+          "redis": {
+            "$ref": "#/components/schemas/ComponentHealthDto"
+          }
+        },
+        "required": [
+          "database",
+          "redis"
+        ]
+      },
+      "HealthReportDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "description": "`degraded` => HTTP 503"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-10-28T10:00:00.000Z"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 1234
+          },
+          "checks": {
+            "$ref": "#/components/schemas/HealthChecksDto"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "uptimeSeconds",
+          "checks"
+        ]
+      },
+      "LivenessDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "uptimeSeconds": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "uptimeSeconds"
+        ]
+      },
+      "GuestAuthDto": {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "description": "Identifiant d'installation généré par l'app (UUID recommandé). Conservé pour le diagnostic et le rattachement futur du compte invité (M-50).",
+            "example": "3f2c1a9e-5b7d-4c8e-9f0a-1b2c3d4e5f60",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "web",
+              "other"
+            ],
+            "default": "android"
+          },
+          "language": {
+            "type": "string",
+            "description": "Langue de l'interface (BCP 47 court).",
+            "example": "fr",
+            "default": "fr"
+          },
+          "country": {
+            "type": "string",
+            "description": "Pays ISO 3166-1 alpha-2.",
+            "example": "TG"
+          }
+        },
+        "required": [
+          "deviceId"
+        ]
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "REGISTERED"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "BLOCKED",
+              "DELETION_PENDING",
+              "DELETED"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "example": "fr"
+          },
+          "country": {
+            "type": "string",
+            "nullable": true,
+            "example": "TG"
+          },
+          "isVip": {
+            "type": "boolean"
+          },
+          "vipExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "language",
+          "country",
+          "isVip",
+          "vipExpiresAt",
+          "createdAt"
+        ]
+      },
+      "AuthTokensDto": {
+        "type": "object",
+        "properties": {
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT à présenter dans `Authorization: Bearer <token>`."
+          },
+          "accessTokenExpiresIn": {
+            "type": "number",
+            "description": "Durée de vie du JWT d'accès en secondes.",
+            "example": 900
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Jeton opaque à usage unique : chaque appel à /auth/refresh en émet un nouveau et révoque le précédent. À stocker de façon sécurisée (EncryptedSharedPreferences)."
+          },
+          "refreshTokenExpiresAt": {
+            "type": "string",
+            "example": "2026-11-27T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "tokenType",
+          "accessToken",
+          "accessTokenExpiresIn",
+          "refreshToken",
+          "refreshTokenExpiresAt"
+        ]
+      },
+      "AuthResponseDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AuthUserDto"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/AuthTokensDto"
+          }
+        },
+        "required": [
+          "user",
+          "tokens"
+        ]
+      },
+      "ApiErrorDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 403
+          },
+          "code": {
+            "type": "string",
+            "description": "Code stable destiné au client (à localiser côté app).",
+            "example": "EPISODE_LOCKED"
+          },
+          "message": {
+            "type": "string",
+            "example": "This episode must be unlocked first"
+          },
+          "details": {
+            "type": "object",
+            "description": "Détails complémentaires (erreurs de validation, coût en pièces, etc.).",
+            "additionalProperties": true
+          },
+          "path": {
+            "type": "string",
+            "example": "/episodes/0192f1f0-8a5b-7c3d-9e1f-abcdefabcdef/play"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-10-28T10:00:00.000Z"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Identifiant de corrélation (en-tête x-request-id)."
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Jeton de rafraîchissement opaque reçu lors de la dernière émission."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "SeriesSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "le-secret-du-lagon"
+          },
+          "title": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 9:16"
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 16:9 (bannières)"
+          },
+          "episodeCount": {
+            "type": "number",
+            "description": "Nombre d’épisodes publiés et prêts",
+            "example": 3
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "example": 2
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "description": "Coût en pièces d’un épisode payant",
+            "example": 10
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "genres",
+          "posterVerticalUrl",
+          "posterHorizontalUrl",
+          "episodeCount",
+          "freeEpisodeCount",
+          "coinCostPerEpisode",
+          "ageRating",
+          "publishedAt"
+        ]
+      },
+      "EpisodeSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "number",
+            "example": 1
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "number",
+            "example": 95
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "free",
+              "unlocked",
+              "locked"
+            ],
+            "description": "Statut pour le spectateur courant (M-10). Sans jeton : `free` ou `locked` seulement."
+          },
+          "coinCost": {
+            "type": "number",
+            "description": "Coût en pièces pour débloquer (0 si gratuit ou déjà débloqué)"
+          },
+          "subtitleLanguages": {
+            "example": [
+              "fr",
+              "en"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "seriesId",
+          "number",
+          "title",
+          "durationSeconds",
+          "thumbnailUrl",
+          "access",
+          "coinCost",
+          "subtitleLanguages",
+          "publishedAt"
+        ]
+      },
+      "HomeItemDto": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "$ref": "#/components/schemas/SeriesSummaryDto"
+          },
+          "episode": {
+            "description": "Présent dans la rangée « Continuer à regarder »",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EpisodeSummaryDto"
+              }
+            ]
+          },
+          "positionSeconds": {
+            "type": "number",
+            "description": "Position de reprise en secondes (« Continuer à regarder »)"
+          }
+        },
+        "required": [
+          "series"
+        ]
+      },
+      "HomeRowDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Clé stable : trending, new, continue_watching, genre:<genre>",
+            "example": "trending"
+          },
+          "title": {
+            "type": "string",
+            "description": "Titre affichable (langue du spectateur)",
+            "example": "Tendances"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeItemDto"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "items"
+        ]
+      },
+      "HomeResponseDto": {
+        "type": "object",
+        "properties": {
+          "banners": {
+            "description": "Bannières de mise en avant (M-01)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSummaryDto"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeRowDto"
+            }
+          }
+        },
+        "required": [
+          "banners",
+          "rows"
+        ]
+      },
+      "PaginatedSeriesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSummaryDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "SeriesDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "le-secret-du-lagon"
+          },
+          "title": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 9:16"
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 16:9 (bannières)"
+          },
+          "episodeCount": {
+            "type": "number",
+            "description": "Nombre d’épisodes publiés et prêts",
+            "example": 3
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "example": 2
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "description": "Coût en pièces d’un épisode payant",
+            "example": 10
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synopsis": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "originalLanguage": {
+            "type": "string",
+            "example": "fr"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "genres",
+          "posterVerticalUrl",
+          "posterHorizontalUrl",
+          "episodeCount",
+          "freeEpisodeCount",
+          "coinCostPerEpisode",
+          "ageRating",
+          "publishedAt",
+          "synopsis",
+          "tags",
+          "originalLanguage",
+          "status"
+        ]
+      },
+      "FeedItemDto": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "$ref": "#/components/schemas/SeriesSummaryDto"
+          },
+          "episode": {
+            "description": "Premier épisode (gratuit) de la série",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EpisodeSummaryDto"
+              }
+            ]
+          },
+          "previewUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Extrait de 15 s (HLS) lisible sans droit ; sinon appeler /episodes/{id}/play"
+          }
+        },
+        "required": [
+          "series",
+          "episode",
+          "previewUrl"
+        ]
+      },
+      "FeedResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedItemDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "PlayDrmDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "aes-128",
+              "widevine"
+            ],
+            "description": "Protection du flux. `widevine` sur les épisodes payants (S10-BE-05)."
+          },
+          "licenseUrl": {
+            "type": "string",
+            "description": "URL du serveur de licences Widevine"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "PlaySubtitleDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "example": "fr"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL du fichier WebVTT"
+          }
+        },
+        "required": [
+          "language",
+          "url"
+        ]
+      },
+      "PlaySessionDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "episodeNumber": {
+            "type": "number",
+            "example": 3
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "free",
+              "unlocked"
+            ]
+          },
+          "manifestUrl": {
+            "type": "string",
+            "description": "URL du manifeste HLS maître. Signée et expirante en S04-BE-02 (la signature sera portée par la query string, le champ ne change pas).",
+            "example": "https://cdn.example.com/hls/0192.../master.m3u8?exp=...&sig=..."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Expiration de l'URL ; redemander /play ensuite."
+          },
+          "drm": {
+            "$ref": "#/components/schemas/PlayDrmDto"
+          },
+          "subtitles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaySubtitleDto"
+            }
+          },
+          "resumePositionSeconds": {
+            "type": "number",
+            "description": "Position de reprise (M-15), 0 si jamais vu ou terminé",
+            "example": 42
+          },
+          "durationSeconds": {
+            "type": "number",
+            "example": 95
+          },
+          "nextEpisodeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Épisode suivant à précharger (M-12)"
+          }
+        },
+        "required": [
+          "episodeId",
+          "seriesId",
+          "episodeNumber",
+          "access",
+          "manifestUrl",
+          "expiresAt",
+          "drm",
+          "subtitles",
+          "resumePositionSeconds",
+          "durationSeconds",
+          "nextEpisodeId"
+        ]
+      },
+      "UpdateProgressDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400,
+            "example": 42
+          },
+          "completed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Épisode regardé jusqu’au bout"
+          }
+        },
+        "required": [
+          "episodeId",
+          "positionSeconds"
+        ]
+      },
+      "WatchProgressDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionSeconds": {
+            "type": "number"
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "episodeId",
+          "positionSeconds",
+          "completed",
+          "updatedAt"
+        ]
+      }
+    }
+  }
+}

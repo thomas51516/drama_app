@@ -1,0 +1,498 @@
+// =============================================================================
+// DRAMA — schéma de données (cahier des charges §8.3, ticket S01-BE-02)
+//
+// RÈGLE DU GRAND LIVRE (source de vérité des pièces) :
+//   * Toute variation de pièces est une ligne APPEND-ONLY de `coin_ledger`
+//     (montant signé, type, référence, clé d'idempotence unique).
+//   * `wallets.purchased_balance` / `wallets.bonus_balance` ne sont que des
+//     PROJECTIONS : elles sont mises à jour dans la même transaction SQL que
+//     l'insertion de la ligne de grand livre et doivent toujours être égales à
+//     SUM(amount) des lignes du bucket correspondant. Elles sont recalculables.
+//   * Jamais d'UPDATE direct d'un solde sans ligne de grand livre ; jamais de
+//     DELETE ou d'UPDATE sur `coin_ledger` (une correction = une ligne
+//     ADJUSTMENT ou REFUND).
+//   * Les pièces bonus (bucket BONUS) portent `expires_at` et sont consommées
+//     avant les pièces achetées ; leur expiration est elle-même une ligne EXPIRY.
+//
+// Conventions : identifiants UUID v7 (triables), tables et colonnes en
+// snake_case via @@map/@map, horodatages en UTC (`timestamptz`).
+// =============================================================================
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum UserType {
+  GUEST
+  REGISTERED
+
+  @@map("user_type")
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETION_PENDING
+  DELETED
+
+  @@map("user_status")
+}
+
+enum SeriesStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("series_status")
+}
+
+/// Classification d'âge (B-01).
+enum AgeRating {
+  ALL
+  PG12
+  PG16
+  R18
+
+  @@map("age_rating")
+}
+
+enum TranscodeStatus {
+  PENDING
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+
+  @@map("transcode_status")
+}
+
+/// Bucket de pièces affecté par une ligne de grand livre.
+enum CoinBucket {
+  PURCHASED
+  BONUS
+
+  @@map("coin_bucket")
+}
+
+enum LedgerEntryType {
+  PURCHASE
+  BONUS
+  UNLOCK
+  ADJUSTMENT
+  EXPIRY
+  REFUND
+
+  @@map("ledger_entry_type")
+}
+
+enum UnlockMethod {
+  COINS
+  AD
+  VIP
+  FREE
+
+  @@map("unlock_method")
+}
+
+enum PaymentProvider {
+  GOOGLE_PLAY
+  MOBILE_MONEY
+
+  @@map("payment_provider")
+}
+
+enum PurchaseStatus {
+  PENDING
+  VERIFIED
+  CREDITED
+  ACKNOWLEDGED
+  REFUNDED
+  FAILED
+
+  @@map("purchase_status")
+}
+
+enum SubscriptionPlan {
+  WEEKLY
+  MONTHLY
+  YEARLY
+
+  @@map("subscription_plan")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  IN_GRACE
+  ON_HOLD
+  CANCELED
+  EXPIRED
+
+  @@map("subscription_status")
+}
+
+/// Rôles du back-office (B-13).
+enum AdminRole {
+  EDITOR
+  MONETIZATION
+  SUPPORT
+  ADMIN
+
+  @@map("admin_role")
+}
+
+enum TokenSubjectType {
+  USER
+  ADMIN
+
+  @@map("token_subject_type")
+}
+
+// -----------------------------------------------------------------------------
+// Utilisateurs finaux
+// -----------------------------------------------------------------------------
+
+model User {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  type         UserType   @default(GUEST)
+  status       UserStatus @default(ACTIVE)
+  phone        String?    @unique @db.VarChar(32)
+  email        String?    @unique @db.VarChar(320)
+  googleSub    String?    @unique @map("google_sub") @db.VarChar(255)
+  displayName  String?    @map("display_name") @db.VarChar(80)
+  /// ISO 3166-1 alpha-2 (ex. TG, CI, SN, FR).
+  country      String?    @db.Char(2)
+  /// BCP 47 court (fr, en, es, pt).
+  language     String     @default("fr") @db.VarChar(8)
+  /// Identifiant d'installation fourni par l'app pour le compte invité (M-50).
+  deviceId     String?    @map("device_id") @db.VarChar(128)
+  isVip        Boolean    @default(false) @map("is_vip")
+  vipExpiresAt DateTime?  @map("vip_expires_at") @db.Timestamptz(3)
+  /// Déblocage automatique de l'épisode suivant si le solde le permet (§3).
+  autoUnlock   Boolean    @default(false) @map("auto_unlock")
+  lastSeenAt   DateTime?  @map("last_seen_at") @db.Timestamptz(3)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  wallet        Wallet?
+  ledgerEntries CoinLedgerEntry[]
+  unlocks       Unlock[]
+  purchases     Purchase[]
+  subscriptions Subscription[]
+  watchProgress WatchProgress[]
+  favorites     Favorite[]
+  refreshTokens RefreshToken[]
+
+  @@index([deviceId])
+  @@index([createdAt])
+  @@index([isVip, vipExpiresAt])
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// Catalogue
+// -----------------------------------------------------------------------------
+
+model Series {
+  id                  String       @id @default(uuid(7)) @db.Uuid
+  slug                String       @unique @db.VarChar(160)
+  title               String       @db.VarChar(200)
+  synopsis            String
+  /// Genres libres au MVP (ex. "romance", "thriller") ; table dédiée si besoin.
+  genres              String[]     @default([])
+  tags                String[]     @default([])
+  originalLanguage    String       @default("fr") @map("original_language") @db.VarChar(8)
+  posterVerticalUrl   String?      @map("poster_vertical_url")
+  posterHorizontalUrl String?      @map("poster_horizontal_url")
+  /// Nombre d'épisodes gratuits en tête de série (§3, B-06).
+  freeEpisodeCount    Int          @default(5) @map("free_episode_count")
+  /// Coût en pièces d'un épisode payant (B-06).
+  coinCostPerEpisode  Int          @default(10) @map("coin_cost_per_episode")
+  status              SeriesStatus @default(DRAFT)
+  /// Territoires autorisés (ISO 3166-1 alpha-2). Vide = monde entier (B-12).
+  territories         String[]     @default([])
+  ageRating           AgeRating    @default(ALL) @map("age_rating")
+  publishedAt         DateTime?    @map("published_at") @db.Timestamptz(3)
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  episodes  Episode[]
+  favorites Favorite[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([genres], type: Gin)
+  @@map("series")
+}
+
+model Episode {
+  id              String          @id @default(uuid(7)) @db.Uuid
+  seriesId        String          @map("series_id") @db.Uuid
+  number          Int
+  title           String?         @db.VarChar(200)
+  durationSeconds Int             @default(0) @map("duration_seconds")
+  transcodeStatus TranscodeStatus @default(PENDING) @map("transcode_status")
+  /// Clé du fichier maître dans le stockage objet (upload back-office, §9).
+  sourceKey       String?         @map("source_key")
+  /// Clé (ou URL absolue en dev) du manifeste HLS maître.
+  hlsKey          String?         @map("hls_key")
+  thumbnailUrl    String?         @map("thumbnail_url")
+  /// Extrait de 15 s pour le flux vertical (M-02).
+  previewKey      String?         @map("preview_key")
+  publishedAt     DateTime?       @map("published_at") @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  series        Series          @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  subtitles     Subtitle[]
+  unlocks       Unlock[]
+  watchProgress WatchProgress[]
+
+  @@unique([seriesId, number])
+  @@index([publishedAt(sort: Desc)])
+  @@index([transcodeStatus])
+  @@map("episodes")
+}
+
+model Subtitle {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  episodeId String   @map("episode_id") @db.Uuid
+  language  String   @db.VarChar(8)
+  fileUrl   String   @map("file_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@unique([episodeId, language])
+  @@map("subtitles")
+}
+
+// -----------------------------------------------------------------------------
+// Pièces : portefeuille (projection) et grand livre (source de vérité)
+// -----------------------------------------------------------------------------
+
+/// Projection des soldes ; voir la règle du grand livre en tête de fichier.
+model Wallet {
+  userId           String   @id @map("user_id") @db.Uuid
+  purchasedBalance Int      @default(0) @map("purchased_balance")
+  bonusBalance     Int      @default(0) @map("bonus_balance")
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+/// Append-only. Une ligne = une variation de solde.
+model CoinLedgerEntry {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  /// Montant signé en pièces (+ crédit, - débit).
+  amount         Int
+  bucket         CoinBucket
+  type           LedgerEntryType
+  /// Type de l'objet référencé (purchase, unlock, reward, admin_adjustment...).
+  referenceType  String?         @map("reference_type") @db.VarChar(40)
+  referenceId    String?         @map("reference_id") @db.VarChar(128)
+  /// Clé d'idempotence fournie par l'appelant ou dérivée (§8.4).
+  idempotencyKey String          @unique @map("idempotency_key") @db.VarChar(200)
+  /// Date d'expiration des pièces bonus créditées par cette ligne.
+  expiresAt      DateTime?       @map("expires_at") @db.Timestamptz(3)
+  note           String?
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  unlock Unlock?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type, expiresAt])
+  @@index([referenceType, referenceId])
+  @@map("coin_ledger")
+}
+
+model Unlock {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  episodeId     String       @map("episode_id") @db.Uuid
+  method        UnlockMethod
+  /// Ligne de débit associée (méthode COINS) — même transaction SQL.
+  ledgerEntryId String?      @unique @map("ledger_entry_id") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode     Episode          @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  ledgerEntry CoinLedgerEntry? @relation(fields: [ledgerEntryId], references: [id])
+
+  @@unique([userId, episodeId])
+  @@index([episodeId])
+  @@map("unlocks")
+}
+
+// -----------------------------------------------------------------------------
+// Paiements et abonnements
+// -----------------------------------------------------------------------------
+
+model Purchase {
+  id            String          @id @default(uuid(7)) @db.Uuid
+  userId        String          @map("user_id") @db.Uuid
+  provider      PaymentProvider
+  /// SKU Google Play ou identifiant de pack mobile money.
+  productId     String          @map("product_id") @db.VarChar(120)
+  /// Jeton d'achat Google ou identifiant de transaction agrégateur — unique (idempotence).
+  purchaseToken String          @unique @map("purchase_token") @db.VarChar(512)
+  orderId       String?         @map("order_id") @db.VarChar(120)
+  /// Montant en unité mineure de la devise (centimes ; FCFA sans décimale).
+  amountMinor   Int?            @map("amount_minor")
+  currency      String?         @db.Char(3)
+  /// Pièces à créditer (achetées + bonus de pack).
+  coins         Int             @default(0)
+  bonusCoins    Int             @default(0) @map("bonus_coins")
+  status        PurchaseStatus  @default(PENDING)
+  rawPayload    Json?           @map("raw_payload")
+  verifiedAt    DateTime?       @map("verified_at") @db.Timestamptz(3)
+  creditedAt    DateTime?       @map("credited_at") @db.Timestamptz(3)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("purchases")
+}
+
+model Subscription {
+  id            String             @id @default(uuid(7)) @db.Uuid
+  userId        String             @map("user_id") @db.Uuid
+  plan          SubscriptionPlan
+  provider      PaymentProvider    @default(GOOGLE_PLAY)
+  productId     String             @map("product_id") @db.VarChar(120)
+  purchaseToken String?            @unique @map("purchase_token") @db.VarChar(512)
+  startsAt      DateTime           @map("starts_at") @db.Timestamptz(3)
+  endsAt        DateTime           @map("ends_at") @db.Timestamptz(3)
+  autoRenew     Boolean            @default(true) @map("auto_renew")
+  status        SubscriptionStatus @default(ACTIVE)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@index([endsAt])
+  @@map("subscriptions")
+}
+
+// -----------------------------------------------------------------------------
+// Lecture et préférences
+// -----------------------------------------------------------------------------
+
+model WatchProgress {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  episodeId       String   @map("episode_id") @db.Uuid
+  positionSeconds Int      @default(0) @map("position_seconds")
+  completed       Boolean  @default(false)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, episodeId])
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("watch_progress")
+}
+
+/// « Ma liste » (M-16).
+model Favorite {
+  userId    String   @map("user_id") @db.Uuid
+  seriesId  String   @map("series_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@id([userId, seriesId])
+  @@map("favorites")
+}
+
+// -----------------------------------------------------------------------------
+// Back-office, sessions et audit
+// -----------------------------------------------------------------------------
+
+model AdminAccount {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  email        String    @unique @db.VarChar(320)
+  /// Hachage Argon2id (§12).
+  passwordHash String    @map("password_hash")
+  displayName  String    @map("display_name") @db.VarChar(80)
+  role         AdminRole @default(EDITOR)
+  isActive     Boolean   @default(true) @map("is_active")
+  /// Secret TOTP chiffré pour la 2FA du back-office (§12).
+  totpSecret   String?   @map("totp_secret")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@map("admin_accounts")
+}
+
+/// Jetons de rafraîchissement opaques, stockés hachés (SHA-256 + pepper), à rotation.
+model RefreshToken {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  tokenHash    String           @unique @map("token_hash") @db.Char(64)
+  subjectType  TokenSubjectType @map("subject_type")
+  userId       String?          @map("user_id") @db.Uuid
+  adminId      String?          @map("admin_id") @db.Uuid
+  /// Famille de rotation : la réutilisation d'un jeton révoqué invalide toute la famille.
+  family       String           @db.Uuid
+  deviceId     String?          @map("device_id") @db.VarChar(128)
+  userAgent    String?          @map("user_agent") @db.VarChar(512)
+  expiresAt    DateTime         @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime?        @map("revoked_at") @db.Timestamptz(3)
+  replacedById String?          @map("replaced_by_id") @db.Uuid
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user  User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admin AdminAccount? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([family])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  /// Compte interne auteur de l'action (null pour une action système).
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorLabel String?  @map("actor_label") @db.VarChar(120)
+  action     String   @db.VarChar(80)
+  targetType String   @map("target_type") @db.VarChar(40)
+  targetId   String?  @map("target_id") @db.VarChar(128)
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor AdminAccount? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
