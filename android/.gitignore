@@ -1,0 +1,13 @@
+# Complements the repository root .gitignore for paths nested under android/.
+.gradle/
+.kotlin/
+build/
+*/build/
+**/build/
+build-logic/.gradle/
+local.properties
+captures/
+*.apk
+*.aab
+*.hprof
+lint-baseline.xml
