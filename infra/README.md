@@ -72,3 +72,23 @@ docker exec -it drama-minio mc ls local/drama-media
 
 - `S01-OPS-03` : VPS staging, DNS, Traefik + TLS.
 - Supervision (Prometheus, Grafana, Loki) et Sentry : cahier des charges §12.
+
+## Épisodes de test verticaux (`media-samples/`)
+
+Les flux HLS publics (Mux, Apple) sont en 16:9 et ne conviennent pas à un lecteur vertical.
+`media-samples/generate.sh` fabrique avec ffmpeg des épisodes de test en 9:16 (1080x1920) conformes
+à la section 9 du cahier des charges : HLS multi-débits CMAF (360p, 540p, 720p, 1080p), segments
+de 2 s, extrait de 15 s en 540p pour le flux et vignette.
+
+```bash
+cd infra/media-samples
+./generate.sh 3 30   # 3 épisodes de 30 s dans out/ (ignoré par git)
+./upload.sh          # copie dans le bucket MinIO sous hls/samples/
+```
+
+Les manifestes sont servis en lecture anonyme :
+`http://localhost:9000/drama-media/hls/samples/ep1/master.m3u8` (ep1 à ep3).
+
+Le seed du backend référence ces clés relatives ; l'URL finale est `CDN_BASE_URL` + clé.
+Pour tester sur un téléphone du même réseau Wi-Fi, mettre `CDN_BASE_URL=http://<IP-du-PC>:9000/drama-media`
+dans `backend/.env` avant `npm run db:seed`, et pointer l'app Android sur la même adresse.

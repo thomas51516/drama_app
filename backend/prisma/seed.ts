@@ -12,12 +12,17 @@ if (!databaseUrl) throw new Error('DATABASE_URL is required to seed');
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
 
-// Flux HLS publics de test (Mux / Apple), utilisés tant que le pipeline vidéo n'existe pas (S02-BE-05).
-const TEST_STREAMS = [
-  'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-  'https://test-streams.mux.dev/test_001/stream.m3u8',
-  'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_hls/master.m3u8',
-];
+// Épisodes de test verticaux 9:16 générés par infra/media-samples/generate.sh et déposés dans MinIO
+// par upload.sh. Clés relatives : l'URL finale est CDN_BASE_URL + clé (voir resolveMediaUrl).
+// Tant que le pipeline vidéo n'existe pas (S02-BE-05), ces clés tiennent lieu de rendu transcodé.
+const sampleKey = (n: number): string => `hls/samples/ep${n}/master.m3u8`;
+const samplePreviewKey = (n: number): string => `hls/samples/ep${n}/preview/index.m3u8`;
+const sampleThumbnail = (cdn: string, n: number): string =>
+  `${cdn}/hls/samples/ep${n}/thumbnail.jpg`;
+const cdnBaseUrl = (process.env.CDN_BASE_URL ?? 'http://localhost:9000/drama-media').replace(
+  /\/+$/,
+  '',
+);
 
 async function main(): Promise<void> {
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@drama.local';
@@ -59,14 +64,20 @@ async function main(): Promise<void> {
   });
 
   const episodes = [
-    { number: 1, title: "L'héritage", durationSeconds: 634, hlsKey: TEST_STREAMS[0] },
-    { number: 2, title: 'La seconde famille', durationSeconds: 90, hlsKey: TEST_STREAMS[1] },
-    { number: 3, title: 'Le testament', durationSeconds: 120, hlsKey: TEST_STREAMS[2] },
+    { number: 1, title: "L'héritage", durationSeconds: 30, hlsKey: sampleKey(1) },
+    { number: 2, title: 'La seconde famille', durationSeconds: 30, hlsKey: sampleKey(2) },
+    { number: 3, title: 'Le testament', durationSeconds: 30, hlsKey: sampleKey(3) },
   ];
   for (const ep of episodes) {
     const saved = await prisma.episode.upsert({
       where: { seriesId_number: { seriesId: series.id, number: ep.number } },
-      update: { hlsKey: ep.hlsKey, durationSeconds: ep.durationSeconds, transcodeStatus: 'READY' },
+      update: {
+        hlsKey: ep.hlsKey,
+        previewKey: samplePreviewKey(ep.number),
+        thumbnailUrl: sampleThumbnail(cdnBaseUrl, ep.number),
+        durationSeconds: ep.durationSeconds,
+        transcodeStatus: 'READY',
+      },
       create: {
         seriesId: series.id,
         number: ep.number,
@@ -74,8 +85,8 @@ async function main(): Promise<void> {
         durationSeconds: ep.durationSeconds,
         transcodeStatus: 'READY',
         hlsKey: ep.hlsKey,
-        previewKey: ep.hlsKey,
-        thumbnailUrl: `https://placehold.co/1080x1920/1f3a4d/ffffff?text=E${ep.number}`,
+        previewKey: samplePreviewKey(ep.number),
+        thumbnailUrl: sampleThumbnail(cdnBaseUrl, ep.number),
         publishedAt: new Date(publishedAt.getTime() + ep.number * 86_400_000),
       },
     });
