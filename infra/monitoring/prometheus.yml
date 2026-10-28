@@ -1,0 +1,17 @@
+# Scrape de l'API DRAMA (GET /metrics). En staging, remplacer la cible par le nom du conteneur API.
+# Si l'API définit METRICS_TOKEN, décommenter le bloc `authorization` avec la même valeur
+# (Prometheus ne substitue pas les variables d'environnement dans ce fichier).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: drama-api
+    metrics_path: /metrics
+    # authorization:
+    #   type: Bearer
+    #   credentials: change-me-metrics-token
+    static_configs:
+      - targets: ["host.docker.internal:3000"]
+        labels:
+          env: dev

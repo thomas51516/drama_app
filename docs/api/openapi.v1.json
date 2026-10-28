@@ -1,0 +1,5552 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Vérifie PostgreSQL et Redis. Renvoie 503 si un composant est indisponible.",
+        "operationId": "check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReportDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReportDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "État de santé (readiness)",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Vivacité du processus (liveness), sans dépendance externe",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/auth/guest": {
+      "post": {
+        "description": "Appelé au premier lancement (M-50). Crée un utilisateur `GUEST` avec son portefeuille et renvoie une paire de jetons. Chaque appel crée un nouveau compte : l'app doit conserver le jeton de rafraîchissement.",
+        "operationId": "guest",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestAuthDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED (30 / 15 min / IP)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Créer un compte invité",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "Émet un nouveau JWT d'accès et un nouveau jeton de rafraîchissement ; l'ancien jeton est révoqué (rotation). Réutiliser un jeton révoqué révoque toute la session (401 `REFRESH_TOKEN_REUSED`).",
+        "operationId": "refresh",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_REFRESH_TOKEN | REFRESH_TOKEN_REUSED | REFRESH_TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED (120 / 15 min / IP)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Renouveler les jetons",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "description": "Vérifie l'ID token Google, crée ou retrouve le compte inscrit et rattache le compte invité (`deviceId`). Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+        "operationId": "google",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleAuthDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connexion Google (planifié S05-BE-01)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/otp/request": {
+      "post": {
+        "description": "Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+        "operationId": "otpRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpRequestResponseDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Demander un code OTP par SMS (planifié S05-BE-02)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/otp/verify": {
+      "post": {
+        "description": "Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+        "operationId": "otpVerify",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Vérifier le code OTP et ouvrir la session (planifié S05-BE-02)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/home": {
+      "get": {
+        "operationId": "home",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Écran d'accueil : bannières et rangées (M-01)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/series": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "genre",
+            "required": false,
+            "in": "query",
+            "description": "Filtre par genre",
+            "schema": {
+              "example": "romance",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSeriesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lister les séries publiées (paginé, filtre par genre)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/series/{id}": {
+      "get": {
+        "operationId": "detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fiche série (M-10)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/series/{id}/episodes": {
+      "get": {
+        "operationId": "episodes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EpisodeSummaryDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Grille des épisodes avec statut gratuit / débloqué / verrouillé (M-10)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/feed": {
+      "get": {
+        "operationId": "feed",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Curseur opaque renvoyé par l’appel précédent",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Flux vertical « Pour vous » (M-02), pagination par curseur",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/search": {
+      "get": {
+        "description": "Recherche plein texte sur les séries publiées. Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Texte recherché (titre, synopsis, tags)",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSeriesDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recherche de séries (planifié S05-BE-06)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/episodes/{id}/play": {
+      "post": {
+        "description": "Vérifie le droit (gratuit, débloqué, VIP) puis renvoie le manifeste HLS, les sous-titres, la position de reprise et l'épisode suivant. Le serveur fait foi (§8.4).",
+        "operationId": "play",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaySessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "EPISODE_LOCKED (details.coinCost)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EPISODE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtenir l'URL de lecture d'un épisode",
+        "tags": [
+          "playback"
+        ]
+      }
+    },
+    "/progress": {
+      "put": {
+        "operationId": "progress",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProgressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchProgressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enregistrer la position de lecture (M-15)",
+        "tags": [
+          "playback"
+        ]
+      }
+    },
+    "/episodes/{id}/unlock": {
+      "post": {
+        "description": "Débit (bonus avant achetées) et création du déblocage dans la même transaction ; idempotent par `idempotencyKey`. 402 `INSUFFICIENT_COINS` si le solde est insuffisant (details.coinCost, details.balance).",
+        "operationId": "unlockEpisode",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockEpisodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnlockResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EPISODE_FREE | EPISODE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Débloquer un épisode avec des pièces (planifié S07-BE-02)",
+        "tags": [
+          "unlock"
+        ]
+      }
+    },
+    "/ads/reward": {
+      "post": {
+        "description": "Appelé par la régie, jamais par l’app. Crédit uniquement après vérification de la signature ; plafond quotidien par utilisateur (Redis). Idempotent par `transactionId`.",
+        "operationId": "adReward",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdRewardCallbackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdRewardAckDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_AD_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Callback SSV de la régie publicitaire (planifié S08-BE-03)",
+        "tags": [
+          "unlock"
+        ]
+      }
+    },
+    "/wallet": {
+      "get": {
+        "operationId": "get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soldes de pièces (planifié S07-BE-04)",
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
+    "/wallet/transactions": {
+      "get": {
+        "operationId": "transactions",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Curseur opaque renvoyé par l’appel précédent",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletTransactionsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historique du grand livre, pagination par curseur (planifié S07-BE-04)",
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
+    "/billing/google/verify": {
+      "post": {
+        "description": "Vérification serveur via la Google Play Developer API, crédit par ligne de grand livre, acquittement. Idempotent par `purchaseToken`.",
+        "operationId": "verifyGoogle",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "PURCHASE_INVALID | PURCHASE_NOT_PAID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Vérifier un achat Google Play et créditer (planifié S07-BE-06)",
+        "tags": [
+          "Billing",
+          "billing"
+        ]
+      }
+    },
+    "/webhooks/google-rtdn": {
+      "post": {
+        "description": "Push Pub/Sub authentifié par jeton OIDC ; traitement asynchrone (BullMQ).",
+        "operationId": "googleRtdn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleRtdnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAckDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_WEBHOOK_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Real-time developer notifications Google Play (planifié S07-BE-07)",
+        "tags": [
+          "Billing",
+          "webhooks"
+        ]
+      }
+    },
+    "/webhooks/mobile-money/{provider}": {
+      "post": {
+        "description": "Signature vérifiée, idempotent par identifiant de transaction, crédit par grand livre.",
+        "operationId": "mobileMoney",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "cinetpay",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileMoneyWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAckDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_WEBHOOK_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Webhook agrégateur mobile money (planifié S09-BE-01)",
+        "tags": [
+          "Billing",
+          "webhooks"
+        ]
+      }
+    },
+    "/rewards/checkin": {
+      "post": {
+        "description": "Barème sur 7 jours, crédit en pièces bonus expirables, idempotent par jour.",
+        "operationId": "checkIn",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckInResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Check-in quotidien (planifié S08-BE-04)",
+        "tags": [
+          "rewards"
+        ]
+      }
+    },
+    "/rewards/tasks": {
+      "get": {
+        "operationId": "tasks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardTasksDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tâches récompensées (planifié M-41, P2)",
+        "tags": [
+          "rewards"
+        ]
+      }
+    },
+    "/rewards/tasks/{id}/claim": {
+      "post": {
+        "operationId": "claim",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "watch_3_episodes",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimTaskResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TASK_NOT_CLAIMABLE | TASK_ALREADY_CLAIMED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Réclamer la récompense d’une tâche (planifié M-41, P2)",
+        "tags": [
+          "rewards"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Profil courant (planifié S05-BE-04)",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "update",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Modifier le profil (planifié S05-BE-04)",
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "description": "Passe le compte en DELETION_PENDING ; purge différée (§14).",
+        "operationId": "remove",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMeResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Demander la suppression du compte (planifié S05-BE-04)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/favorites": {
+      "get": {
+        "operationId": "favorites",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoritesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "« Ma liste » (planifié S05-BE-05)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/favorites/{seriesId}": {
+      "post": {
+        "operationId": "addFavorite",
+        "parameters": [
+          {
+            "name": "seriesId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajouter une série à « Ma liste » (planifié S05-BE-05)",
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "operationId": "removeFavorite",
+        "parameters": [
+          {
+            "name": "seriesId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retirer une série de « Ma liste » (planifié S05-BE-05)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/webhooks/transcode/{provider}": {
+      "post": {
+        "description": "Passe l’épisode à READY ou FAILED. Cible par `episodeId`, `externalId` ou `sourceKey`. Signature : `X-Transcode-Signature: sha256=<hex HMAC-SHA256(secret, [timestamp \".\"] corps brut)>` ; `X-Transcode-Timestamp` (secondes epoch, optionnel, tolérance ±5 min). Idempotent.",
+        "operationId": "handle",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "mux",
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-transcode-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-transcode-timestamp",
+            "required": false,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscodeWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscodeWebhookAckDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_WEBHOOK_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Fin de transcodage (service géré)",
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/admin/auth/login": {
+      "post": {
+        "description": "Vérifie le mot de passe (Argon2id) et renvoie un jeton de défi valable 5 minutes. À la première connexion, le secret TOTP et l'URI otpauth sont renvoyés (`totp_setup_required`) : la 2FA est obligatoire. Limite : 5 tentatives par e-mail et par 15 minutes.",
+        "operationId": "login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLoginResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ADMIN_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connexion back-office (étape 1 : mot de passe)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/totp/verify": {
+      "post": {
+        "description": "Valide le code à 6 chiffres (fenêtre ±1 pas de 30 s) et émet le JWT admin. Le jeton de défi est à usage unique. Lors de l'enrôlement, le premier code valide active la 2FA du compte.",
+        "operationId": "verify",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTotpVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CHALLENGE | CHALLENGE_EXPIRED | CHALLENGE_USED | INVALID_TOTP_CODE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connexion back-office (étape 2 : code TOTP)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/me": {
+      "get": {
+        "operationId": "me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN | ADMIN_TOKEN_REVOKED | ADMIN_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Compte interne courant",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/logout": {
+      "post": {
+        "description": "Révoque le jeton courant (liste de refus Redis jusqu'à son expiration).",
+        "operationId": "logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Déconnexion",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/series": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Recherche sur le titre et le slug",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSeriesListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | FORBIDDEN_FIELDS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Lister les séries (tous statuts, paginé, recherche)",
+        "tags": [
+          "admin-series"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminSeriesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSeriesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | FORBIDDEN_FIELDS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer une série (brouillon, slug dérivé du titre)",
+        "tags": [
+          "admin-series"
+        ]
+      }
+    },
+    "/admin/series/{id}": {
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSeriesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | FORBIDDEN_FIELDS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Détail d'une série",
+        "tags": [
+          "admin-series"
+        ]
+      },
+      "patch": {
+        "description": "EDITOR : tous les champs sauf la monétisation ; MONETIZATION : `freeEpisodeCount` et `coinCostPerEpisode` uniquement ; ADMIN : tout. Chaque changement est tracé (ancienne / nouvelle valeur).",
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminSeriesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSeriesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | FORBIDDEN_FIELDS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une série",
+        "tags": [
+          "admin-series"
+        ]
+      }
+    },
+    "/admin/series/{id}/publish": {
+      "post": {
+        "operationId": "publish",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSeriesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | FORBIDDEN_FIELDS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SERIES_NO_READY_EPISODE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Publier (409 si aucun épisode READY)",
+        "tags": [
+          "admin-series"
+        ]
+      }
+    },
+    "/admin/series/{id}/archive": {
+      "post": {
+        "operationId": "archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSeriesDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | FORBIDDEN_FIELDS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Archiver (retire la série du catalogue public)",
+        "tags": [
+          "admin-series"
+        ]
+      }
+    },
+    "/admin/series/{id}/episodes": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminEpisodeDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Épisodes d'une série, triés par numéro (à interroger toutes les 5 s pendant un transcodage)",
+        "tags": [
+          "admin-episodes"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminEpisodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminEpisodeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EPISODE_NUMBER_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer un épisode (numéro auto = max + 1)",
+        "tags": [
+          "admin-episodes"
+        ]
+      }
+    },
+    "/admin/series/{id}/episodes/order": {
+      "put": {
+        "operationId": "reorder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderEpisodesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminEpisodeDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "EPISODE_ORDER_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Réordonner les épisodes (renumérotés 1..n dans l’ordre donné)",
+        "tags": [
+          "admin-episodes"
+        ]
+      }
+    },
+    "/admin/episodes/{id}": {
+      "patch": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminEpisodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminEpisodeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier le titre ou la date de publication",
+        "tags": [
+          "admin-episodes"
+        ]
+      },
+      "delete": {
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer un épisode (et ses fichiers HLS / source)",
+        "tags": [
+          "admin-episodes"
+        ]
+      }
+    },
+    "/admin/episodes/{id}/upload-url": {
+      "post": {
+        "description": "Le navigateur envoie le fichier directement au stockage objet (PUT sur `uploadUrl` avec `headers`), jamais via l’API. Max 2 Go, `video/mp4` ou `video/quicktime`. Appeler ensuite `/uploaded`.",
+        "operationId": "uploadUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EpisodeUploadUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadTargetDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "URL pré-signée PUT pour le fichier maître",
+        "tags": [
+          "admin-episodes"
+        ]
+      }
+    },
+    "/admin/episodes/{id}/uploaded": {
+      "post": {
+        "operationId": "uploaded",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminEpisodeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SOURCE_MISSING | SOURCE_NOT_UPLOADED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Signaler la fin de l’upload : statut UPLOADED, transcodage mis en file",
+        "tags": [
+          "admin-episodes"
+        ]
+      }
+    },
+    "/admin/episodes/{id}/retranscode": {
+      "post": {
+        "operationId": "retranscode",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminEpisodeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SOURCE_MISSING | SOURCE_NOT_UPLOADED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Relancer le transcodage à partir du fichier maître existant",
+        "tags": [
+          "admin-episodes"
+        ]
+      }
+    },
+    "/admin/uploads/presign": {
+      "post": {
+        "operationId": "presign",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignedUploadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "URL pré-signée PUT pour une affiche (`kind: poster`)",
+        "tags": [
+          "admin-episodes"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "DRAMA API",
+    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique).\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/guest`, `/auth/refresh`, `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Équipe backend DRAMA",
+      "url": "",
+      "email": ""
+    }
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "Supervision"
+    },
+    {
+      "name": "auth",
+      "description": "Compte invité, Google, OTP et jetons (M-50, M-51)"
+    },
+    {
+      "name": "catalog",
+      "description": "Accueil, séries, épisodes, recherche, flux (M-01, M-02, M-10)"
+    },
+    {
+      "name": "playback",
+      "description": "Lecture et progression (M-11, M-15)"
+    },
+    {
+      "name": "unlock",
+      "description": "Déblocage par pièces et pub récompensée (M-20, M-21)"
+    },
+    {
+      "name": "wallet",
+      "description": "Portefeuille et historique (M-30)"
+    },
+    {
+      "name": "billing",
+      "description": "Google Play Billing et mobile money (§10)"
+    },
+    {
+      "name": "rewards",
+      "description": "Check-in et tâches (M-40, M-41)"
+    },
+    {
+      "name": "users",
+      "description": "Profil, suppression de compte, favoris (M-16, M-52)"
+    },
+    {
+      "name": "webhooks",
+      "description": "Rappels serveur à serveur (signature, pas de JWT)"
+    },
+    {
+      "name": "admin-auth",
+      "description": "Back-office : connexion 2FA (B-13)"
+    },
+    {
+      "name": "admin-series",
+      "description": "Back-office : séries (B-01)"
+    },
+    {
+      "name": "admin-episodes",
+      "description": "Back-office : épisodes, upload, transcodage (B-02)"
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Développement local"
+    },
+    {
+      "url": "https://api.staging.drama.example",
+      "description": "Recette (S01-OPS-03)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "JWT d'accès utilisateur (15 min)"
+      },
+      "admin": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "JWT admin (aud: admin)"
+      }
+    },
+    "schemas": {
+      "ComponentHealthDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ]
+          },
+          "latencyMs": {
+            "type": "number",
+            "example": 2.3
+          },
+          "error": {
+            "type": "string",
+            "example": "connect ECONNREFUSED 127.0.0.1:6379"
+          }
+        },
+        "required": [
+          "status",
+          "latencyMs"
+        ]
+      },
+      "HealthChecksDto": {
+        "type": "object",
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/ComponentHealthDto"
+          },
+          "redis": {
+            "$ref": "#/components/schemas/ComponentHealthDto"
+          }
+        },
+        "required": [
+          "database",
+          "redis"
+        ]
+      },
+      "HealthReportDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "description": "`degraded` => HTTP 503"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-10-28T10:00:00.000Z"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 1234
+          },
+          "checks": {
+            "$ref": "#/components/schemas/HealthChecksDto"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "uptimeSeconds",
+          "checks"
+        ]
+      },
+      "LivenessDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "uptimeSeconds": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "uptimeSeconds"
+        ]
+      },
+      "GuestAuthDto": {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "description": "Identifiant d'installation généré par l'app (UUID recommandé). Conservé pour le diagnostic et le rattachement futur du compte invité (M-50).",
+            "example": "3f2c1a9e-5b7d-4c8e-9f0a-1b2c3d4e5f60",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "web",
+              "other"
+            ],
+            "default": "android"
+          },
+          "language": {
+            "type": "string",
+            "description": "Langue de l'interface (BCP 47 court).",
+            "example": "fr",
+            "default": "fr"
+          },
+          "country": {
+            "type": "string",
+            "description": "Pays ISO 3166-1 alpha-2.",
+            "example": "TG"
+          }
+        },
+        "required": [
+          "deviceId"
+        ]
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "REGISTERED"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "BLOCKED",
+              "DELETION_PENDING",
+              "DELETED"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "example": "fr"
+          },
+          "country": {
+            "type": "string",
+            "nullable": true,
+            "example": "TG"
+          },
+          "isVip": {
+            "type": "boolean"
+          },
+          "vipExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "language",
+          "country",
+          "isVip",
+          "vipExpiresAt",
+          "createdAt"
+        ]
+      },
+      "AuthTokensDto": {
+        "type": "object",
+        "properties": {
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT à présenter dans `Authorization: Bearer <token>`."
+          },
+          "accessTokenExpiresIn": {
+            "type": "number",
+            "description": "Durée de vie du JWT d'accès en secondes.",
+            "example": 900
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Jeton opaque à usage unique : chaque appel à /auth/refresh en émet un nouveau et révoque le précédent. À stocker de façon sécurisée (EncryptedSharedPreferences)."
+          },
+          "refreshTokenExpiresAt": {
+            "type": "string",
+            "example": "2026-11-27T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "tokenType",
+          "accessToken",
+          "accessTokenExpiresIn",
+          "refreshToken",
+          "refreshTokenExpiresAt"
+        ]
+      },
+      "AuthResponseDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AuthUserDto"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/AuthTokensDto"
+          }
+        },
+        "required": [
+          "user",
+          "tokens"
+        ]
+      },
+      "ApiErrorDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 403
+          },
+          "code": {
+            "type": "string",
+            "description": "Code stable destiné au client (à localiser côté app).",
+            "example": "EPISODE_LOCKED"
+          },
+          "message": {
+            "type": "string",
+            "example": "This episode must be unlocked first"
+          },
+          "details": {
+            "type": "object",
+            "description": "Détails complémentaires (erreurs de validation, coût en pièces, etc.).",
+            "additionalProperties": true
+          },
+          "path": {
+            "type": "string",
+            "example": "/episodes/0192f1f0-8a5b-7c3d-9e1f-abcdefabcdef/play"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-10-28T10:00:00.000Z"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Identifiant de corrélation (en-tête x-request-id)."
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Jeton de rafraîchissement opaque reçu lors de la dernière émission."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "GoogleAuthDto": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "ID token Google (One Tap / Credential Manager)"
+          },
+          "deviceId": {
+            "type": "string",
+            "description": "Identifiant d’installation, pour rattacher le compte invité courant"
+          }
+        },
+        "required": [
+          "idToken"
+        ]
+      },
+      "OtpRequestDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "Numéro E.164",
+            "example": "+22890000000"
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "OtpRequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "À renvoyer avec le code"
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 300,
+            "description": "Validité du code en secondes"
+          },
+          "resendAfterSeconds": {
+            "type": "number",
+            "example": 60,
+            "description": "Délai avant un nouvel envoi"
+          }
+        },
+        "required": [
+          "challengeId",
+          "expiresIn",
+          "resendAfterSeconds"
+        ]
+      },
+      "OtpVerifyDto": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456"
+          },
+          "deviceId": {
+            "type": "string",
+            "description": "Identifiant d’installation, pour rattacher le compte invité courant"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
+        ]
+      },
+      "SeriesSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "le-secret-du-lagon"
+          },
+          "title": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 9:16"
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 16:9 (bannières)"
+          },
+          "episodeCount": {
+            "type": "number",
+            "description": "Nombre d’épisodes publiés et prêts",
+            "example": 3
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "example": 2
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "description": "Coût en pièces d’un épisode payant",
+            "example": 10
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "genres",
+          "posterVerticalUrl",
+          "posterHorizontalUrl",
+          "episodeCount",
+          "freeEpisodeCount",
+          "coinCostPerEpisode",
+          "ageRating",
+          "publishedAt"
+        ]
+      },
+      "EpisodeSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "number",
+            "example": 1
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "number",
+            "example": 95
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "free",
+              "unlocked",
+              "locked"
+            ],
+            "description": "Statut pour le spectateur courant (M-10). Sans jeton : `free` ou `locked` seulement."
+          },
+          "coinCost": {
+            "type": "number",
+            "description": "Coût en pièces pour débloquer (0 si gratuit ou déjà débloqué)"
+          },
+          "subtitleLanguages": {
+            "example": [
+              "fr",
+              "en"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "seriesId",
+          "number",
+          "title",
+          "durationSeconds",
+          "thumbnailUrl",
+          "access",
+          "coinCost",
+          "subtitleLanguages",
+          "publishedAt"
+        ]
+      },
+      "HomeItemDto": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "$ref": "#/components/schemas/SeriesSummaryDto"
+          },
+          "episode": {
+            "description": "Présent dans la rangée « Continuer à regarder »",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EpisodeSummaryDto"
+              }
+            ]
+          },
+          "positionSeconds": {
+            "type": "number",
+            "description": "Position de reprise en secondes (« Continuer à regarder »)"
+          }
+        },
+        "required": [
+          "series"
+        ]
+      },
+      "HomeRowDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Clé stable : trending, new, continue_watching, genre:<genre>",
+            "example": "trending"
+          },
+          "title": {
+            "type": "string",
+            "description": "Titre affichable (langue du spectateur)",
+            "example": "Tendances"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeItemDto"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "items"
+        ]
+      },
+      "HomeResponseDto": {
+        "type": "object",
+        "properties": {
+          "banners": {
+            "description": "Bannières de mise en avant (M-01)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSummaryDto"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeRowDto"
+            }
+          }
+        },
+        "required": [
+          "banners",
+          "rows"
+        ]
+      },
+      "PaginatedSeriesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSummaryDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "SeriesDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "le-secret-du-lagon"
+          },
+          "title": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 9:16"
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 16:9 (bannières)"
+          },
+          "episodeCount": {
+            "type": "number",
+            "description": "Nombre d’épisodes publiés et prêts",
+            "example": 3
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "example": 2
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "description": "Coût en pièces d’un épisode payant",
+            "example": 10
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "synopsis": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "originalLanguage": {
+            "type": "string",
+            "example": "fr"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "genres",
+          "posterVerticalUrl",
+          "posterHorizontalUrl",
+          "episodeCount",
+          "freeEpisodeCount",
+          "coinCostPerEpisode",
+          "ageRating",
+          "publishedAt",
+          "synopsis",
+          "tags",
+          "originalLanguage",
+          "status"
+        ]
+      },
+      "FeedItemDto": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "$ref": "#/components/schemas/SeriesSummaryDto"
+          },
+          "episode": {
+            "description": "Premier épisode (gratuit) de la série",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EpisodeSummaryDto"
+              }
+            ]
+          },
+          "previewUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Extrait de 15 s (HLS) lisible sans droit ; sinon appeler /episodes/{id}/play"
+          }
+        },
+        "required": [
+          "series",
+          "episode",
+          "previewUrl"
+        ]
+      },
+      "FeedResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedItemDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "PlayDrmDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "aes-128",
+              "widevine"
+            ],
+            "description": "Protection du flux. `widevine` sur les épisodes payants (S10-BE-05)."
+          },
+          "licenseUrl": {
+            "type": "string",
+            "description": "URL du serveur de licences Widevine"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "PlaySubtitleDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "example": "fr"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL du fichier WebVTT"
+          }
+        },
+        "required": [
+          "language",
+          "url"
+        ]
+      },
+      "PlaySessionDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "episodeNumber": {
+            "type": "number",
+            "example": 3
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "free",
+              "unlocked"
+            ]
+          },
+          "manifestUrl": {
+            "type": "string",
+            "description": "URL du manifeste HLS maître. Signée et expirante en S04-BE-02 (la signature sera portée par la query string, le champ ne change pas).",
+            "example": "https://cdn.example.com/hls/0192.../master.m3u8?exp=...&sig=..."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Expiration de l'URL ; redemander /play ensuite."
+          },
+          "drm": {
+            "$ref": "#/components/schemas/PlayDrmDto"
+          },
+          "subtitles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaySubtitleDto"
+            }
+          },
+          "resumePositionSeconds": {
+            "type": "number",
+            "description": "Position de reprise (M-15), 0 si jamais vu ou terminé",
+            "example": 42
+          },
+          "durationSeconds": {
+            "type": "number",
+            "example": 95
+          },
+          "nextEpisodeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Épisode suivant à précharger (M-12)"
+          }
+        },
+        "required": [
+          "episodeId",
+          "seriesId",
+          "episodeNumber",
+          "access",
+          "manifestUrl",
+          "expiresAt",
+          "drm",
+          "subtitles",
+          "resumePositionSeconds",
+          "durationSeconds",
+          "nextEpisodeId"
+        ]
+      },
+      "UpdateProgressDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400,
+            "example": 42
+          },
+          "completed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Épisode regardé jusqu’au bout"
+          }
+        },
+        "required": [
+          "episodeId",
+          "positionSeconds"
+        ]
+      },
+      "WatchProgressDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionSeconds": {
+            "type": "number"
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "episodeId",
+          "positionSeconds",
+          "completed",
+          "updatedAt"
+        ]
+      },
+      "UnlockEpisodeDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Clé d’idempotence générée par l’app (UUID) : un double appel ne débite qu’une fois (§8.4).",
+            "example": "6f1d2c3b-4a5e-4f60-8b7c-9d0e1f2a3b4c"
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ]
+      },
+      "WalletDto": {
+        "type": "object",
+        "properties": {
+          "purchasedBalance": {
+            "type": "number",
+            "example": 120,
+            "description": "Pièces achetées"
+          },
+          "bonusBalance": {
+            "type": "number",
+            "example": 30,
+            "description": "Pièces bonus (consommées en premier, expirables)"
+          },
+          "totalBalance": {
+            "type": "number",
+            "example": 150
+          },
+          "nextBonusExpiryAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Prochaine expiration de pièces bonus"
+          },
+          "isVip": {
+            "type": "boolean"
+          },
+          "vipExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "purchasedBalance",
+          "bonusBalance",
+          "totalBalance",
+          "nextBonusExpiryAt",
+          "isVip",
+          "vipExpiresAt"
+        ]
+      },
+      "UnlockResultDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "COINS",
+              "AD",
+              "VIP",
+              "FREE"
+            ]
+          },
+          "coinsDebited": {
+            "type": "number",
+            "example": 10,
+            "description": "Pièces débitées (0 si déjà débloqué)"
+          },
+          "alreadyUnlocked": {
+            "type": "boolean",
+            "description": "Appel déjà traité avec la même clé d’idempotence"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletDto"
+          }
+        },
+        "required": [
+          "episodeId",
+          "method",
+          "coinsDebited",
+          "alreadyUnlocked",
+          "wallet"
+        ]
+      },
+      "AdRewardCallbackDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "example": "admob"
+          },
+          "transactionId": {
+            "type": "string",
+            "description": "Identifiant unique de la transaction côté régie (idempotence)"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Utilisateur DRAMA (user_id SSV)"
+          },
+          "rewardAmount": {
+            "type": "number",
+            "example": 1
+          },
+          "customData": {
+            "type": "string",
+            "description": "Données personnalisées (episodeId visé)"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Signature de la régie, vérifiée côté serveur"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "1730112000000"
+          },
+          "keyId": {
+            "type": "string",
+            "description": "Identifiant de la clé de signature"
+          }
+        },
+        "required": [
+          "provider",
+          "transactionId",
+          "userId",
+          "rewardAmount",
+          "signature",
+          "timestamp"
+        ]
+      },
+      "AdRewardAckDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "episodeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Épisode débloqué par la pub"
+          }
+        },
+        "required": [
+          "accepted",
+          "episodeId"
+        ]
+      },
+      "WalletTransactionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "example": -10,
+            "description": "Montant signé (+ crédit, - débit)"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "PURCHASED",
+              "BONUS"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "PURCHASE",
+              "BONUS",
+              "UNLOCK",
+              "ADJUSTMENT",
+              "EXPIRY",
+              "REFUND"
+            ]
+          },
+          "referenceType": {
+            "type": "string",
+            "nullable": true,
+            "example": "unlock"
+          },
+          "referenceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "description": "Libellé affichable"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "bucket",
+          "type",
+          "referenceType",
+          "referenceId",
+          "note",
+          "expiresAt",
+          "createdAt"
+        ]
+      },
+      "WalletTransactionsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletTransactionDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "GoogleVerifyDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "coins",
+              "subscription"
+            ]
+          },
+          "productId": {
+            "type": "string",
+            "example": "coins_100",
+            "description": "SKU Google Play"
+          },
+          "purchaseToken": {
+            "type": "string",
+            "description": "purchaseToken renvoyé par Play Billing (unique, idempotence)"
+          }
+        },
+        "required": [
+          "kind",
+          "productId",
+          "purchaseToken"
+        ]
+      },
+      "SubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "WEEKLY",
+              "MONTHLY",
+              "YEARLY"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "IN_GRACE",
+              "ON_HOLD",
+              "CANCELED",
+              "EXPIRED"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "autoRenew": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "plan",
+          "status",
+          "startsAt",
+          "endsAt",
+          "autoRenew"
+        ]
+      },
+      "PurchaseResultDto": {
+        "type": "object",
+        "properties": {
+          "purchaseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "VERIFIED",
+              "CREDITED",
+              "ACKNOWLEDGED",
+              "REFUNDED",
+              "FAILED"
+            ]
+          },
+          "coinsCredited": {
+            "type": "number",
+            "example": 100
+          },
+          "bonusCoinsCredited": {
+            "type": "number",
+            "example": 10
+          },
+          "alreadyProcessed": {
+            "type": "boolean",
+            "description": "Achat déjà crédité (même purchaseToken)"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletDto"
+          },
+          "subscription": {
+            "description": "Présent pour `kind: subscription`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "purchaseId",
+          "status",
+          "coinsCredited",
+          "bonusCoinsCredited",
+          "alreadyProcessed",
+          "wallet"
+        ]
+      },
+      "PubSubMessageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Charge utile base64 (DeveloperNotification)"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "publishTime": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "messageId"
+        ]
+      },
+      "GoogleRtdnDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/PubSubMessageDto"
+          },
+          "subscription": {
+            "type": "string",
+            "description": "Nom de l’abonnement Pub/Sub"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "WebhookAckDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accepted"
+        ]
+      },
+      "MobileMoneyWebhookDto": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Identifiant de transaction agrégateur (idempotence)"
+          },
+          "status": {
+            "type": "string",
+            "example": "ACCEPTED",
+            "description": "Statut selon l’agrégateur"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Charge utile complète conservée telle quelle"
+          }
+        },
+        "required": [
+          "transactionId",
+          "status"
+        ]
+      },
+      "CheckInResultDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "number",
+            "example": 3,
+            "description": "Jour du cycle (1 à 7)"
+          },
+          "coinsCredited": {
+            "type": "number",
+            "example": 5
+          },
+          "streak": {
+            "type": "number",
+            "example": 3,
+            "description": "Jours consécutifs"
+          },
+          "alreadyCheckedIn": {
+            "type": "boolean",
+            "description": "Déjà effectué aujourd’hui (aucun crédit)"
+          },
+          "nextCheckInAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletDto"
+          }
+        },
+        "required": [
+          "day",
+          "coinsCredited",
+          "streak",
+          "alreadyCheckedIn",
+          "nextCheckInAt",
+          "wallet"
+        ]
+      },
+      "RewardTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "watch_3_episodes"
+          },
+          "title": {
+            "type": "string",
+            "example": "Regarder 3 épisodes"
+          },
+          "description": {
+            "type": "string"
+          },
+          "coins": {
+            "type": "number",
+            "example": 10
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "claimable",
+              "claimed"
+            ]
+          },
+          "progress": {
+            "type": "number",
+            "example": 1
+          },
+          "target": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "coins",
+          "status"
+        ]
+      },
+      "RewardTasksDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardTaskDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ClaimTaskResultDto": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "coinsCredited": {
+            "type": "number",
+            "example": 10
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletDto"
+          }
+        },
+        "required": [
+          "taskId",
+          "coinsCredited",
+          "wallet"
+        ]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "REGISTERED"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "BLOCKED",
+              "DELETION_PENDING",
+              "DELETED"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "example": "fr"
+          },
+          "country": {
+            "type": "string",
+            "nullable": true,
+            "example": "TG"
+          },
+          "isVip": {
+            "type": "boolean"
+          },
+          "vipExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+22890000000"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "autoUnlock": {
+            "type": "boolean",
+            "description": "Déblocage automatique de l’épisode suivant si le solde le permet"
+          },
+          "deletionScheduledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Suppression programmée (DELETION_PENDING)"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "language",
+          "country",
+          "isVip",
+          "vipExpiresAt",
+          "createdAt",
+          "email",
+          "phone",
+          "displayName",
+          "autoUnlock",
+          "deletionScheduledAt"
+        ]
+      },
+      "UpdateMeDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "language": {
+            "type": "string",
+            "example": "fr"
+          },
+          "country": {
+            "type": "string",
+            "example": "TG"
+          },
+          "autoUnlock": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DeleteMeResultDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "DELETION_PENDING"
+            ]
+          },
+          "purgeAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Purge définitive après le délai de rétractation"
+          }
+        },
+        "required": [
+          "status",
+          "purgeAt"
+        ]
+      },
+      "FavoriteDto": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "$ref": "#/components/schemas/SeriesSummaryDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "series",
+          "createdAt"
+        ]
+      },
+      "FavoritesDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FavoriteDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "TranscodeWebhookDto": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed"
+            ]
+          },
+          "episodeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ciblage par identifiant d’épisode"
+          },
+          "externalId": {
+            "type": "string",
+            "description": "Ciblage par identifiant de job chez le fournisseur"
+          },
+          "sourceKey": {
+            "type": "string",
+            "description": "Ciblage par clé du fichier maître",
+            "example": "sources/<seriesId>/<episodeId>/ep1.mp4"
+          },
+          "hlsKey": {
+            "type": "string",
+            "description": "Clé (ou URL absolue) du manifeste maître ; défaut `hls/{episodeId}/master.m3u8`"
+          },
+          "previewKey": {
+            "type": "string"
+          },
+          "thumbnailUrl": {
+            "type": "string"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "error": {
+            "type": "string",
+            "description": "Message d’erreur (événement `failed`)"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "TranscodeWebhookAckDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "example": true
+          },
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transcodeStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "UPLOADED",
+              "PROCESSING",
+              "READY",
+              "FAILED"
+            ]
+          }
+        },
+        "required": [
+          "accepted",
+          "episodeId",
+          "transcodeStatus"
+        ]
+      },
+      "AdminLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@drama.local"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AdminLoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "totp_required",
+              "totp_setup_required"
+            ],
+            "description": "`totp_setup_required` à la première connexion : afficher le QR code (`otpauthUri`) puis appeler /totp/verify avec le premier code."
+          },
+          "challengeToken": {
+            "type": "string",
+            "description": "À renvoyer tel quel à /admin/auth/totp/verify. Expire en 5 minutes."
+          },
+          "secret": {
+            "type": "string",
+            "description": "Secret TOTP base32 (uniquement si `totp_setup_required`).",
+            "example": "JBSWY3DPEHPK3PXP"
+          },
+          "otpauthUri": {
+            "type": "string",
+            "description": "URI otpauth:// à encoder en QR code (uniquement si `totp_setup_required`).",
+            "example": "otpauth://totp/DRAMA%20back-office%3Aadmin%40drama.local?secret=JBSWY3DPEHPK3PXP&issuer=DRAMA+back-office&algorithm=SHA1&digits=6&period=30"
+          }
+        },
+        "required": [
+          "status",
+          "challengeToken"
+        ]
+      },
+      "AdminTotpVerifyDto": {
+        "type": "object",
+        "properties": {
+          "challengeToken": {
+            "type": "string",
+            "description": "Jeton de défi renvoyé par /admin/auth/login (5 min)."
+          },
+          "code": {
+            "type": "string",
+            "description": "Code TOTP à 6 chiffres (fenêtre ±1 pas de 30 s).",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "challengeToken",
+          "code"
+        ]
+      },
+      "AdminUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@drama.local"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Administrateur"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "EDITOR",
+              "MONETIZATION",
+              "SUPPORT",
+              "ADMIN"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role"
+        ]
+      },
+      "AdminSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT admin (`aud: admin`), à présenter dans `Authorization: Bearer`."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Durée de vie en secondes.",
+            "example": 28800
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminUserDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "AdminSeriesDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "le-secret-du-lagon"
+          },
+          "title": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "synopsis": {
+            "type": "string"
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "example": [
+              "héritage",
+              "famille"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "language": {
+            "type": "string",
+            "example": "fr",
+            "description": "Langue originale (BCP 47 court)"
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ]
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "example": 5
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "example": 10
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "territories": {
+            "example": [],
+            "description": "ISO 3166-1 alpha-2 ; vide = monde",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "episodeCount": {
+            "type": "number",
+            "description": "Nombre total d'épisodes (tous statuts)",
+            "example": 12
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "synopsis",
+          "genres",
+          "tags",
+          "language",
+          "ageRating",
+          "posterVerticalUrl",
+          "posterHorizontalUrl",
+          "freeEpisodeCount",
+          "coinCostPerEpisode",
+          "status",
+          "territories",
+          "episodeCount",
+          "publishedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AdminSeriesListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminSeriesDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "CreateAdminSeriesDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Le Secret du Lagon"
+          },
+          "synopsis": {
+            "type": "string",
+            "maxLength": 5000,
+            "default": ""
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "language": {
+            "type": "string",
+            "example": "fr",
+            "default": "fr"
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ],
+            "default": "ALL"
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL publique (affiche 9:16)"
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL publique (affiche 16:9)"
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000,
+            "description": "Rôles MONETIZATION et ADMIN"
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Rôles MONETIZATION et ADMIN"
+          },
+          "territories": {
+            "example": [
+              "TG",
+              "CI"
+            ],
+            "description": "Vide = monde",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateAdminSeriesDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Le Secret du Lagon"
+          },
+          "synopsis": {
+            "type": "string",
+            "maxLength": 5000,
+            "default": ""
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "language": {
+            "type": "string",
+            "example": "fr",
+            "default": "fr"
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ],
+            "default": "ALL"
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL publique (affiche 9:16)"
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL publique (affiche 16:9)"
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000,
+            "description": "Rôles MONETIZATION et ADMIN"
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Rôles MONETIZATION et ADMIN"
+          },
+          "territories": {
+            "example": [
+              "TG",
+              "CI"
+            ],
+            "description": "Vide = monde",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AdminEpisodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "number",
+            "example": 1
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "number",
+            "example": 95
+          },
+          "transcodeStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "UPLOADED",
+              "PROCESSING",
+              "READY",
+              "FAILED"
+            ]
+          },
+          "sourceKey": {
+            "type": "string",
+            "nullable": true,
+            "example": "sources/<seriesId>/<episodeId>/ep1.mp4"
+          },
+          "hlsKey": {
+            "type": "string",
+            "nullable": true,
+            "example": "hls/<episodeId>/master.m3u8"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "previewKey": {
+            "type": "string",
+            "nullable": true,
+            "example": "hls/<episodeId>/preview/index.m3u8"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "transcodeError": {
+            "type": "string",
+            "nullable": true,
+            "description": "Dernière erreur (statut FAILED)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "seriesId",
+          "number",
+          "title",
+          "durationSeconds",
+          "transcodeStatus",
+          "sourceKey",
+          "hlsKey",
+          "thumbnailUrl",
+          "previewKey",
+          "publishedAt",
+          "transcodeError",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateAdminEpisodeDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "number": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Défaut : max + 1"
+          }
+        }
+      },
+      "ReorderEpisodesDto": {
+        "type": "object",
+        "properties": {
+          "episodeIds": {
+            "description": "Tous les identifiants d’épisodes de la série, dans le nouvel ordre (renumérotés 1..n)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "episodeIds"
+        ]
+      },
+      "UpdateAdminEpisodeDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Date de publication (programmable, B-04) ; `null` pour dépublier"
+          }
+        }
+      },
+      "EpisodeUploadUrlDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "example": "ep01-master.mp4",
+            "maxLength": 200
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "video/mp4",
+              "video/quicktime"
+            ]
+          },
+          "sizeBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483648,
+            "description": "Taille en octets (max 2 Go)"
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "sizeBytes"
+        ]
+      },
+      "UploadTargetDto": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "description": "URL pré-signée : le navigateur fait un PUT direct du fichier"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "description": "En-têtes à envoyer avec le PUT",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "Content-Type": "video/mp4"
+            }
+          },
+          "sourceKey": {
+            "type": "string",
+            "example": "sources/<seriesId>/<episodeId>/ep01-master.mp4"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uploadUrl",
+          "method",
+          "headers",
+          "sourceKey",
+          "expiresAt"
+        ]
+      },
+      "PresignUploadDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "poster"
+            ]
+          },
+          "fileName": {
+            "type": "string",
+            "example": "affiche.jpg",
+            "maxLength": 200
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "fileName",
+          "contentType"
+        ]
+      },
+      "PresignedUploadDto": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "key": {
+            "type": "string",
+            "example": "posters/0192f1f0-8a5b-7c3d-9e1f-abcdefabcdef/affiche.jpg"
+          },
+          "publicUrl": {
+            "type": "string",
+            "description": "URL publique à enregistrer dans `posterVerticalUrl` / `posterHorizontalUrl`",
+            "example": "http://localhost:9000/drama-media/posters/0192f1f0-8a5b-7c3d-9e1f-abcdefabcdef/affiche.jpg"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uploadUrl",
+          "method",
+          "headers",
+          "key",
+          "publicUrl",
+          "expiresAt"
+        ]
+      }
+    }
+  }
+}

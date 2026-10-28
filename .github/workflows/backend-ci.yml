@@ -46,6 +46,20 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # Stockage objet pour les tests e2e d'upload pré-signé (S02-BE-04) ; bucket créé au démarrage.
+      minio:
+        image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          MINIO_DEFAULT_BUCKETS: drama-media:download
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -fsS http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     env:
       NODE_ENV: test
@@ -54,9 +68,15 @@ jobs:
       JWT_ACCESS_SECRET: ci-only-access-secret-0123456789abcdef0123456789
       JWT_REFRESH_SECRET: ci-only-refresh-secret-0123456789abcdef0123456789
       S3_ENDPOINT: http://localhost:9000
-      S3_ACCESS_KEY: ci
-      S3_SECRET_KEY: ci
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
       S3_BUCKET: drama-media
+      CDN_BASE_URL: http://localhost:9000/drama-media
+      ADMIN_JWT_SECRET: ci-only-admin-secret-0123456789abcdef0123456789
+      TOTP_ENCRYPTION_KEY: ci-only-totp-key-0123456789abcdef0123456789
+      TRANSCODE_PROVIDER: webhook
+      TRANSCODE_WORKER_ENABLED: 'false'
+      TRANSCODE_WEBHOOK_SECRET: ci-only-transcode-webhook-secret-0123456789
       SWAGGER_ENABLED: 'true'
 
     steps:
@@ -67,6 +87,10 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
+
+      # ffmpeg : prérequis du worker local (les tests unitaires le simulent ; présent pour scripts/smoke-ingest.ts).
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
 
       - name: Install dependencies
         run: npm ci
@@ -91,7 +115,7 @@ jobs:
       - name: E2E tests
         run: npm run test:e2e
 
-      - name: OpenAPI export is up to date
+      - name: OpenAPI v1 export is up to date
         run: |
-          node dist/openapi-export.js /tmp/openapi.v0.1.json
-          diff -u ../docs/api/openapi.v0.1.json /tmp/openapi.v0.1.json
+          node dist/openapi-export.js /tmp/openapi.v1.json
+          diff -u ../docs/api/openapi.v1.json /tmp/openapi.v1.json

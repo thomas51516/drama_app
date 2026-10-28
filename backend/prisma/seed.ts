@@ -40,6 +40,27 @@ async function main(): Promise<void> {
   });
   console.log(`admin account: ${admin.email} (${admin.role})`);
 
+  // Un compte par rôle (même mot de passe que l'admin) pour tester les règles du back-office.
+  const domain = adminEmail.split('@')[1] ?? 'drama.local';
+  for (const [role, displayName] of [
+    ['EDITOR', 'Éditeur'],
+    ['MONETIZATION', 'Monétisation'],
+    ['SUPPORT', 'Support'],
+  ] as const) {
+    const email = `${role.toLowerCase()}@${domain}`;
+    await prisma.adminAccount.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        displayName,
+        role,
+        passwordHash: await argon2.hash(adminPassword, { type: argon2.argon2id }),
+      },
+    });
+    console.log(`admin account: ${email} (${role})`);
+  }
+
   const publishedAt = new Date('2026-10-01T08:00:00Z');
   const series = await prisma.series.upsert({
     where: { slug: 'le-secret-du-lagon' },

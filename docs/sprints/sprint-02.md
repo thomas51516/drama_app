@@ -25,8 +25,8 @@ Contrat partagé : `docs/api/admin-contract-v1.md`.
 | S02-A2-01 | A2 | VerticalPager | Terminé au sprint 1 |
 | S02-A2-02 | A2 | Préchargement et SimpleCache | Terminé au sprint 1 |
 | S02-A2-03 | A2 | Contrôles : pause, avance/retour, barre de progression | En cours |
-| S03-WEB-03 | WEB | Catalogue : création et édition de série (avancé) | En cours |
-| S04-WEB-01 | WEB | Upload direct des épisodes avec progression (avancé) | En cours |
+| S03-WEB-03 | WEB | Catalogue : création et édition de série (avancé) | Terminé, vérifié, commité |
+| S04-WEB-01 | WEB | Upload direct des épisodes avec progression (avancé) | Terminé, vérifié, commité |
 
 ## Tickets qui dépendent du client ou de prestataires
 

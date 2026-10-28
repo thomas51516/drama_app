@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { type Response } from 'express';
 import { Prisma } from '../../generated/prisma/client.js';
+import { captureException } from '../../observability/sentry.js';
 import { type ApiErrorDto } from '../dto/api-error.dto.js';
 import { type RequestWithContext } from '../request-context.js';
 
@@ -32,6 +33,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
         `${req.method} ${req.originalUrl} -> ${body.statusCode} ${body.code}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+      captureException(exception, {
+        requestId: req.requestId,
+        method: req.method,
+        path: req.originalUrl,
+        code: body.code,
+      });
     }
 
     res.status(body.statusCode).json(body);

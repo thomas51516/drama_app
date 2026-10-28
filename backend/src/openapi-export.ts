@@ -1,6 +1,6 @@
 /**
  * Exporte le contrat OpenAPI sans ouvrir de port : `npm run openapi:export [chemin]`.
- * Par défaut : <monorepo>/docs/api/openapi.v0.1.json.
+ * Par défaut : <monorepo>/docs/api/openapi.v1.json (v0.1 conservée pour l'historique).
  */
 import 'dotenv/config';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -17,11 +17,16 @@ const fallbacks: Record<string, string> = {
   JWT_REFRESH_SECRET: 'openapi-export-placeholder-secret-0123456789abcdef',
   S3_ACCESS_KEY: 'export',
   S3_SECRET_KEY: 'export',
+  ADMIN_JWT_SECRET: 'openapi-export-placeholder-secret-0123456789abcdef',
+  TOTP_ENCRYPTION_KEY: 'openapi-export-placeholder-secret-0123456789abcdef',
+  // Aucune connexion Redis/BullMQ pendant l'export.
+  TRANSCODE_PROVIDER: 'webhook',
+  TRANSCODE_WORKER_ENABLED: 'false',
 };
 for (const [key, value] of Object.entries(fallbacks)) process.env[key] ??= value;
 
 const target = resolve(
-  process.argv[2] ?? resolve(import.meta.dirname, '../../docs/api/openapi.v0.1.json'),
+  process.argv[2] ?? resolve(import.meta.dirname, '../../docs/api/openapi.v1.json'),
 );
 
 const app = await NestFactory.create(AppModule, { logger: false });

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { AgeRating, SeriesStatus } from '../../generated/prisma/client.js';
 
 export const EPISODE_ACCESS = ['free', 'unlocked', 'locked'] as const;
@@ -135,6 +135,33 @@ export class ListSeriesQueryDto {
   @IsString()
   @MaxLength(40)
   genre?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  pageSize: number = 20;
+}
+
+export class SearchQueryDto {
+  @ApiProperty({
+    description: 'Texte recherché (titre, synopsis, tags)',
+    minLength: 2,
+    maxLength: 100,
+  })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  q: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()

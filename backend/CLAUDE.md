@@ -4,16 +4,21 @@ NestJS 12 (ESM, `"type": "module"`, imports end with `.js`), TypeScript strict, 
 
 ## Layout
 
-- One folder per business module (spec §8.2): `auth`, `catalog`, `playback`, `unlock`, `wallet`, `billing`, `rewards`, `users`, `admin`, plus `health`. Each has `<name>.module.ts`, `<name>.controller.ts`, `<name>.service.ts`, `dto/` for request/response classes.
-- Cross-cutting code lives in `common/` (decorators, exception filter, request logger, `ApiErrorDto`), `config/` (zod env schema + `AppConfig`), `prisma/`, `redis/`, `openapi/`.
+- One folder per business module (spec §8.2): `auth`, `catalog`, `playback`, `unlock`, `wallet`, `billing`, `rewards`, `users`, `admin` (sub-modules `auth/`, `series/`, `episodes/`, `audit/`), plus `health`, `metrics`, `storage` (S3), `transcode` (BullMQ + ffmpeg / webhook). Each has `<name>.module.ts`, `<name>.controller.ts`, `<name>.service.ts`, `dto/` for request/response classes.
+- Cross-cutting code lives in `common/` (decorators, exception filter, request logger, `ApiErrorDto`, `rate-limit/`, `crypto/`), `config/` (zod env schema + `AppConfig`), `prisma/`, `redis/`, `openapi/`, `observability/` (Sentry).
 - `src/generated/prisma/` is generated and git-ignored: never edit, run `npm run prisma:generate`.
-- Not-yet-implemented endpoints throw `notImplemented('<ticket>')` (501) and their controllers carry `@ApiExcludeController()` until their sprint. Mark every stub with `// TODO <ticket>`.
+- Not-yet-implemented endpoints throw `notImplemented('<ticket>')` (501) but ARE documented in OpenAPI v1 with real request/response DTOs and `@ApiNotImplementedResponse` (the Android mock is generated from them). Keep their DTOs stable; mark every stub with `// TODO <ticket>`.
+- New env var = `env.schema.ts` + `AppConfig` getter + `.env.example` + README table + CI workflow env + `openapi-export.ts` fallbacks if it is required.
 
 ## HTTP conventions
 
 - Protected by default: the global `JwtAuthGuard` requires a bearer token unless the handler/class has `@Public()`. Public routes still populate `req.user` when a valid token is sent. Read the user with `@CurrentUser()`.
+- Back-office routes: class-level `@AdminRoute()` + `@UseGuards(AdminAuthGuard)` + `@ApiBearerAuth('admin')`, role restrictions with `@Roles('EDITOR', 'ADMIN')`, actor with `@CurrentAdmin()`. Admin JWTs use `ADMIN_JWT_SECRET` / `aud: admin`; never accept them in `JwtAuthGuard` or user JWTs in `AdminAuthGuard`. Contract: `docs/api/admin-contract-v1.md` (binding; any change goes through that file first).
+- Every admin mutation records an `AuditService` entry (actor, action `<target>.<verb>`, old/new values of the changed fields, IP), inside the same `$transaction` as the write when there is one.
+- Rate-limited routes declare `@RateLimit({ name, limit, windowSeconds, scope: 'ip' | 'email' })`; the guard answers 429 `RATE_LIMITED` and fails open when Redis is down.
+- Webhooks (`/webhooks/*`) are `@Public()` and authenticated by signature over `req.rawBody` (app created with `rawBody: true`), never by JWT.
 - Validate every input with class-validator DTOs (global `ValidationPipe`: whitelist + forbidNonWhitelisted + transform). Query DTOs need `@Type(() => Number)` for numbers.
-- Document every public endpoint with `@ApiOperation`, response types and `ApiErrorDto` for errors. Run `npm run openapi:export` after changing the contract; CI fails if `docs/api/openapi.v0.1.json` is stale. Bump `OPENAPI_VERSION` in `src/openapi/openapi.ts` on breaking changes.
+- Document every endpoint with `@ApiOperation`, response types and `ApiErrorDto` for errors. Run `npm run openapi:export` after changing the contract; CI fails if `docs/api/openapi.v1.json` is stale (`openapi.v0.1.json` is history, do not regenerate it). Bump `OPENAPI_VERSION` in `src/openapi/openapi.ts` on breaking changes.
 - Errors: throw Nest `HttpException`s with `{ code: 'STABLE_CODE', message, details? }`; `AllExceptionsFilter` normalises everything to `ApiErrorDto`. Codes are SCREAMING_SNAKE_CASE and are the contract with the app; messages are English and not shown to users.
 - Code, identifiers and commits in English; Swagger descriptions, README and user-facing text in French.
 
@@ -23,6 +28,7 @@ NestJS 12 (ESM, `"type": "module"`, imports end with `.js`), TypeScript strict, 
 - Schema change = `npm run prisma:migrate -- --name <snake_case_name>` and commit `prisma/migrations/*`. Never edit a merged migration; check with `npm run prisma:reset` that migrations replay from scratch.
 - Use `prisma.$transaction(async (tx) => …)` whenever two writes must be atomic (user + wallet, ledger + unlock, token rotation).
 - Public catalog queries must go through `publishedSeriesWhere()` / `visibleEpisodeWhere()` (`catalog/catalog.where.ts`), and access decisions through `EntitlementService` + `computeAccess()`.
+- Episode transcode status transitions go through `TranscodeService` (`submit`, `markProcessing`, `markReady`, `markFailed`), never by updating `transcodeStatus` directly elsewhere. Storage keys: `sources/{seriesId}/{episodeId}/{fileName}`, `hls/{episodeId}/…`, `posters/{uuid}/{fileName}`; public URLs via `StorageService.publicUrl()`.
 
 ## Ledger rule (non-negotiable)
 
@@ -30,6 +36,6 @@ Every coin movement is an append-only `coin_ledger` row (`amount` signed, `bucke
 
 ## Tests
 
-- Unit: `npm test` (Vitest, `src/**/*.spec.ts`, globals enabled). Mock Prisma/Redis with plain objects and `vi.fn()`; construct services directly (`new Service(prisma as never, …)`) rather than booting a Nest module.
-- E2E: `npm run test:e2e` (`test/**/*.e2e-spec.ts`) needs the compose stack and `npm run prisma:deploy`. Clean up rows you create.
-- Before handing over: `npm run lint && npm run build && npm test` must pass; run `npm run test:e2e` when you touched auth, catalog, playback or the schema.
+- Unit: `npm test` (Vitest, `src/**/*.spec.ts`, globals enabled). Mock Prisma/Redis/S3/ffmpeg with plain objects and `vi.fn()`; construct services directly (`new Service(prisma as never, …)`) rather than booting a Nest module. `FfmpegRunner` is the seam for the transcode pipeline.
+- E2E: `npm run test:e2e` (`test/**/*.e2e-spec.ts`) needs the compose stack (PostgreSQL, Redis, MinIO) and `npm run prisma:deploy`. Create apps with `createNestApplication({ rawBody: true })`. Force `process.env.TRANSCODE_PROVIDER = 'webhook'` in e2e files so no ffmpeg job runs; the real pipeline is exercised by `npx tsx scripts/smoke-ingest.ts` against a running API. Clean up rows you create (series cascade episodes; delete audit logs of test actors before the accounts).
+- Before handing over: `npm run lint && npm run build && npm test` must pass; run `npm run test:e2e` when you touched auth, admin, catalog, playback, transcode or the schema. ffmpeg 6+ must be installed for the smoke test.

@@ -18,7 +18,7 @@ describe('API (e2e)', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication({ logger: false });
+    app = moduleRef.createNestApplication({ logger: false, rawBody: true });
     configureApp(app, app.get(AppConfig));
     await app.init();
     prisma = app.get(PrismaService);

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { IS_ADMIN_ROUTE_KEY } from '../../common/decorators/admin-route.decorator.js';
 import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator.js';
 import { type RequestWithContext } from '../../common/request-context.js';
 import { type AccessTokenPayload } from '../auth.types.js';
@@ -13,6 +14,7 @@ import { type AccessTokenPayload } from '../auth.types.js';
 /**
  * Garde globale : exige un JWT d'accès valide sauf sur les routes `@Public()`.
  * Sur une route publique, un jeton valide renseigne tout de même `req.user`.
+ * Les routes `@AdminRoute()` sont déléguées à `AdminAuthGuard` (JWT admin distinct).
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -22,6 +24,13 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isAdminRoute =
+      this.reflector.getAllAndOverride<boolean | undefined>(IS_ADMIN_ROUTE_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true;
+    if (isAdminRoute) return true;
+
     const isPublic =
       this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC_KEY, [
         context.getHandler(),

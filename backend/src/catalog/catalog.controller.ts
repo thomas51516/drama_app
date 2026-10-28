@@ -2,6 +2,7 @@ import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
+  ApiNotImplementedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -10,6 +11,7 @@ import {
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
+import { notImplemented } from '../common/errors/not-implemented.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
 import { CatalogService } from './catalog.service.js';
 import {
@@ -19,13 +21,14 @@ import {
   HomeResponseDto,
   ListSeriesQueryDto,
   PaginatedSeriesDto,
+  SearchQueryDto,
   SeriesDetailDto,
 } from './dto/catalog.dto.js';
 
 /**
  * Catalogue (§8.2). Routes publiques : un jeton valide est optionnel mais permet
  * la personnalisation (statut des épisodes, « Continuer à regarder », territoires).
- * TODO S05-BE-06 : GET /search.
+ * `GET /search` : planifié S05-BE-06 (501 en attendant).
  */
 @ApiTags('catalog')
 @ApiBearerAuth()
@@ -89,5 +92,19 @@ export class CatalogController {
     @CurrentUser() user?: AuthenticatedUser,
   ): Promise<FeedResponseDto> {
     return this.catalog.getFeed(query, await this.catalog.viewerContext(user?.id));
+  }
+
+  // TODO S05-BE-06 : recherche plein texte PostgreSQL (titre, synopsis, tags)
+  @Public()
+  @Get('search')
+  @ApiOperation({
+    summary: 'Recherche de séries (planifié S05-BE-06)',
+    description:
+      "Recherche plein texte sur les séries publiées. Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+  })
+  @ApiOkResponse({ type: PaginatedSeriesDto })
+  @ApiNotImplementedResponse({ type: ApiErrorDto, description: 'NOT_IMPLEMENTED' })
+  search(@Query() _query: SearchQueryDto): never {
+    return notImplemented('S05-BE-06');
   }
 }

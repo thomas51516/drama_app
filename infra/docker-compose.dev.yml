@@ -51,6 +51,8 @@ services:
       MINIO_DEFAULT_BUCKETS: ${S3_BUCKET:-drama-media}:download
       MINIO_API_PORT_NUMBER: "9000"
       MINIO_CONSOLE_PORT_NUMBER: "9001"
+      # CORS de l'API S3 : le back-office (3100) fait des PUT directs sur les URLs pré-signées (S02-BE-04).
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGINS:-http://localhost:3100,http://localhost:3000}
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"

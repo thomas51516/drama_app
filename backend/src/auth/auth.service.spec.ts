@@ -121,7 +121,9 @@ describe('AuthService.createGuest', () => {
 
 describe('AuthService.refresh', () => {
   const user = fakeUser();
-  function storedToken(partial: Partial<RefreshToken> = {}): RefreshToken & { user: User } {
+  function storedToken(
+    partial: Partial<RefreshToken & { user: User }> = {},
+  ): RefreshToken & { user: User } {
     return {
       id: 'rt-old',
       tokenHash: 'x'.repeat(64),

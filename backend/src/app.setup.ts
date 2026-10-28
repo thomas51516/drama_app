@@ -2,6 +2,8 @@ import { type INestApplication } from '@nestjs/common';
 import helmet from 'helmet';
 import { requestLogger } from './common/middleware/request-logger.middleware.js';
 import { type AppConfig } from './config/app-config.js';
+import { metricsMiddleware } from './metrics/metrics.middleware.js';
+import { MetricsService } from './metrics/metrics.service.js';
 
 /**
  * Configuration HTTP commune à `main.ts` et aux tests e2e :
@@ -20,10 +22,11 @@ export function configureApp(app: INestApplication, config: AppConfig): INestApp
     origin: config.corsOrigins,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type', 'Accept-Language', 'X-Request-Id'],
-    exposedHeaders: ['X-Request-Id'],
+    exposedHeaders: ['X-Request-Id', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
     maxAge: 600,
   });
   app.use(requestLogger());
+  app.use(metricsMiddleware(app.get(MetricsService)));
   app.enableShutdownHooks();
   return app;
 }

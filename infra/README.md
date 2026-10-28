@@ -13,7 +13,16 @@ docker compose -f infra/docker-compose.dev.yml down       # arrêter (les volume
 docker compose -f infra/docker-compose.dev.yml down -v    # arrêter ET supprimer les données
 ```
 
-Le service one-shot `minio-init` s'exécute automatiquement après que MinIO est sain : il crée le bucket `drama-media` (idempotent) et lui donne une politique de lecture anonyme (`download`), pratique pour tester des manifestes HLS en local. Pour le relancer à la main :
+Le service one-shot `minio-init` s'exécute automatiquement après que MinIO est sain : il crée le bucket `drama-media` (idempotent) et lui donne une politique de lecture anonyme (`download`), pratique pour tester des manifestes HLS en local. MinIO n'accepte les requêtes navigateur (PUT direct sur URL pré-signée depuis le back-office) que depuis les origines de `MINIO_CORS_ORIGINS` (défaut `http://localhost:3100,http://localhost:3000`) ; vérification :
+
+```bash
+curl -s -i -X OPTIONS http://localhost:9000/drama-media/sources/test.mp4 \
+  -H "Origin: http://localhost:3100" -H "Access-Control-Request-Method: PUT" \
+  -H "Access-Control-Request-Headers: content-type" | grep -i access-control
+# attendu : Access-Control-Allow-Origin: http://localhost:3100 et Access-Control-Allow-Methods: PUT
+```
+
+Pour relancer l'initialisation du bucket à la main :
 
 ```bash
 docker compose -f infra/docker-compose.dev.yml run --rm minio-init
@@ -48,6 +57,9 @@ Toutes les variables ont une valeur par défaut. Pour les surcharger, exporter l
 | `MINIO_PORT` | `9000` | Port API S3 |
 | `MINIO_CONSOLE_PORT` | `9001` | Port console web |
 | `S3_BUCKET` | `drama-media` | Bucket créé au démarrage |
+| `MINIO_CORS_ORIGINS` | `http://localhost:3100,http://localhost:3000` | Origines autorisées pour les PUT navigateur (CORS de l'API S3) |
+| `PROMETHEUS_PORT`, `GRAFANA_PORT` | `9090`, `3300` | Ports de la pile de supervision |
+| `GRAFANA_USER`, `GRAFANA_PASSWORD` | `admin` / `admin` | Identifiants Grafana |
 
 Valeurs correspondantes côté backend (`backend/.env.example`) :
 
@@ -68,10 +80,22 @@ docker exec -it drama-redis redis-cli
 docker exec -it drama-minio mc ls local/drama-media
 ```
 
+## Supervision (`docker-compose.monitoring.yml`, S02-OPS-02)
+
+```bash
+docker compose -f infra/docker-compose.monitoring.yml up -d
+# Prometheus : http://localhost:9090 (cible drama-api = host.docker.internal:3000/metrics)
+# Grafana    : http://localhost:3300 (admin / admin) — dossier « DRAMA », tableau « DRAMA API — latence et erreurs »
+```
+
+- `monitoring/prometheus.yml` scrape `GET /metrics` de l'API lancée sur l'hôte toutes les 15 s (en staging, remplacer la cible par le conteneur API). Si l'API définit `METRICS_TOKEN`, décommenter le bloc `authorization` du fichier avec la même valeur.
+- `monitoring/grafana/provisioning/` déclare la source Prometheus et charge `monitoring/grafana/dashboards/drama-api.json` : requêtes/s par statut, taux d'erreur 5xx, latences p50/p95/p99 (filtre par route), p95 par route, transcodages READY/FAILED, jobs actifs, mémoire.
+- Sentry : côté API uniquement (`SENTRY_DSN`), rien à déployer ici.
+- Loki / Promtail : non inclus pour l'instant (l'API tourne sur l'hôte en dev, ses logs ne transitent pas par Docker) ; à ajouter avec le déploiement staging (S02-OPS-01) où l'API sera conteneurisée.
+
 ## À venir
 
-- `S01-OPS-03` : VPS staging, DNS, Traefik + TLS.
-- Supervision (Prometheus, Grafana, Loki) et Sentry : cahier des charges §12.
+- `S01-OPS-03` / `S02-OPS-01` : VPS staging, DNS, Traefik + TLS, déploiement automatique, Loki + Promtail.
 
 ## Épisodes de test verticaux (`media-samples/`)
 
@@ -90,5 +114,7 @@ Les manifestes sont servis en lecture anonyme :
 `http://localhost:9000/drama-media/hls/samples/ep1/master.m3u8` (ep1 à ep3).
 
 Le seed du backend référence ces clés relatives ; l'URL finale est `CDN_BASE_URL` + clé.
+Le worker de transcodage du backend (`TRANSCODE_PROVIDER=local`) produit exactement la même échelle de rendus
+pour les épisodes déposés depuis le back-office, sous `hls/{episodeId}/`.
 Pour tester sur un téléphone du même réseau Wi-Fi, mettre `CDN_BASE_URL=http://<IP-du-PC>:9000/drama-media`
 dans `backend/.env` avant `npm run db:seed`, et pointer l'app Android sur la même adresse.

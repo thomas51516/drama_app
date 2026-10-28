@@ -237,22 +237,26 @@ model Series {
 }
 
 model Episode {
-  id              String          @id @default(uuid(7)) @db.Uuid
-  seriesId        String          @map("series_id") @db.Uuid
-  number          Int
-  title           String?         @db.VarChar(200)
-  durationSeconds Int             @default(0) @map("duration_seconds")
-  transcodeStatus TranscodeStatus @default(PENDING) @map("transcode_status")
+  id                  String          @id @default(uuid(7)) @db.Uuid
+  seriesId            String          @map("series_id") @db.Uuid
+  number              Int
+  title               String?         @db.VarChar(200)
+  durationSeconds     Int             @default(0) @map("duration_seconds")
+  transcodeStatus     TranscodeStatus @default(PENDING) @map("transcode_status")
   /// Clé du fichier maître dans le stockage objet (upload back-office, §9).
-  sourceKey       String?         @map("source_key")
+  sourceKey           String?         @map("source_key")
   /// Clé (ou URL absolue en dev) du manifeste HLS maître.
-  hlsKey          String?         @map("hls_key")
-  thumbnailUrl    String?         @map("thumbnail_url")
+  hlsKey              String?         @map("hls_key")
+  thumbnailUrl        String?         @map("thumbnail_url")
   /// Extrait de 15 s pour le flux vertical (M-02).
-  previewKey      String?         @map("preview_key")
-  publishedAt     DateTime?       @map("published_at") @db.Timestamptz(3)
-  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  previewKey          String?         @map("preview_key")
+  /// Dernière erreur de transcodage (statut FAILED), effacée à la relance.
+  transcodeError      String?         @map("transcode_error")
+  /// Identifiant du job chez le fournisseur de transcodage géré (webhook), ou job BullMQ en local.
+  transcodeExternalId String?         @map("transcode_external_id") @db.VarChar(200)
+  publishedAt         DateTime?       @map("published_at") @db.Timestamptz(3)
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   series        Series          @relation(fields: [seriesId], references: [id], onDelete: Cascade)
   subtitles     Subtitle[]
@@ -262,6 +266,7 @@ model Episode {
   @@unique([seriesId, number])
   @@index([publishedAt(sort: Desc)])
   @@index([transcodeStatus])
+  @@index([transcodeExternalId])
   @@map("episodes")
 }
 
@@ -431,18 +436,20 @@ model Favorite {
 // -----------------------------------------------------------------------------
 
 model AdminAccount {
-  id           String    @id @default(uuid(7)) @db.Uuid
-  email        String    @unique @db.VarChar(320)
+  id            String    @id @default(uuid(7)) @db.Uuid
+  email         String    @unique @db.VarChar(320)
   /// Hachage Argon2id (§12).
-  passwordHash String    @map("password_hash")
-  displayName  String    @map("display_name") @db.VarChar(80)
-  role         AdminRole @default(EDITOR)
-  isActive     Boolean   @default(true) @map("is_active")
-  /// Secret TOTP chiffré pour la 2FA du back-office (§12).
-  totpSecret   String?   @map("totp_secret")
-  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(3)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  passwordHash  String    @map("password_hash")
+  displayName   String    @map("display_name") @db.VarChar(80)
+  role          AdminRole @default(EDITOR)
+  isActive      Boolean   @default(true) @map("is_active")
+  /// Secret TOTP chiffré (AES-256-GCM, clé TOTP_ENCRYPTION_KEY) pour la 2FA du back-office (§12).
+  totpSecret    String?   @map("totp_secret")
+  /// Date de validation du premier code TOTP ; null = enrôlement 2FA à faire à la prochaine connexion.
+  totpEnabledAt DateTime? @map("totp_enabled_at") @db.Timestamptz(3)
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]

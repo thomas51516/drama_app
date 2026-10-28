@@ -81,4 +81,45 @@ export class AppConfig {
   get playbackUrlTtlSeconds(): number {
     return this.env.PLAYBACK_URL_TTL_SECONDS;
   }
+
+  get admin() {
+    return {
+      jwtSecret: this.env.ADMIN_JWT_SECRET,
+      jwtTtlSeconds: this.env.ADMIN_JWT_TTL_SECONDS,
+      totpEncryptionKey: this.env.TOTP_ENCRYPTION_KEY,
+      totpIssuer: this.env.TOTP_ISSUER,
+    };
+  }
+
+  get uploadUrlTtlSeconds(): number {
+    return this.env.UPLOAD_URL_TTL_SECONDS;
+  }
+
+  get transcode() {
+    return {
+      provider: this.env.TRANSCODE_PROVIDER,
+      workerEnabled: this.env.TRANSCODE_WORKER_ENABLED,
+      concurrency: this.env.TRANSCODE_CONCURRENCY,
+      webhookSecret: this.env.TRANSCODE_WEBHOOK_SECRET,
+      submitUrl: this.env.TRANSCODE_SUBMIT_URL,
+      ffmpegPath: this.env.FFMPEG_PATH,
+      ffprobePath: this.env.FFPROBE_PATH,
+    };
+  }
+
+  get rateLimitEnabled(): boolean {
+    return this.env.RATE_LIMIT_ENABLED;
+  }
+
+  get metrics() {
+    return { enabled: this.env.METRICS_ENABLED, token: this.env.METRICS_TOKEN };
+  }
+
+  get sentry() {
+    return {
+      dsn: this.env.SENTRY_DSN,
+      tracesSampleRate: this.env.SENTRY_TRACES_SAMPLE_RATE,
+      environment: this.env.SENTRY_ENVIRONMENT ?? this.env.NODE_ENV,
+    };
+  }
 }
