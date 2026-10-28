@@ -1,0 +1,32 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+local.properties
+
+# Node
+node_modules/
+dist/
+.output/
+.nuxt/
+coverage/
+
+# Android
+android/build/
+android/**/build/
+android/.gradle/
+android/.kotlin/
+android/captures/
+
+# Misc
+*.log
