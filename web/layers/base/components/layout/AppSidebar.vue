@@ -35,15 +35,15 @@ function isActive(path: string): boolean {
           :to="module.path"
           class="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-surface-100"
           :class="
-            isActive(module.path)
-              ? 'bg-primary-50 font-medium text-primary'
-              : 'text-surface-700'
+            isActive(module.path) ? 'bg-primary-50 font-medium text-primary' : 'text-surface-700'
           "
           :aria-current="isActive(module.path) ? 'page' : undefined"
         >
           <i :class="module.icon" class="text-base" aria-hidden="true" />
           <span class="flex-1 truncate">{{ t(module.labelKey) }}</span>
-          <span class="text-[10px] uppercase tracking-wide text-muted-color">{{ module.ticket }}</span>
+          <span class="text-[10px] uppercase tracking-wide text-muted-color">{{
+            module.ticket
+          }}</span>
         </NuxtLink>
       </li>
     </ul>

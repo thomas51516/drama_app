@@ -16,6 +16,7 @@
     "ofetch": "^1.5.1",
     "pinia": "^4.1.0",
     "primeicons": "^7.0.0",
+    "primelocale": "^2.6.2",
     "primevue": "^4.5.5",
     "tailwindcss": "^4.3.3",
     "tailwindcss-primeui": "^0.6.1",

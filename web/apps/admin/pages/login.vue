@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiError } from '../../../layers/base/utils/api-error'
+import { ApiError } from '#base/utils/api-error'
 
 definePageMeta({ layout: 'auth', public: true })
 
@@ -146,10 +146,20 @@ function backToCredentials(): void {
           </p>
         </div>
 
-        <div v-if="auth.step === 'totp_setup' && auth.totpSetup" class="rounded-md bg-surface-100 p-3 text-sm">
-          <div class="text-xs font-medium uppercase text-muted-color">{{ t('auth.totpSecret') }}</div>
-          <code class="mt-1 block break-all text-base tracking-wider">{{ auth.totpSetup.secret }}</code>
-          <a :href="auth.totpSetup.otpauthUri" class="mt-2 inline-block text-xs text-primary underline">
+        <div
+          v-if="auth.step === 'totp_setup' && auth.totpSetup"
+          class="rounded-md bg-surface-100 p-3 text-sm"
+        >
+          <div class="text-xs font-medium uppercase text-muted-color">
+            {{ t('auth.totpSecret') }}
+          </div>
+          <code class="mt-1 block break-all text-base tracking-wider">{{
+            auth.totpSetup.secret
+          }}</code>
+          <a
+            :href="auth.totpSetup.otpauthUri"
+            class="mt-2 inline-block text-xs text-primary underline"
+          >
             otpauth://
           </a>
         </div>

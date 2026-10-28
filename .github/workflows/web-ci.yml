@@ -1,0 +1,59 @@
+name: web-ci
+
+on:
+  push:
+    paths:
+      - 'web/**'
+      - '.github/workflows/web-ci.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/web-ci.yml'
+
+concurrency:
+  group: web-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NUXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint + Prettier)
+        run: npm run lint
+
+      - name: Typecheck (vue-tsc)
+        run: npm run typecheck
+
+      - name: Unit tests (Vitest)
+        run: npm run test
+
+      - name: Build admin app
+        run: npm run build:admin
+        env:
+          NUXT_PUBLIC_API_MOCK: 'false'
+
+      - name: Upload admin build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-admin-output
+          path: web/apps/admin/.output
+          retention-days: 7

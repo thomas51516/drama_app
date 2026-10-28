@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import type { Paginated, SeriesStatus, SeriesSummary } from '../../../../layers/base/types/api'
+import type { Paginated, SeriesStatus, SeriesSummary } from '#base/types/api'
 
 const { t, d } = useI18n()
 const api = useApi()
 
-const {
-  data,
-  status,
-  error,
-  refresh,
-} = await useAsyncData<Paginated<SeriesSummary>>('admin-series', () =>
-  api.get<Paginated<SeriesSummary>>('/admin/series', { query: { page: 1, pageSize: 50 } }),
+const { data, status, error, refresh } = await useAsyncData<Paginated<SeriesSummary>>(
+  'admin-series',
+  () => api.get<Paginated<SeriesSummary>>('/admin/series', { query: { page: 1, pageSize: 50 } }),
 )
 
 const series = computed(() => data.value?.items ?? [])
@@ -34,7 +30,13 @@ const statusSeverity: Record<SeriesStatus, 'secondary' | 'success' | 'contrast'>
     <Message v-if="error" severity="error" :closable="false" class="mb-4">
       <div class="flex flex-wrap items-center gap-3">
         <span>{{ t('series.loadError') }}</span>
-        <Button :label="t('series.retry')" size="small" severity="danger" outlined @click="refresh()" />
+        <Button
+          :label="t('series.retry')"
+          size="small"
+          severity="danger"
+          outlined
+          @click="refresh()"
+        />
       </div>
     </Message>
 
@@ -50,7 +52,7 @@ const statusSeverity: Record<SeriesStatus, 'secondary' | 'success' | 'contrast'>
     >
       <template #header>
         <div class="text-sm text-muted-color">
-          {{ t('series.count', series.length, { count: series.length }) }}
+          {{ t('series.count', { count: series.length }, series.length) }}
         </div>
       </template>
 

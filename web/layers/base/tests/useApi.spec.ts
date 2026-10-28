@@ -48,7 +48,7 @@ describe('useApi() in mock mode', () => {
     const auth = useAuthStore()
     const api = useApi()
     // Simulate a token the server no longer accepts.
-    useCookie<string | null>('drama_admin_token').value = 'expired-token'
+    auth.token = 'expired-token'
     expect(auth.isAuthenticated).toBe(true)
 
     await expect(api.get('/admin/auth/me')).rejects.toMatchObject({ status: 401 })

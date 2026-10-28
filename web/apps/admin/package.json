@@ -10,16 +10,12 @@
     "build": "nuxt build",
     "preview": "nuxt preview",
     "generate": "nuxt generate",
-    "lint": "eslint . ../../layers/base",
-    "lint:fix": "eslint --fix . ../../layers/base",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@drama/web-base": "0.1.0"
   },
   "devDependencies": {
-    "eslint": "^10.0.0",
-    "eslint-config-prettier": "^10.1.8",
     "typescript": "~5.9.3",
     "vue-tsc": "^3.3.13"
   }

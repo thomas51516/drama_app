@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backofficeModules, findModuleByPath } from '../../../layers/base/utils/modules'
+import { backofficeModules, findModuleByPath } from '#base/utils/modules'
 
 describe('back-office modules registry', () => {
   it('lists the 13 modules of spec section 5 in order', () => {

@@ -1,4 +1,4 @@
-import { FetchError, type FetchOptions } from 'ofetch'
+import { FetchError } from 'ofetch'
 import { ApiError } from '../utils/api-error'
 import { isAuthRoute, mockRequest, type MockMethod } from '../mocks'
 import { useAuthStore } from '../stores/auth'
@@ -14,9 +14,21 @@ export interface ApiRequestOptions {
 export interface ApiClient {
   request<T>(path: string, options?: ApiRequestOptions): Promise<T>
   get<T>(path: string, options?: Omit<ApiRequestOptions, 'method' | 'body'>): Promise<T>
-  post<T>(path: string, body?: unknown, options?: Omit<ApiRequestOptions, 'method' | 'body'>): Promise<T>
-  put<T>(path: string, body?: unknown, options?: Omit<ApiRequestOptions, 'method' | 'body'>): Promise<T>
-  patch<T>(path: string, body?: unknown, options?: Omit<ApiRequestOptions, 'method' | 'body'>): Promise<T>
+  post<T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<ApiRequestOptions, 'method' | 'body'>,
+  ): Promise<T>
+  put<T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<ApiRequestOptions, 'method' | 'body'>,
+  ): Promise<T>
+  patch<T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<ApiRequestOptions, 'method' | 'body'>,
+  ): Promise<T>
   delete<T>(path: string, options?: Omit<ApiRequestOptions, 'method' | 'body'>): Promise<T>
   /** True when responses come from `layers/base/mocks` instead of the network. */
   readonly isMock: boolean
@@ -75,10 +87,10 @@ export function useApi(): ApiClient {
         })
       }
 
-      const fetchOptions: FetchOptions<'json'> = {
+      return await $fetch<T>(path, {
         baseURL: config.public.apiBase,
         method,
-        body: options.body as FetchOptions['body'],
+        body: options.body as Record<string, unknown> | undefined,
         query: options.query,
         signal: options.signal,
         headers: {
@@ -87,8 +99,7 @@ export function useApi(): ApiClient {
           ...options.headers,
         },
         retry: 0,
-      }
-      return await $fetch<T>(path, fetchOptions)
+      })
     } catch (error) {
       const apiError = toApiError(error)
       if (apiError.status === 401) {

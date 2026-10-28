@@ -17,7 +17,8 @@ export type AuthStep = 'credentials' | 'totp' | 'totp_setup'
  * lifetime decided with the backend (S03-BE-04). Revisit if the backend adds a cookie session.
  */
 export const useAuthStore = defineStore('auth', () => {
-  const tokenCookie = useCookie<string | null>(AUTH_COOKIE_NAME, {
+  /** The JWT, backed by the cookie. Writable so the API client / tests can reset it. */
+  const token = useCookie<string | null>(AUTH_COOKIE_NAME, {
     sameSite: 'strict',
     secure: !import.meta.dev,
     path: '/',
@@ -25,14 +26,13 @@ export const useAuthStore = defineStore('auth', () => {
     default: () => null,
   })
 
-  const token = computed(() => tokenCookie.value)
   const user = ref<AdminUser | null>(null)
   const step = ref<AuthStep>('credentials')
   const challengeToken = ref<string | null>(null)
   const totpSetup = ref<{ otpauthUri: string; secret: string } | null>(null)
   const pending = ref(false)
 
-  const isAuthenticated = computed(() => Boolean(tokenCookie.value))
+  const isAuthenticated = computed(() => Boolean(token.value))
 
   function resetChallenge(): void {
     step.value = 'credentials'
@@ -72,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
         challengeToken: challengeToken.value,
         code,
       })
-      tokenCookie.value = response.accessToken
+      token.value = response.accessToken
       user.value = response.user
       resetChallenge()
       return response.user
@@ -83,7 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** Restore the user profile from the token (page refresh). Clears the session on failure. */
   async function fetchMe(): Promise<AdminUser | null> {
-    if (!tokenCookie.value) return null
+    if (!token.value) return null
     const api = useApi()
     try {
       user.value = await api.get<AdminUser>('/admin/auth/me')
@@ -96,14 +96,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** Forget the session locally (used by logout and by the API client on 401). */
   function clearSession(): void {
-    tokenCookie.value = null
+    token.value = null
     user.value = null
     resetChallenge()
   }
 
   async function logout(): Promise<void> {
     const api = useApi()
-    if (tokenCookie.value) {
+    if (token.value) {
       try {
         await api.post('/admin/auth/logout')
       } catch {

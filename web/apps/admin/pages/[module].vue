@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { findModuleByPath } from '../../../layers/base/utils/modules'
+import { findModuleByPath } from '#base/utils/modules'
 
 definePageMeta({
   validate: (route) => findModuleByPath(route.path) !== undefined,

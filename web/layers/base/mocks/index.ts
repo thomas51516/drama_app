@@ -64,8 +64,14 @@ const handlers: Record<string, Handler> = {
 
   'POST /admin/auth/totp/verify': ({ body }): TotpVerifyResponse => {
     const { challengeToken, code } = (body ?? {}) as Partial<TotpVerifyRequest>
-    if (challengeToken !== authFixture.challengeToken || code !== authFixture.credentials.totpCode) {
-      throw new ApiError(401, 'Invalid TOTP code', { statusCode: 401, message: 'Invalid TOTP code' })
+    if (
+      challengeToken !== authFixture.challengeToken ||
+      code !== authFixture.credentials.totpCode
+    ) {
+      throw new ApiError(401, 'Invalid TOTP code', {
+        statusCode: 401,
+        message: 'Invalid TOTP code',
+      })
     }
     return {
       accessToken: authFixture.accessToken,

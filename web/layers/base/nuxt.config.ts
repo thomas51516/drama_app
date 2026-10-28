@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import Aura from '@primeuix/themes/aura'
+import frLocale from 'primelocale/fr.json' with { type: 'json' }
 
 const currentDir = fileURLToPath(new URL('.', import.meta.url))
 
@@ -12,6 +13,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-10-01',
 
   modules: ['@nuxt/eslint', '@pinia/nuxt', '@nuxtjs/i18n', '@primevue/nuxt-module'],
+
+  alias: {
+    // Lets apps import layer code without relative paths: `import type { X } from '#base/types/api'`.
+    '#base': currentDir,
+  },
 
   typescript: {
     strict: true,
@@ -61,54 +67,8 @@ export default defineNuxtConfig({
     autoImport: true,
     options: {
       ripple: false,
-      locale: {
-        // Minimal French overrides for built-in component texts.
-        emptyMessage: 'Aucun résultat',
-        emptyFilterMessage: 'Aucun résultat trouvé',
-        accept: 'Oui',
-        reject: 'Non',
-        clear: 'Effacer',
-        apply: 'Appliquer',
-        cancel: 'Annuler',
-        choose: 'Choisir',
-        upload: 'Envoyer',
-        search: 'Rechercher',
-        dayNames: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'],
-        dayNamesShort: ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'],
-        dayNamesMin: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
-        monthNames: [
-          'janvier',
-          'février',
-          'mars',
-          'avril',
-          'mai',
-          'juin',
-          'juillet',
-          'août',
-          'septembre',
-          'octobre',
-          'novembre',
-          'décembre',
-        ],
-        monthNamesShort: [
-          'janv.',
-          'févr.',
-          'mars',
-          'avr.',
-          'mai',
-          'juin',
-          'juil.',
-          'août',
-          'sept.',
-          'oct.',
-          'nov.',
-          'déc.',
-        ],
-        today: "Aujourd'hui",
-        weekHeader: 'Sem.',
-        firstDayOfWeek: 1,
-        dateFormat: 'dd/mm/yy',
-      },
+      // Full French locale for built-in component texts (calendar, filters, file upload...).
+      locale: frLocale.fr,
       theme: {
         preset: Aura,
         options: {

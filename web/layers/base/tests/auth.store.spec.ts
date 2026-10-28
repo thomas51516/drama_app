@@ -44,6 +44,8 @@ describe('auth store (mock API)', () => {
     expect(auth.token).toBe('mock-access-token')
     expect(auth.user?.role).toBe('admin')
     expect(auth.step).toBe('credentials')
+    // Cookie writes are flushed by a watcher: re-read document.cookie after a tick.
+    await nextTick()
     expect(useCookie<string | null>(AUTH_COOKIE_NAME).value).toBe('mock-access-token')
   })
 
@@ -70,14 +72,15 @@ describe('auth store (mock API)', () => {
 
     expect(auth.isAuthenticated).toBe(false)
     expect(auth.user).toBeNull()
-    expect(useCookie<string | null>(AUTH_COOKIE_NAME).value).toBeNull()
+    await nextTick()
+    expect(useCookie<string | null>(AUTH_COOKIE_NAME).value).toBeFalsy()
   })
 
   it('fetchMe() restores the user from an existing token', async () => {
     const auth = useAuthStore()
     await auth.login(mockCredentials.email, mockCredentials.password)
     await auth.verifyTotp(mockCredentials.totpCode)
-    auth.user = null
+    auth.$patch({ user: null })
 
     const user = await auth.fetchMe()
     expect(user?.email).toBe(mockCredentials.email)
