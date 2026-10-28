@@ -30,3 +30,6 @@ android/captures/
 
 # Misc
 *.log
+
+# Firebase (fourni par le client, hors dépôt)
+android/app/google-services.json
