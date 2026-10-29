@@ -1,5 +1,6 @@
 package com.drama.feature.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,181 +13,293 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.drama.core.common.result.AppError
-import com.drama.core.ui.component.DramaPrimaryButton
-import com.drama.core.ui.component.LoadingIndicator
+import com.drama.core.ui.component.ErrorState
+import com.drama.core.ui.component.OfflineBanner
+import com.drama.core.ui.component.PosterCard
 import com.drama.core.ui.component.PosterImage
+import com.drama.core.ui.component.SkeletonBox
+import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
-import com.drama.core.ui.theme.DramaTheme
-import com.drama.domain.model.HomeContent
-import com.drama.domain.model.HomeRow
-import com.drama.domain.model.Series
+import com.drama.domain.model.HomeBanner
+import kotlinx.coroutines.delay
 
-/** Home fed by `GET /home` (S02): plain cards per row, no design polish yet (M-01..M-09 arrive in Sprint 3). */
+/** Home (M-01, S03-A1-01): banner carousel, configured rows of 2:3 posters, continue watching, pull-to-refresh. */
 @Composable
 fun HomeScreen(
-    onPlaySeries: (seriesId: String) -> Unit,
     onOpenSeries: (seriesId: String) -> Unit,
-    onOpenAccount: () -> Unit,
+    onResumeEpisode: (seriesId: String, episodeId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     HomeContent(
         state = state,
-        onSeriesClick = { seriesId ->
-            viewModel.onSeriesClicked(seriesId)
-            onPlaySeries(seriesId)
-        },
         onOpenSeries = onOpenSeries,
-        onOpenAccount = onOpenAccount,
-        onRetry = viewModel::retry,
+        onResumeEpisode = onResumeEpisode,
+        onRefresh = viewModel::refresh,
         modifier = modifier,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeContent(
     state: HomeUiState,
-    onSeriesClick: (seriesId: String) -> Unit,
     onOpenSeries: (seriesId: String) -> Unit,
-    onOpenAccount: () -> Unit,
-    onRetry: () -> Unit,
+    onResumeEpisode: (seriesId: String, episodeId: String) -> Unit,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
             modifier
                 .fillMaxSize()
-                .safeDrawingPadding(),
+                .background(MaterialTheme.colorScheme.background)
+                .statusBarsPadding(),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = "DRAMA", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-            TextButton(onClick = onOpenAccount) { Text("Mon compte") }
-        }
-        if (state.isRefreshing) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
+        HomeTopBar()
         when {
-            state.isLoading -> LoadingIndicator()
-            state.showError -> HomeError(error = state.error, onRetry = onRetry)
-            state.content == null || state.content.isEmpty ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Aucune série publiée") }
+            state.isLoading -> HomeSkeleton()
+            state.showError -> ErrorState(message = state.error.toMessage(), onRetry = onRefresh)
             else ->
-                HomeRows(
-                    content = state.content,
-                    staleError = state.error,
-                    onSeriesClick = onSeriesClick,
-                    onOpenSeries = onOpenSeries,
-                    onRetry = onRetry,
-                )
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = DramaSpacing.xl),
+                        verticalArrangement = Arrangement.spacedBy(DramaSpacing.lg),
+                    ) {
+                        if (state.error != null) {
+                            item(key = "offline") {
+                                OfflineBanner(
+                                    message = "Hors ligne : contenu en cache",
+                                    onRetry = onRefresh,
+                                )
+                            }
+                        }
+                        if (state.banners.isNotEmpty()) {
+                            item(key = "banners") {
+                                BannerCarousel(banners = state.banners, onBannerClick = { onOpenSeries(it.seriesId) })
+                            }
+                        }
+                        if (state.isEmpty) {
+                            item(key = "empty") {
+                                Text(
+                                    text = "Aucune série publiée pour le moment.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(DramaSpacing.lg),
+                                )
+                            }
+                        }
+                        items(state.rows, key = { it.key }) { row ->
+                            HomeRowSection(
+                                row = row,
+                                onCardClick = { card ->
+                                    val episodeId = card.resumeEpisodeId
+                                    if (episodeId !=
+                                        null
+                                    ) {
+                                        onResumeEpisode(card.seriesId, episodeId)
+                                    } else {
+                                        onOpenSeries(card.seriesId)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
         }
     }
 }
 
 @Composable
-private fun HomeRows(
-    content: HomeContent,
-    staleError: AppError?,
-    onSeriesClick: (String) -> Unit,
-    onOpenSeries: (String) -> Unit,
-    onRetry: () -> Unit,
-) {
-    LazyColumn(
-        contentPadding = PaddingValues(bottom = DramaSpacing.xl),
-        verticalArrangement = Arrangement.spacedBy(DramaSpacing.md),
+private fun HomeTopBar() {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (staleError != null) {
-            item {
-                Row(
-                    modifier = Modifier.padding(horizontal = DramaSpacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Hors ligne : contenu en cache",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(onClick = onRetry) { Text("Réessayer") }
-                }
+        Text(
+            text = "DRAMA",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black, letterSpacing = 2.sp),
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/** Auto-advancing carousel (every [BANNER_AUTO_ADVANCE_MS]) with page dots; pauses while the user drags. */
+@Composable
+private fun BannerCarousel(
+    banners: List<HomeBanner>,
+    onBannerClick: (HomeBanner) -> Unit,
+) {
+    val pagerState = rememberPagerState { banners.size }
+    LaunchedEffect(pagerState, banners.size) {
+        if (banners.size < 2) return@LaunchedEffect
+        while (true) {
+            delay(BANNER_AUTO_ADVANCE_MS)
+            if (!pagerState.isScrollInProgress) {
+                pagerState.animateScrollToPage((pagerState.currentPage + 1) % banners.size)
             }
         }
-        if (content.banners.isNotEmpty()) {
-            item {
-                val banner = content.banners.first()
-                Column(modifier = Modifier.padding(horizontal = DramaSpacing.md)) {
-                    PosterImage(
-                        url = banner.posterHorizontalUrl ?: banner.posterVerticalUrl,
-                        contentDescription = banner.title,
+    }
+    Column {
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = DramaSpacing.md),
+            pageSpacing = DramaSpacing.sm,
+            beyondViewportPageCount = 1,
+        ) { page ->
+            BannerCard(banner = banners[page], onClick = { onBannerClick(banners[page]) })
+        }
+        if (banners.size > 1) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = DramaSpacing.sm),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                repeat(banners.size) { index ->
+                    val selected = pagerState.currentPage == index
+                    Box(
                         modifier =
                             Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onSeriesClick(banner.id) },
+                                .padding(horizontal = 3.dp)
+                                .size(width = if (selected) 18.dp else 6.dp, height = 6.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        Color.White.copy(
+                                            alpha = 0.35f,
+                                        )
+                                    },
+                                ),
                     )
-                    Spacer(Modifier.height(DramaSpacing.xs))
-                    Text(banner.title, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
-        items(content.rows.filter { it.items.isNotEmpty() }, key = { it.key }) { row ->
-            HomeRowSection(row = row, onSeriesClick = onSeriesClick, onOpenSeries = onOpenSeries)
+    }
+}
+
+@Composable
+private fun BannerCard(
+    banner: HomeBanner,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(BANNER_RATIO)
+                .clip(RoundedCornerShape(DramaSizes.bannerCornerRadius))
+                .clickable(onClick = onClick),
+    ) {
+        PosterImage(
+            url = banner.imageUrl,
+            contentDescription = banner.title,
+            modifier = Modifier.fillMaxSize(),
+            fallbackText = null,
+        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.45f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = 0.9f),
+                        ),
+                    ),
+        )
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(DramaSpacing.md),
+        ) {
+            Text(
+                text = banner.title,
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val subtitle = banner.subtitle
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun HomeRowSection(
-    row: HomeRow,
-    onSeriesClick: (String) -> Unit,
-    onOpenSeries: (String) -> Unit,
+    row: HomeRowUi,
+    onCardClick: (HomeCard) -> Unit,
 ) {
     Column {
         Text(
             text = row.title,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.xs),
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = DramaSpacing.md),
-            horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm + DramaSpacing.xs),
         ) {
-            items(row.items, key = { it.series.id + (it.episode?.id ?: "") }) { item ->
-                SeriesCard(
-                    series = item.series,
-                    subtitle =
-                        item.episode?.let { "Reprendre l'épisode ${it.index}" }
-                            ?: "${item.series.episodeCount} épisodes · ${item.series.freeEpisodeCount} gratuits",
-                    onClick = { onSeriesClick(item.series.id) },
-                    onLongClick = { onOpenSeries(item.series.id) },
+            items(row.cards, key = { it.seriesId + (it.resumeEpisodeId ?: "") }) { card ->
+                PosterCard(
+                    title = card.title,
+                    imageUrl = card.posterUrl,
+                    subtitle = card.subtitle,
+                    badge = card.badge,
+                    progress = card.progress,
+                    onClick = { onCardClick(card) },
                 )
             }
         }
@@ -194,113 +307,51 @@ private fun HomeRowSection(
 }
 
 @Composable
-private fun SeriesCard(
-    series: Series,
-    subtitle: String,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
+private fun HomeSkeleton() {
     Column(
-        modifier =
-            Modifier
-                .width(CARD_WIDTH)
-                .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(DramaSpacing.lg),
     ) {
-        PosterImage(
-            url = series.posterVerticalUrl,
-            contentDescription = series.title,
+        SkeletonBox(
             modifier =
                 Modifier
+                    .padding(horizontal = DramaSpacing.md)
                     .fillMaxWidth()
-                    .aspectRatio(9f / 16f)
-                    .clip(RoundedCornerShape(10.dp)),
+                    .aspectRatio(BANNER_RATIO),
+            cornerRadius = DramaSizes.bannerCornerRadius,
         )
-        Spacer(Modifier.height(DramaSpacing.xs))
-        Text(series.title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        TextButton(onClick = onLongClick, contentPadding = PaddingValues(0.dp)) {
-            Text("Fiche", style = MaterialTheme.typography.labelSmall)
+        repeat(2) {
+            Column {
+                SkeletonBox(
+                    modifier =
+                        Modifier
+                            .padding(horizontal = DramaSpacing.md)
+                            .width(140.dp)
+                            .height(18.dp),
+                    cornerRadius = 6.dp,
+                )
+                Spacer(Modifier.height(DramaSpacing.sm))
+                Row(
+                    modifier = Modifier.padding(horizontal = DramaSpacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm + DramaSpacing.xs),
+                ) {
+                    repeat(3) {
+                        SkeletonBox(
+                            modifier = Modifier.size(DramaSizes.posterCardWidth, DramaSizes.posterCardHeight),
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun HomeError(
-    error: AppError?,
-    onRetry: () -> Unit,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(DramaSpacing.lg),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text =
-                when (error) {
-                    is AppError.Network -> "Pas de connexion. Vérifiez le réseau puis réessayez."
-                    is AppError.Server -> "Le service est indisponible (${error.code}). Réessayez dans un instant."
-                    else -> "Impossible de charger l'accueil."
-                },
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(Modifier.height(DramaSpacing.md))
-        DramaPrimaryButton(text = "Réessayer", onClick = onRetry)
+private fun AppError?.toMessage(): String =
+    when (this) {
+        is AppError.Network -> "Pas de connexion. Vérifiez le réseau puis réessayez."
+        is AppError.Server -> "Le service est indisponible ($code). Réessayez dans un instant."
+        else -> "Impossible de charger l'accueil."
     }
-}
 
-private val CARD_WIDTH = 132.dp
-
-@Preview(showBackground = true)
-@Composable
-private fun HomeContentPreview() {
-    val series =
-        Series(
-            id = "s1",
-            slug = "le-secret-du-lagon",
-            title = "Le Secret du Lagon",
-            synopsis = "",
-            posterVerticalUrl = null,
-            posterHorizontalUrl = null,
-            genres = listOf("romance"),
-            episodeCount = 3,
-            freeEpisodeCount = 2,
-            coinCostPerEpisode = 10,
-            ageRating = "PG12",
-        )
-    DramaTheme {
-        HomeContent(
-            state =
-                HomeUiState(
-                    isLoading = false,
-                    content =
-                        HomeContent(
-                            banners = listOf(series),
-                            rows =
-                                listOf(
-                                    HomeRow(
-                                        "trending",
-                                        "Tendances",
-                                        listOf(
-                                            com.drama.domain.model
-                                                .HomeItem(series),
-                                        ),
-                                    ),
-                                ),
-                        ),
-                ),
-            onSeriesClick = {},
-            onOpenSeries = {},
-            onOpenAccount = {},
-            onRetry = {},
-        )
-    }
-}
+private const val BANNER_AUTO_ADVANCE_MS = 5_000L
+private const val BANNER_RATIO = 16f / 9f

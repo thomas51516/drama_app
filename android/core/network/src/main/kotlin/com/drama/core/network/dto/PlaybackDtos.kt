@@ -9,10 +9,12 @@ data class PlayDrmDto(
     val licenseUrl: String? = null,
 )
 
+/** `{language, label, url}` (addendum v1.1); [label] was absent in v1.0 and then defaults to the language. */
 @Serializable
 data class PlaySubtitleDto(
     val language: String,
     val url: String,
+    val label: String? = null,
 )
 
 @Serializable

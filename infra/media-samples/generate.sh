@@ -83,6 +83,24 @@ drawtext=fontfile=$FONT:text='9:16 · 1080x1920':fontcolor=0x94a3b8:fontsize=48:
     -hls_segment_filename "$dir/preview/seg_%03d.m4s" "$dir/preview/index.m3u8"
   ffmpeg -hide_banner -loglevel error -y -f lavfi -i "$src" -ss 2 -frames:v 1 -vf "scale=540:960" "$dir/thumbnail.jpg"
 
+  # Sous-titre français de test, aligné sur le chrono affiché dans la vidéo.
+  mkdir -p "$dir/subtitles"
+  cat > "$dir/subtitles/fr.vtt" <<VTT
+WEBVTT
+
+00:00:01.000 --> 00:00:05.000
+DRAMA — épisode $n (sous-titre de test)
+
+00:00:06.000 --> 00:00:12.000
+Le chrono jaune défile au centre de l'image.
+
+00:00:13.000 --> 00:00:20.000
+Format vertical 9:16, 1080x1920, HLS en quatre qualités.
+
+00:00:21.000 --> 00:00:28.000
+Fin de l'épisode $n.
+VTT
+
   echo "ep$n : $(ls "$dir" | tr '\n' ' ')"
 }
 

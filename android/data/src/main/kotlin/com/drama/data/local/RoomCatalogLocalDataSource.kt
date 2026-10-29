@@ -3,6 +3,7 @@ package com.drama.data.local
 import com.drama.core.database.dao.CatalogDao
 import com.drama.core.database.entity.CacheMetaEntity
 import com.drama.core.database.entity.EpisodeEntity
+import com.drama.core.database.entity.HomeBannerEntity
 import com.drama.core.database.entity.HomeRowEntity
 import com.drama.core.database.entity.HomeRowItemEntity
 import com.drama.core.database.entity.SeriesEntity
@@ -12,9 +13,11 @@ import com.drama.data.local.CatalogLocalDataSource.Companion.seriesKey
 import com.drama.data.mapper.toDomain
 import com.drama.data.mapper.toEntity
 import com.drama.domain.model.Episode
+import com.drama.domain.model.HomeBanner
 import com.drama.domain.model.HomeContent
 import com.drama.domain.model.HomeItem
 import com.drama.domain.model.HomeRow
+import com.drama.domain.model.HomeRowType
 import com.drama.domain.model.Series
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -39,38 +42,48 @@ class RoomCatalogLocalDataSource
 
         @OptIn(ExperimentalCoroutinesApi::class)
         override fun observeHome(): Flow<HomeContent?> =
-            combine(dao.observeHomeRows(), dao.observeHomeRowItems(), dao.observeAllSeries()) { rows, items, series ->
-                Triple(rows, items, series)
-            }.flatMapLatest { (rows, items, series) ->
-                val episodeIds = items.mapNotNull { it.episodeId }.distinct()
-                val episodesFlow =
-                    if (episodeIds.isEmpty()) flowOf(emptyList()) else dao.observeEpisodesByIds(episodeIds)
-                episodesFlow.map { episodes -> buildHome(rows, items, series, episodes) }
-            }.distinctUntilChanged()
+            combine(
+                dao.observeHomeBanners(),
+                dao.observeHomeRows(),
+                dao.observeHomeRowItems(),
+                dao.observeAllSeries(),
+            ) { banners, rows, items, series -> HomeTables(banners, rows, items, series) }
+                .flatMapLatest { tables ->
+                    val episodeIds = tables.items.mapNotNull { it.episodeId }.distinct()
+                    val episodesFlow =
+                        if (episodeIds.isEmpty()) flowOf(emptyList()) else dao.observeEpisodesByIds(episodeIds)
+                    episodesFlow.map { episodes -> buildHome(tables, episodes) }
+                }.distinctUntilChanged()
+
+        private data class HomeTables(
+            val banners: List<HomeBannerEntity>,
+            val rows: List<HomeRowEntity>,
+            val items: List<HomeRowItemEntity>,
+            val series: List<SeriesEntity>,
+        )
 
         private fun buildHome(
-            rows: List<HomeRowEntity>,
-            items: List<HomeRowItemEntity>,
-            series: List<SeriesEntity>,
+            tables: HomeTables,
             episodes: List<EpisodeEntity>,
         ): HomeContent? {
-            if (rows.isEmpty()) return null
-            val seriesById = series.associateBy { it.id }
+            // The marker row is written on every save, so "no rows" means "never cached".
+            if (tables.rows.none { it.key == MARKER_ROW_KEY }) return null
+            val seriesById = tables.series.associateBy { it.id }
             val episodesById = episodes.associateBy { it.id }
-            val itemsByRow = items.groupBy { it.rowKey }
+            val itemsByRow = tables.items.groupBy { it.rowKey }
             val banners =
-                itemsByRow[BANNER_ROW_KEY]
-                    .orEmpty()
+                tables.banners
                     .sortedBy { it.position }
-                    .mapNotNull { seriesById[it.seriesId]?.toDomain() }
+                    .map { HomeBanner(it.id, it.seriesId, it.imageUrl, it.title, it.subtitle) }
             val domainRows =
-                rows
-                    .filter { it.key != BANNER_ROW_KEY }
+                tables.rows
+                    .filter { it.key != MARKER_ROW_KEY }
                     .sortedBy { it.position }
                     .map { row ->
                         HomeRow(
                             key = row.key,
                             title = row.title,
+                            type = HomeRowType.from(row.type, row.key),
                             items =
                                 itemsByRow[row.key].orEmpty().sortedBy { it.position }.mapNotNull { item ->
                                     seriesById[item.seriesId]?.let { s ->
@@ -90,16 +103,16 @@ class RoomCatalogLocalDataSource
             content: HomeContent,
             nowEpochMs: Long,
         ) {
-            val rows = mutableListOf(HomeRowEntity(key = BANNER_ROW_KEY, position = -1, title = ""))
+            val rows = mutableListOf(HomeRowEntity(key = MARKER_ROW_KEY, position = -1, title = ""))
             val items = mutableListOf<HomeRowItemEntity>()
             val series = linkedMapOf<String, Series>()
             val episodes = linkedMapOf<String, Episode>()
-            content.banners.forEachIndexed { index, s ->
-                series.putIfAbsent(s.id, s)
-                items += HomeRowItemEntity(BANNER_ROW_KEY, index, s.id, null, null)
-            }
+            val banners =
+                content.banners.mapIndexed { index, b ->
+                    HomeBannerEntity(b.id, index, b.seriesId, b.imageUrl, b.title, b.subtitle)
+                }
             content.rows.forEachIndexed { rowIndex, row ->
-                rows += HomeRowEntity(key = row.key, position = rowIndex, title = row.title)
+                rows += HomeRowEntity(key = row.key, position = rowIndex, title = row.title, type = row.type.name)
                 row.items.forEachIndexed { index, item ->
                     series.putIfAbsent(item.series.id, item.series)
                     item.episode?.let { episodes.putIfAbsent(it.id, it) }
@@ -108,7 +121,7 @@ class RoomCatalogLocalDataSource
             }
             val seriesEntities =
                 series.values.map { s -> s.toEntity(nowEpochMs, detail = false, previous = dao.getSeries(s.id)) }
-            dao.replaceHome(rows, items, seriesEntities, episodes.values.map { it.toEntity(nowEpochMs) })
+            dao.replaceHome(banners, rows, items, seriesEntities, episodes.values.map { it.toEntity(nowEpochMs) })
             dao.upsertCacheMeta(CacheMetaEntity(KEY_HOME, nowEpochMs))
         }
 
@@ -146,7 +159,7 @@ class RoomCatalogLocalDataSource
         override suspend fun clear() = dao.clearCatalogCache()
 
         private companion object {
-            /** Banners are stored as a pseudo-row so the home cache is a single transaction. */
-            const val BANNER_ROW_KEY = "__banners"
+            /** Pseudo-row always present once the home was cached (an empty home is a valid cached answer). */
+            const val MARKER_ROW_KEY = "__home"
         }
     }

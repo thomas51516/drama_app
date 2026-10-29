@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,24 +23,33 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -72,6 +82,7 @@ data class PlayerActions(
     val onNextEpisode: () -> Unit,
     val onReplay: () -> Unit,
     val onBack: () -> Unit,
+    val settings: SettingsActions,
 )
 
 @Composable
@@ -101,6 +112,12 @@ fun PlayerScreen(
                 onNextEpisode = viewModel::onNextEpisode,
                 onReplay = viewModel::onReplay,
                 onBack = onBack,
+                settings =
+                    SettingsActions(
+                        onSpeedSelected = viewModel::onSpeedSelected,
+                        onQualitySelected = viewModel::onQualitySelected,
+                        onSubtitleSelected = viewModel::onSubtitleSelected,
+                    ),
             ),
     )
 }
@@ -114,6 +131,7 @@ fun PlayerContent(
 ) {
     KeepScreenOn(enabled = state.isPlaying)
     ImmersiveSystemBars()
+    var sheet by rememberSaveable { mutableStateOf<PlayerSheet?>(null) }
 
     Box(
         modifier =
@@ -154,25 +172,25 @@ fun PlayerContent(
                         actions = actions,
                     )
                 }
-                DebugOverlay(
+                StartupBadge(
                     state = state,
                     modifier =
                         Modifier
                             .align(Alignment.TopStart)
                             .statusBarsPadding()
-                            .padding(DramaSpacing.sm),
+                            .padding(top = TOP_BAR_HEIGHT, start = DramaSpacing.sm),
                 )
             }
         }
-        TextButton(
-            onClick = actions.onBack,
+        PlayerTopBar(
+            state = state,
+            onBack = actions.onBack,
+            onOpenSheet = { sheet = it },
             modifier =
                 Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding(),
-        ) {
-            Text("Fermer", color = Color.White)
-        }
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth(),
+        )
         state.errorMessage?.takeIf { state.episodes.isNotEmpty() }?.let { message ->
             Text(
                 text = message,
@@ -184,7 +202,90 @@ fun PlayerContent(
                         .padding(DramaSpacing.md),
             )
         }
+        sheet?.let { open ->
+            PlayerSettingsSheet(
+                sheet = open,
+                state = state,
+                actions = actions.settings,
+                onNavigate = { sheet = it },
+                onDismiss = { sheet = null },
+            )
+        }
     }
+}
+
+/** Back arrow, episode label and the live settings (speed, quality, subtitles) as tappable chips. */
+@Composable
+private fun PlayerTopBar(
+    state: PlayerUiState,
+    onBack: () -> Unit,
+    onOpenSheet: (PlayerSheet) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
+                .statusBarsPadding()
+                .height(TOP_BAR_HEIGHT)
+                .padding(horizontal = DramaSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = Color.White)
+        }
+        Text(
+            text = state.currentEpisode?.let { "Épisode ${it.index}" } ?: "",
+            color = Color.White,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        if (state.episodes.isNotEmpty()) {
+            SettingChip(text = state.speedLabel, onClick = { onOpenSheet(PlayerSheet.SPEED) })
+            SettingChip(text = state.qualityLabel, onClick = { onOpenSheet(PlayerSheet.QUALITY) })
+            SettingChip(
+                text = "CC ${state.subtitleLabel}",
+                active = state.activeSubtitleLanguage != null,
+                onClick = { onOpenSheet(PlayerSheet.SUBTITLES) },
+            )
+            IconButton(onClick = { onOpenSheet(PlayerSheet.SETTINGS) }) {
+                Icon(Icons.Default.Settings, contentDescription = "Paramètres de lecture", tint = Color.White)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingChip(
+    text: String,
+    onClick: () -> Unit,
+    active: Boolean = false,
+) {
+    Text(
+        text = text,
+        color = Color.White,
+        style = MaterialTheme.typography.labelMedium,
+        maxLines = 1,
+        modifier =
+            Modifier
+                .padding(horizontal = DramaSpacing.xxs)
+                .background(
+                    if (active) {
+                        MaterialTheme.colorScheme.primary.copy(
+                            alpha = 0.85f,
+                        )
+                    } else {
+                        Color.White.copy(alpha = 0.16f)
+                    },
+                    RoundedCornerShape(50),
+                ).clickable(onClick = onClick)
+                .padding(
+                    horizontal = DramaSpacing.sm + DramaSpacing.xxs,
+                    vertical = DramaSpacing.xs + DramaSpacing.xxs,
+                ),
+    )
 }
 
 @OptIn(UnstableApi::class)
@@ -215,8 +316,17 @@ private fun EpisodePage(
             ContentFrame(
                 player = player,
                 modifier = Modifier.fillMaxSize(),
-                // Contenu 9:16 : on remplit l'écran (léger rognage latéral sur les écrans 20:9), comme ReelShort.
+                // 9:16 content fills the screen (slight side crop on 20:9 screens), like ReelShort.
                 contentScale = ContentScale.Crop,
+            )
+            // Cues sit above the title/seek-bar block and the navigation bar, never under them.
+            SubtitleOverlay(
+                player = player,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .navigationBarsPadding()
+                        .padding(bottom = SUBTITLE_BOTTOM_INSET),
             )
         }
 
@@ -250,6 +360,7 @@ private fun EpisodePage(
                 Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
                     .navigationBarsPadding()
                     .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
         ) {
@@ -258,6 +369,8 @@ private fun EpisodePage(
                     text = "Épisode ${episode.index} — ${episode.title}",
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 PillButton(text = if (isMuted) "Muet" else "Son", onClick = actions.onToggleMute)
@@ -343,40 +456,24 @@ private fun PauseBadge(modifier: Modifier = Modifier) {
     }
 }
 
+/** One-line startup measurement (S01-A2-01 spike instrumentation), kept discreet under the top bar. */
 @Composable
-private fun DebugOverlay(
+private fun StartupBadge(
     state: PlayerUiState,
     modifier: Modifier = Modifier,
 ) {
-    val last = state.lastStartup
-    val lines =
-        buildList {
-            add("PlayerSpike — ép. ${state.currentIndex + 1}/${state.episodes.size}")
-            add(
-                last?.let {
-                    val mode = if (it.wasPreloaded) "préchargé" else "à froid"
-                    "1re image : ${it.startupMs} ms ($mode)" + (it.readyMs?.let { r -> " · READY $r ms" } ?: "")
-                } ?: "1re image : …",
-            )
-            add("préchargés : ${state.preloadedIndices.sorted().map { it + 1 }.ifEmpty { listOf("aucun") }}")
-            add("état : ${if (state.isPlaying) "lecture" else "pause"}")
-            if (state.startupMetrics.size > 1) {
-                add(
-                    "historique : " +
-                        state.startupMetrics.joinToString(" · ") { "ép.${it.index + 1} ${it.startupMs} ms" },
-                )
-            }
-        }
-    Column(
+    val last = state.lastStartup ?: return
+    val mode = if (last.wasPreloaded) "préchargé" else "à froid"
+    Text(
+        text = "1re image ${last.startupMs} ms · $mode · ${state.currentIndex + 1}/${state.episodes.size}",
+        color = Color(0xFFB9F6CA),
+        fontSize = 10.sp,
+        fontFamily = FontFamily.Monospace,
         modifier =
             modifier
-                .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
-                .padding(DramaSpacing.sm),
-    ) {
-        lines.forEach { line ->
-            Text(text = line, color = Color(0xFFB9F6CA), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-        }
-    }
+                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                .padding(horizontal = DramaSpacing.sm, vertical = DramaSpacing.xxs),
+    )
 }
 
 @Composable
@@ -406,3 +503,6 @@ private tailrec fun Context.findActivity(): Activity? =
         is ContextWrapper -> baseContext.findActivity()
         else -> null
     }
+
+private val TOP_BAR_HEIGHT = 48.dp
+private val SUBTITLE_BOTTOM_INSET = 112.dp

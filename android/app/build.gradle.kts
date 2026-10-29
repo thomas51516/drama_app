@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.drama.android.application)
     alias(libs.plugins.drama.android.compose)
@@ -18,6 +20,34 @@ if (firebaseConfigured) {
     logger.lifecycle("Firebase: app/google-services.json absent, building without Google services (Logcat analytics).")
 }
 
+// S03-OPS-01: release signing from the environment (CI) or android/local.properties (developer machine).
+// Keys: DRAMA_KEYSTORE_PATH, DRAMA_KEYSTORE_PASSWORD, DRAMA_KEY_ALIAS, DRAMA_KEY_PASSWORD. When any is missing
+// the release build type falls back to the debug key so `:app:bundleRelease` always builds locally; such a
+// bundle is debug-signed and must never be uploaded anywhere.
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+
+fun signingValue(key: String): String? =
+    (System.getenv(key) ?: localProperties.getProperty(key))?.trim()?.takeIf { it.isNotEmpty() }
+
+val releaseKeystorePath = signingValue("DRAMA_KEYSTORE_PATH")
+val releaseKeystorePassword = signingValue("DRAMA_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("DRAMA_KEY_ALIAS")
+val releaseKeyPassword = signingValue("DRAMA_KEY_PASSWORD")
+val releaseKeystoreFile =
+    releaseKeystorePath?.let { path ->
+        file(path).takeIf { it.isAbsolute }
+            ?: rootProject.file(path)
+    }
+val releaseSigningConfigured =
+    releaseKeystoreFile?.exists() == true &&
+        releaseKeystorePassword != null &&
+        releaseKeyAlias != null &&
+        releaseKeyPassword != null
+
 android {
     namespace = "com.drama.app"
 
@@ -27,9 +57,28 @@ android {
 
     defaultConfig {
         applicationId = "com.drama.app"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.0"
         buildConfigField("boolean", "FIREBASE_CONFIGURED", "$firebaseConfigured")
+    }
+
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+            logger.lifecycle("Signing: release keystore configured (${releaseKeystoreFile?.name}).")
+        } else {
+            logger.lifecycle(
+                "Signing: DRAMA_KEYSTORE_* not set or keystore missing, release falls back to the debug key " +
+                    "(local build only, not distributable).",
+            )
+        }
     }
 
     buildTypes {
@@ -37,10 +86,19 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
-            // R8 is enabled from Sprint 6 (performance sprint); keep the spike readable in Logcat for now.
-            isMinifyEnabled = false
+            // S03-OPS-01: R8 + resource shrinking on release (spec §7: obfuscation, AAB < 30 MB).
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig =
+                if (releaseSigningConfigured) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
+    }
+
+    bundle {
+        language.enableSplit = true
+        density.enableSplit = true
+        abi.enableSplit = true
     }
 
     packaging {
@@ -66,6 +124,11 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
+
+    // Coil image loader configured once here (SVG decoder for the dev placeholders, OkHttp network fetcher).
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.svg)
 
     // Firebase SDKs are always compiled in (the tracker picks Firebase or Logcat at runtime); only the
     // Gradle plugins depend on google-services.json.

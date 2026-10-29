@@ -4,10 +4,12 @@ import android.content.Context
 import com.drama.app.BuildConfig
 import com.drama.app.analytics.FirebaseAnalyticsTracker
 import com.drama.app.analytics.LogcatAnalyticsTracker
+import com.drama.app.locale.AndroidDeviceLocale
 import com.drama.app.logging.AndroidLogger
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.coroutines.DefaultDispatcherProvider
 import com.drama.core.common.coroutines.DispatcherProvider
+import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
 import com.drama.core.common.time.Clock
 import com.drama.core.common.time.SystemClock
@@ -33,6 +35,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideClock(): Clock = SystemClock
+
+    @Provides
+    @Singleton
+    fun provideDeviceLocale(impl: AndroidDeviceLocale): DeviceLocaleProvider = impl
 
     /** Firebase when google-services.json was present at build time and the SDK initialised; Logcat otherwise. */
     @Provides

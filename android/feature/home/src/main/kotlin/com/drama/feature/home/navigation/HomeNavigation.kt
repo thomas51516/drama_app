@@ -9,15 +9,10 @@ import kotlinx.serialization.Serializable
 data object HomeRoute
 
 fun NavGraphBuilder.homeScreen(
-    onPlaySeries: (seriesId: String) -> Unit,
     onOpenSeries: (seriesId: String) -> Unit,
-    onOpenAccount: () -> Unit,
+    onResumeEpisode: (seriesId: String, episodeId: String) -> Unit,
 ) {
     composable<HomeRoute> {
-        HomeScreen(
-            onPlaySeries = onPlaySeries,
-            onOpenSeries = onOpenSeries,
-            onOpenAccount = onOpenAccount,
-        )
+        HomeScreen(onOpenSeries = onOpenSeries, onResumeEpisode = onResumeEpisode)
     }
 }

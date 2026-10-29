@@ -17,6 +17,9 @@ interface WatchHistoryDao {
     @Query("SELECT * FROM watch_history WHERE seriesId = :seriesId")
     suspend fun getBySeries(seriesId: String): WatchHistoryEntity?
 
+    @Query("SELECT * FROM watch_history WHERE seriesId = :seriesId")
+    fun observeBySeries(seriesId: String): Flow<WatchHistoryEntity?>
+
     @Query("DELETE FROM watch_history")
     suspend fun clear()
 }

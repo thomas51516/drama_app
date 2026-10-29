@@ -7,6 +7,7 @@ import com.drama.data.fake.FakeCatalogRepository
 import com.drama.data.fake.FakePlaybackRepository
 import com.drama.data.local.CatalogLocalDataSource
 import com.drama.data.local.RoomCatalogLocalDataSource
+import com.drama.data.repository.DataStorePlayerSettingsRepository
 import com.drama.data.repository.DefaultSessionRepository
 import com.drama.data.repository.RemoteCatalogRepository
 import com.drama.data.repository.RemotePlaybackRepository
@@ -16,6 +17,7 @@ import com.drama.data.session.DataStoreSessionStore
 import com.drama.data.session.InstallationDeviceIdProvider
 import com.drama.domain.repository.CatalogRepository
 import com.drama.domain.repository.PlaybackRepository
+import com.drama.domain.repository.PlayerSettingsRepository
 import com.drama.domain.repository.SessionRepository
 import com.drama.domain.repository.WatchHistoryRepository
 import com.drama.domain.repository.WatchProgressRepository
@@ -45,6 +47,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindSessionStore(impl: DataStoreSessionStore): SessionStore
+
+    @Binds
+    @Singleton
+    abstract fun bindPlayerSettingsRepository(impl: DataStorePlayerSettingsRepository): PlayerSettingsRepository
 
     @Binds
     @Singleton

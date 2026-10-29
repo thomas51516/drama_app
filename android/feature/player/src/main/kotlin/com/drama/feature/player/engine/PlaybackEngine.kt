@@ -47,6 +47,28 @@ data class PlaybackPosition(
 }
 
 /**
+ * Tracks of the current episode as reported by the player (M-13 quality, M-14 subtitles).
+ * [videoShortSides] are the "p" values of the HLS renditions (short side of the frame), sorted ascending.
+ */
+data class AvailableTracks(
+    val videoShortSides: List<Int> = emptyList(),
+    val subtitleLanguages: List<String> = emptyList(),
+    /** Rendition currently being rendered, when known. */
+    val playingWidth: Int? = null,
+    val playingHeight: Int? = null,
+    val selectedSubtitleLanguage: String? = null,
+) {
+    val playingShortSide: Int? get() =
+        if (playingWidth != null &&
+            playingHeight != null
+        ) {
+            minOf(playingWidth, playingHeight)
+        } else {
+            null
+        }
+}
+
+/**
  * Abstraction over the Media3 stack so the view model stays testable on the JVM.
  * All methods must be called from the main thread.
  *
@@ -61,6 +83,8 @@ interface PlaybackEngine {
     val activePlayer: StateFlow<Player?>
 
     val position: StateFlow<PlaybackPosition>
+
+    val tracks: StateFlow<AvailableTracks>
 
     /** Declares [count] episode slots and drops any previous sources and players' media. */
     fun setPlaylist(count: Int)
@@ -91,6 +115,15 @@ interface PlaybackEngine {
     fun seekTo(positionMs: Long)
 
     fun setMuted(muted: Boolean)
+
+    /** Playback speed (M-13), kept across episodes. */
+    fun setPlaybackSpeed(speed: Float)
+
+    /** Caps the video rendition by its short side in pixels (360, 540, ...); 0 removes the cap (ABR). */
+    fun setMaxVideoShortSide(shortSide: Int)
+
+    /** Enables the text track of [language] (ISO 639-1) or disables subtitles when null. */
+    fun setSubtitleLanguage(language: String?)
 
     /** Synchronous read for progress reports; -1 when no player is attached. */
     fun currentPositionMs(): Long

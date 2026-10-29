@@ -1,9 +1,11 @@
 # DRAMA — application Android
 
 Application de micro-séries verticales (Kotlin, Jetpack Compose, Media3, Hilt). Ce dossier contient le socle
-multi-module du Sprint 1 (S01-A1-01, S01-A1-02), le spike lecteur HLS (S01-A2-01, S01-A2-02) et les fondations du
+multi-module du Sprint 1 (S01-A1-01, S01-A1-02), le spike lecteur HLS (S01-A2-01, S01-A2-02), les fondations du
 Sprint 2 : couche réseau sur l'API réelle (S02-A1-01), compte invité (S02-A1-02), Room progression/historique/cache
-(S02-A1-03), Firebase conditionnel (S02-A1-04) et contrôles du lecteur (S02-A2-03).
+(S02-A1-03), Firebase conditionnel (S02-A1-04) et contrôles du lecteur (S02-A2-03), puis le Sprint 3 : accueil et
+fiche série réels (S03-A1-01), sous-titres (S03-A2-01), vitesse et qualité (S03-A2-02), AAB signé et distribution
+interne (S03-OPS-01).
 
 ## Prérequis
 
@@ -49,24 +51,27 @@ cd android
 ./gradlew ktlintCheck                 # style Kotlin (ktlintFormat pour corriger)
 ./gradlew lintDebug                   # Android Lint
 ./gradlew installDebug                # installe sur l'appareil/émulateur connecté
+./gradlew :app:bundleRelease          # AAB release (R8 + shrink) : app/build/outputs/bundle/release/app-release.aab
 ```
 
-La CI (`.github/workflows/android-ci.yml`) exécute `ktlintCheck`, `lintDebug`, `test` puis `:app:assembleDebug`.
+La CI (`.github/workflows/android-ci.yml`) exécute `ktlintCheck`, `lintDebug`, `test` puis `:app:assembleDebug` à
+chaque push, et le job `bundle` (AAB release, signature, Firebase App Distribution) sur les tags `v*`
+(voir « Release : signature, R8 et distribution interne »).
 
 ## Carte des modules
 
 | Module | Type | Rôle |
 | --- | --- | --- |
-| `:app` | application | `@HiltAndroidApp`, activité unique, `NavHost`, thème M3, edge-to-edge, liaisons Hilt des abstractions `core:common`. |
+| `:app` | application | `@HiltAndroidApp`, activité unique, `NavHost` + barre de navigation (Accueil, Pour vous, Ma liste, Profil), thème M3, edge-to-edge, liaisons Hilt des abstractions `core:common` (`AndroidDeviceLocale` pour `Accept-Language` / `X-Country`). |
 | `:core:common` | Kotlin/JVM pur | `AppResult`/`AppError`, `DispatcherProvider`, façade `Logger`. |
-| `:core:ui` | bibliothèque Compose | `DramaTheme` (Material 3), jetons (`DramaColors`, `DramaSpacing`), composants partagés. |
-| `:core:network` | bibliothèque | Retrofit (`AuthApi`, `CatalogApi`, `PlaybackApi`) + OkHttp + kotlinx.serialization, DTO de l'OpenAPI v0.1, `ApiErrorMapper`, `SessionManager`, `AuthInterceptor`, `TokenAuthenticator`, `RetryInterceptor`. |
-| `:core:database` | bibliothèque | Room v2 (`watch_progress`, `watch_history`, cache catalogue), DataStore `user_preferences` et `session` (jetons chiffrés par le Keystore). |
-| `:domain` | Kotlin/JVM pur | Modèles `Series`, `Episode`, `PlaySession`, `HomeContent`, `WatchProgress`, `SessionState`, interfaces de dépôts et cas d'usage. |
+| `:core:ui` | bibliothèque Compose | `DramaTheme` (Material 3, thème sombre provisoire), jetons (`DramaColors`, `DramaSpacing`, `DramaSizes`), composants partagés (`PosterCard`, `PosterImage` Coil, `SkeletonBox`, `OfflineBanner`, `ErrorState`). |
+| `:core:network` | bibliothèque | Retrofit (`AuthApi`, `CatalogApi`, `PlaybackApi`) + OkHttp + kotlinx.serialization, DTO de l'OpenAPI v1 (+ addendum v1.1 : `subtitles`, bannières et types de rangées), `ApiErrorMapper`, `SessionManager`, `AuthInterceptor`, `TokenAuthenticator`, `RetryInterceptor`, `LocaleHeadersInterceptor`. |
+| `:core:database` | bibliothèque | Room v3 (`watch_progress`, `watch_history`, cache catalogue, `home_banners`), DataStore `user_preferences` (vitesse, qualité, sous-titres) et `session` (jetons chiffrés par le Keystore). |
+| `:domain` | Kotlin/JVM pur | Modèles `Series`, `Episode`, `PlaySession`, `HomeContent` (`HomeBanner`, `HomeRowType`), `PlayerSettings`, `ResumeTarget`, `WatchProgress`, `SessionState`, interfaces de dépôts et cas d'usage. |
 | `:data` | bibliothèque | `RemoteCatalogRepository` (API + cache Room, stale-while-revalidate), `RemotePlaybackRepository`, `DefaultSessionRepository`, dépôts Room, `FakeCatalogRepository` (tests et bascule debug). |
-| `:feature:home` | feature | Accueil alimenté par `GET /home` : bannière, rangées de cartes, hors-ligne depuis le cache. |
-| `:feature:player` | feature | Lecteur vertical plein écran, résolution `POST /episodes/{id}/play` par page, progression toutes les 5 s, contrôles (M-13), page « verrouillé », overlay de mesure. |
-| `:feature:series` | feature | Coquille « Fiche série » (route + écran vide). |
+| `:feature:home` | feature | Accueil M-01 : carrousel de bannières, rangées configurées (Tendances, Nouveautés, genres, manuelles), « Continuer à regarder », pull-to-refresh, squelette, bandeau hors-ligne. |
+| `:feature:player` | feature | Lecteur vertical plein écran, résolution `POST /episodes/{id}/play` par page, progression toutes les 5 s, contrôles (M-13 : vitesse, qualité), sous-titres (M-14), page « verrouillé », mesure de démarrage. |
+| `:feature:series` | feature | Fiche série M-10 : affiche, synopsis dépliable, genres, âge, grille des épisodes (gratuit / débloqué / verrouillé), « Regarder » / « Reprendre l'épisode N », lien profond `drama://series/{id}`. |
 | `:feature:account` | feature | Coquille « Mon compte » (route + écran vide). |
 | `build-logic/` | plugins de convention | `drama.android.application|library|compose|feature`, `drama.hilt`, `drama.jvm.library`. |
 
@@ -151,6 +156,13 @@ Le build n'exige pas Firebase. Pour l'activer :
 `episode_id`, `episode_number`, `resumed`), `episode_complete`, `paywall_view` (épisode verrouillé).
 L'identifiant utilisateur Firebase est l'id serveur du compte invité.
 
+### En-têtes de langue et de pays (addendum v1.1)
+
+`LocaleHeadersInterceptor` ajoute à chaque appel `Accept-Language` (locale de l'appareil, ex. `fr-FR, fr;q=0.9`)
+et `X-Country` (pays de la SIM, sinon du réseau, sinon de la locale). Le backend s'en sert pour filtrer les
+rangées de l'accueil par pays et traduire leurs titres. Logcat `Http` (niveau BASIC) n'affiche pas les en-têtes ;
+pour vérifier : `adb logcat -s Http` montre les URL, le backend journalise le pays reçu.
+
 ### Vérification de bout en bout
 
 ```bash
@@ -162,7 +174,58 @@ adb logcat -s AppStartup Session Http Catalog Player PlayerSpike Analytics
 # PlayerSpike: start index=0 … start_ms=12000       ← reprise à la position serveur après relance de l'app
 ```
 
-## Lecteur (S01-A2-01 / S01-A2-02 / S02-A2-03)
+## Accueil et fiche série (S03-A1-01)
+
+- **Accueil** (`GET /home`) : bannières configurées dans le back-office (`{id, seriesId, imageUrl, title, subtitle}`,
+  carrousel auto toutes les 5 s, points de page, appui → fiche série) puis rangées actives typées
+  `TRENDING | NEW | GENRE | MANUAL | CONTINUE_WATCHING`. L'app accepte aussi l'ancienne forme (bannières = résumés de
+  série, rangées sans `type`, type déduit de la clé) tant que le backend n'a pas livré la mise en avant.
+- **Continuer à regarder** : fusion de l'historique local (Room, immédiat) et de la rangée serveur
+  (synchronisée entre appareils), dédoublonnée par série, entrées terminées exclues ; la carte porte la barre de
+  progression et l'appui ouvre le lecteur à l'épisode (reprise serveur). Sans rangée serveur, elle est placée en
+  tête. Les rangées vides sont masquées.
+- Cartes 2:3 (`PosterCard`, Coil : espace réservé + fondu 250 ms), squelette au premier chargement, bandeau
+  « Hors ligne : contenu en cache » quand le rafraîchissement échoue, pull-to-refresh (`PullToRefreshBox`).
+- **Barre de navigation** : Accueil · Pour vous (espace réservé, M-02 au sprint 4) · Ma liste (espace réservé,
+  M-16) · Profil (coquille compte). La fiche série et le lecteur s'affichent plein écran, sans barre.
+- **Fiche série** (`GET /series/{id}` + `GET /series/{id}/episodes`, stale-while-revalidate) : affiche verticale
+  avec dégradé, titre, âge, nombre d'épisodes, gratuits, genres, synopsis dépliable, bouton « Regarder » ou
+  « Reprendre l'épisode N » (`ResumeTarget` : dernier épisode vu non terminé, sinon le suivant, sinon le premier),
+  grille d'épisodes 5 colonnes avec statut (« Gratuit », « Débloqué », cadenas + coût). Appui sur un épisode →
+  lecteur ; un épisode verrouillé affiche la page « verrouillé » du lecteur (paywall au sprint 7).
+- Événement `series_view` (`series_id`, `source` = `home` | `deeplink`) à l'ouverture de la fiche.
+- **Lien profond** : `drama://series/{seriesId}` (manifeste + `navDeepLink`). Test :
+  `adb shell am start -a android.intent.action.VIEW -d "drama://series/<uuid>" com.drama.app.debug`.
+  Le domaine HTTPS (App Links) sera ajouté quand l'hôte de production sera connu.
+
+## Lecteur (S01-A2-01 / S01-A2-02 / S02-A2-03 / S03-A2-01 / S03-A2-02)
+
+### Sous-titres (S03-A2-01, M-14)
+
+- Les pistes viennent de `POST /episodes/{id}/play` (`subtitles: [{language, label, url}]`, WebVTT) et sont attachées
+  au `MediaItem` en `SubtitleConfiguration` (`text/vtt`), jamais marquées « par défaut » : la sélection passe par
+  `TrackSelectionParameters.setPreferredTextLanguage` (+ piste texte désactivée quand « Désactivés »).
+- Préférence persistée (DataStore `subtitle_mode`) : `auto` (défaut = langue de l'appareil si l'épisode la propose,
+  sinon rien), `off`, ou un code ISO 639-1. Résolution par épisode dans `TrackSelectionMapper.resolveSubtitleLanguage`.
+- Rendu : `SubtitleView` (media3-ui) piloté par `Player.Listener.onCues`, style `CaptionStyleCompat` lisible sur
+  vidéo (blanc gras, fond noir translucide, ombre portée, 18 sp), au-dessus de la barre de progression.
+- Sélecteur : puce `CC FR` / `CC Off` en haut à droite ou menu ⚙ → « Sous-titres » (Désactivés + langues de
+  l'épisode). Logcat `PlayerSpike` : `tracks … text=[fr] selected_text=fr`.
+
+### Vitesse et qualité (S03-A2-02, M-13)
+
+- Vitesse 0,75× / 1× / 1,25× / 1,5× / 2× (`setPlaybackSpeed`), persistée (`playback_speed`).
+- Qualité Auto / 1080p / 720p / 540p / 360p : le « p » désigne le **petit côté** de l'image (renditions verticales
+  360×640 … 1080×1920). Le plafond passé à `setMaxVideoSize` est le grand côté d'un cadre 16:9 à cette qualité
+  (360p → 640 px), ce qui borne de la même façon portrait et paysage (`TrackSelectionMapper.longSideCap`).
+  Les options proposées suivent les renditions réellement présentes dans le manifeste HLS (`onTracksChanged`).
+  Persistée (`max_video_height`, 0 = auto).
+- Les valeurs courantes sont affichées dans la barre du haut (`1.5x` · `360p` ou `Auto · 540p` quand la rendition
+  en cours est connue · `CC FR`) et survivent aux changements d'épisode (réappliquées à chaque `play()` du pool).
+- Vérification Logcat : `adb logcat -s PlayerSpike Player` →
+  `settings applied speed=1.5 max_short_side=360 subtitles=fr` puis
+  `selected video format index=0 360x640 bitrate=… cap_short_side=360`.
+
 
 ### Contrôles (S02-A2-03)
 
@@ -241,12 +304,60 @@ Le build debug autorise le HTTP en clair (`app/src/debug/res/xml/network_securit
 release ne l'autorise pas. Le lecteur remplit l'écran (`ContentScale.Crop`) : un écran 20:9 rogne
 légèrement les bords d'un contenu 9:16, un contenu 16:9 serait fortement rogné, ce qui est voulu.
 
+## Release : signature, R8 et distribution interne (S03-OPS-01)
+
+### Signature
+
+La configuration `release` lit quatre clés, d'abord dans l'environnement puis dans `android/local.properties`
+(fichier ignoré par git) :
+
+```properties
+DRAMA_KEYSTORE_PATH=/chemin/vers/drama-release.jks   # absolu, ou relatif à android/
+DRAMA_KEYSTORE_PASSWORD=…
+DRAMA_KEY_ALIAS=drama
+DRAMA_KEY_PASSWORD=…
+```
+
+Si l'une manque (ou si le fichier n'existe pas), `release` est signée avec la **clé de debug** : `./gradlew
+:app:bundleRelease` fonctionne toujours en local (le log Gradle l'indique : « release falls back to the debug key »),
+mais un tel AAB n'est pas distribuable. Créer la clé de production (à conserver hors dépôt, sauvegardée) :
+
+```bash
+keytool -genkeypair -v -keystore drama-release.jks -alias drama -keyalg RSA -keysize 4096 -validity 10000
+```
+
+### R8
+
+`isMinifyEnabled` + `isShrinkResources` sur `release`, règles dans `app/proguard-rules.pro` (kotlinx.serialization :
+DTO et routes de navigation ; Retrofit : fonctions `suspend`). Retrofit, OkHttp, Room, Hilt, Media3, Coil et Firebase
+embarquent leurs propres règles. Le `mapping.txt` est dans `app/build/outputs/mapping/release/` (téléversé en CI,
+90 jours) ; `LineNumberTable` est conservé pour Crashlytics.
+
+### CI : job `bundle` sur les tags `v*`
+
+`git tag v0.3.0 && git push origin v0.3.0` déclenche, après le job de build : `:app:bundleRelease` avec
+`versionName = 0.3.0` et `versionCode = numéro de run`, puis l'AAB et le mapping en artefacts. Secrets GitHub :
+
+| Secret | Rôle |
+| --- | --- |
+| `DRAMA_KEYSTORE_BASE64` | keystore en base64 (`base64 -w0 drama-release.jks`) |
+| `DRAMA_KEYSTORE_PASSWORD`, `DRAMA_KEY_ALIAS`, `DRAMA_KEY_PASSWORD` | identifiants de la clé |
+| `GOOGLE_SERVICES_JSON` | contenu de `google-services.json` ; l'`appId` Firebase de `com.drama.app` en est extrait |
+| `FIREBASE_APP_DISTRIBUTION_SA` | compte de service Firebase (rôle « Firebase App Distribution Admin ») |
+
+Sans secrets de signature : AAB signé debug, artefact suffixé `-debugsigned`, pas de distribution. Avec la clé mais
+sans compte de service : AAB signé, pas de distribution. Avec les deux : envoi à Firebase App Distribution, groupe
+`internal-testers` (à créer dans la console Firebase, testeurs invités par e-mail).
+
 ## Qualité
 
 - `ktlint` (`ktlint_official`, exception de nommage pour les `@Composable`) via `./gradlew ktlintCheck` / `ktlintFormat`.
 - Tests unitaires : `:core:common` (AppResult), `:domain` (navigation d'épisodes, cas d'usage, politique de reprise),
   `:core:network` (`TokenAuthenticatorTest` avec MockWebServer : refresh en vol unique, rotation, repli invité ;
-  `ApiErrorMapperTest` ; `RetryInterceptorTest`), `:data` (`RemoteCatalogRepositoryTest` : politique de cache ;
-  `MediaUrlResolverTest`), `:feature:player` (`PlayerViewModelTest` : /play, verrouillé, seek, ±10 s, muet,
-  fin d'épisode, progression 5 s).
+  `ApiErrorMapperTest` ; `RetryInterceptorTest`), `:data` (`RemoteCatalogRepositoryTest` : politique de cache,
+  bannières et types de rangées ; `MediaUrlResolverTest`), `:feature:home` (`HomeViewModelTest` : rangées, fusion
+  « Continuer à regarder », états), `:feature:series` (`SeriesViewModelTest` : cible de reprise, `series_view`,
+  états), `:feature:player` (`PlayerViewModelTest` : /play, verrouillé, seek, ±10 s, muet, fin d'épisode,
+  progression 5 s, persistance vitesse / qualité / sous-titres, survie au changement d'épisode ;
+  `TrackSelectionMapperTest`).
 - Android Lint : `./gradlew lintDebug` (bloquant sur les erreurs).

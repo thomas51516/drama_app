@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -13,9 +15,13 @@ import javax.inject.Singleton
 data class UserPreferences(
     val dataSaverEnabled: Boolean = false,
     val playbackSpeed: Float = 1f,
+    /** Maximum video height in pixels; 0 = automatic (ABR). */
+    val maxVideoHeight: Int = 0,
+    /** `auto`, `off` or an ISO 639-1 code; null when never chosen (= auto). */
+    val subtitleMode: String? = null,
 )
 
-/** DataStore-backed user preferences (M-13 speed, M-17 data saver). */
+/** DataStore-backed user preferences (M-13 speed and quality, M-14 subtitles, M-17 data saver). */
 @Singleton
 class UserPreferencesDataSource
     @Inject
@@ -27,6 +33,8 @@ class UserPreferencesDataSource
                 UserPreferences(
                     dataSaverEnabled = prefs[Keys.DATA_SAVER] ?: false,
                     playbackSpeed = prefs[Keys.PLAYBACK_SPEED] ?: 1f,
+                    maxVideoHeight = prefs[Keys.MAX_VIDEO_HEIGHT] ?: 0,
+                    subtitleMode = prefs[Keys.SUBTITLE_MODE],
                 )
             }
 
@@ -38,8 +46,18 @@ class UserPreferencesDataSource
             dataStore.edit { it[Keys.PLAYBACK_SPEED] = speed }
         }
 
+        suspend fun setMaxVideoHeight(maxHeight: Int) {
+            dataStore.edit { it[Keys.MAX_VIDEO_HEIGHT] = maxHeight }
+        }
+
+        suspend fun setSubtitleMode(mode: String) {
+            dataStore.edit { it[Keys.SUBTITLE_MODE] = mode }
+        }
+
         private object Keys {
             val DATA_SAVER = booleanPreferencesKey("data_saver_enabled")
             val PLAYBACK_SPEED = floatPreferencesKey("playback_speed")
+            val MAX_VIDEO_HEIGHT = intPreferencesKey("max_video_height")
+            val SUBTITLE_MODE = stringPreferencesKey("subtitle_mode")
         }
     }

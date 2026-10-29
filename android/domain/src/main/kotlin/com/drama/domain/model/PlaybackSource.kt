@@ -5,6 +5,8 @@ data class PlaybackSource(
     val url: String,
     val format: StreamFormat,
     val drmLicenseUrl: String? = null,
+    /** Side-loaded text tracks attached to the media item (M-14). */
+    val subtitles: List<Subtitle> = emptyList(),
 )
 
 enum class StreamFormat {

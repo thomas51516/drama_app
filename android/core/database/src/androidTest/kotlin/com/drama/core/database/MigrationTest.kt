@@ -10,7 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Replays every exported schema (core/database/schemas) and checks the v1 -> v2 auto-migration keeps the
+ * Replays every exported schema (core/database/schemas) and checks the auto-migrations (1 -> 2 -> 3) keep the
  * Sprint 1 progress rows. Run on a device: `./gradlew :core:database:connectedDebugAndroidTest`.
  */
 @RunWith(AndroidJUnit4::class)
@@ -40,6 +40,26 @@ class MigrationTest {
             assertEquals(0, cursor.getInt(2))
         }
         db.query("SELECT COUNT(*) FROM watch_history").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
+        db.close()
+    }
+
+    @Test
+    fun migrate2To3_addsBannersAndRowType() {
+        helper.createDatabase(TEST_DB, 2).apply {
+            execSQL("INSERT INTO home_rows (`key`, position, title) VALUES ('trending', 0, 'Tendances')")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 3, true)
+        db.query("SELECT `key`, type FROM home_rows").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("trending", cursor.getString(0))
+            assertEquals("MANUAL", cursor.getString(1))
+        }
+        db.query("SELECT COUNT(*) FROM home_banners").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals(0, cursor.getInt(0))
         }

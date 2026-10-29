@@ -1,6 +1,7 @@
 package com.drama.feature.player.engine
 
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -10,6 +11,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -25,6 +28,7 @@ import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
 import com.drama.core.common.logging.Logger
 import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.StreamFormat
+import com.drama.domain.model.Subtitle
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -60,6 +64,14 @@ class ExoPlaybackEngine(
 
     private val positionFlow = MutableStateFlow(PlaybackPosition())
     override val position: StateFlow<PlaybackPosition> = positionFlow.asStateFlow()
+
+    private val tracksFlow = MutableStateFlow(AvailableTracks())
+    override val tracks: StateFlow<AvailableTracks> = tracksFlow.asStateFlow()
+
+    // Settings applied to every player the pool hands out (they survive episode changes, S03-A2-01/02).
+    private var playbackSpeed = 1f
+    private var maxVideoShortSide = 0
+    private var subtitleLanguage: String? = null
 
     private var slotCount = 0
     private val mediaItems = mutableMapOf<Int, MediaItem>()
@@ -193,6 +205,8 @@ class ExoPlaybackEngine(
         val player = idlePlayers.removeFirstOrNull() ?: createPlayer()
         current = player
         player.volume = if (muted) 0f else 1f
+        applySettings(player)
+        tracksFlow.value = AvailableTracks()
         currentWasPreloaded = index in preloadedIndices
         firstFrameReported = false
         readyAtMs = null
@@ -225,6 +239,7 @@ class ExoPlaybackEngine(
         activePlayerFlow.value = null
         mainHandler.removeCallbacks(positionTicker)
         positionFlow.value = PlaybackPosition()
+        tracksFlow.value = AvailableTracks()
     }
 
     override fun togglePlayPause() {
@@ -258,6 +273,38 @@ class ExoPlaybackEngine(
     override fun setMuted(muted: Boolean) {
         this.muted = muted
         current?.volume = if (muted) 0f else 1f
+    }
+
+    override fun setPlaybackSpeed(speed: Float) {
+        playbackSpeed = speed
+        current?.let { applySettings(it) }
+    }
+
+    override fun setMaxVideoShortSide(shortSide: Int) {
+        maxVideoShortSide = shortSide
+        current?.let { applySettings(it) }
+    }
+
+    override fun setSubtitleLanguage(language: String?) {
+        subtitleLanguage = language
+        current?.let { applySettings(it) }
+    }
+
+    /** Speed, quality cap and subtitle choice are plain player parameters: cheap to re-apply on every start. */
+    private fun applySettings(player: ExoPlayer) {
+        val cap = TrackSelectionMapper.longSideCap(maxVideoShortSide)
+        player.trackSelectionParameters =
+            player.trackSelectionParameters
+                .buildUpon()
+                .setMaxVideoSize(cap, cap)
+                .setPreferredTextLanguage(subtitleLanguage)
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, subtitleLanguage == null)
+                .build()
+        if (player.playbackParameters.speed != playbackSpeed) player.setPlaybackSpeed(playbackSpeed)
+        logger.i(
+            TAG,
+            "settings applied speed=$playbackSpeed max_short_side=$maxVideoShortSide subtitles=${subtitleLanguage ?: "off"}",
+        )
     }
 
     override fun currentPositionMs(): Long = current?.currentPosition ?: -1L
@@ -336,6 +383,52 @@ class ExoPlaybackEngine(
             if (player === current) eventsFlow.tryEmit(PlaybackEvent.IsPlayingChanged(isPlaying))
         }
 
+        override fun onTracksChanged(tracks: Tracks) {
+            if (player !== current) return
+            val videoFormats =
+                tracks.groups
+                    .filter { it.type == C.TRACK_TYPE_VIDEO }
+                    .flatMap { group -> (0 until group.length).map { group.getTrackFormat(it) } }
+            val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+            val selectedText =
+                textGroups
+                    .flatMap { group ->
+                        (0 until group.length).filter { group.isTrackSelected(it) }.map { group.getTrackFormat(it) }
+                    }.firstOrNull()
+                    ?.language
+            tracksFlow.value =
+                tracksFlow.value.copy(
+                    videoShortSides =
+                        videoFormats
+                            .filter { it.width > 0 && it.height > 0 }
+                            .map { TrackSelectionMapper.shortSide(it.width, it.height) }
+                            .distinct()
+                            .sorted(),
+                    subtitleLanguages =
+                        textGroups
+                            .flatMap { group -> (0 until group.length).map { group.getTrackFormat(it) } }
+                            .mapNotNull { it.language?.lowercase() }
+                            .distinct(),
+                    selectedSubtitleLanguage = selectedText?.lowercase(),
+                )
+            logger.i(
+                TAG,
+                "tracks index=$currentIndex video=${tracksFlow.value.videoShortSides.joinToString("/") { "${it}p" }} " +
+                    "text=${tracksFlow.value.subtitleLanguages} selected_text=${selectedText ?: "none"}",
+            )
+        }
+
+        override fun onVideoSizeChanged(videoSize: VideoSize) {
+            if (player !== current || videoSize.width == 0 || videoSize.height == 0) return
+            val format = player.videoFormat
+            tracksFlow.value = tracksFlow.value.copy(playingWidth = videoSize.width, playingHeight = videoSize.height)
+            logger.i(
+                TAG,
+                "selected video format index=$currentIndex ${videoSize.width}x${videoSize.height} " +
+                    "bitrate=${format?.bitrate ?: -1} codecs=${format?.codecs ?: "?"} cap_short_side=$maxVideoShortSide",
+            )
+        }
+
         override fun onPlayerError(error: PlaybackException) {
             if (player !== current) return
             logger.e(TAG, "player error index=$currentIndex code=${error.errorCodeName}", error)
@@ -354,7 +447,18 @@ class ExoPlaybackEngine(
                     StreamFormat.DASH -> MimeTypes.APPLICATION_MPD
                     StreamFormat.PROGRESSIVE -> null
                 },
-            ).build()
+            ).setSubtitleConfigurations(subtitles.map { it.toSubtitleConfiguration() })
+            .build()
+
+    /** Side-loaded WebVTT track (M-14); never flagged default: the selector picks it from the preference. */
+    private fun Subtitle.toSubtitleConfiguration(): MediaItem.SubtitleConfiguration =
+        MediaItem.SubtitleConfiguration
+            .Builder(Uri.parse(url))
+            .setMimeType(MimeTypes.TEXT_VTT)
+            .setLanguage(language)
+            .setLabel(label)
+            .setSelectionFlags(0)
+            .build()
 
     companion object {
         const val TAG = "PlayerSpike"

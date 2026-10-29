@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
+import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
@@ -13,14 +14,20 @@ import com.drama.core.common.time.Clock
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeNavigation
 import com.drama.domain.model.PlaySession
+import com.drama.domain.model.PlayerSettings
+import com.drama.domain.model.SubtitleMode
+import com.drama.domain.model.VideoQuality
 import com.drama.domain.model.WatchProgress
+import com.drama.domain.repository.PlayerSettingsRepository
 import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.PlaybackStart
 import com.drama.domain.usecase.ReportProgressUseCase
 import com.drama.domain.usecase.StartPlaybackUseCase
+import com.drama.feature.player.engine.AvailableTracks
 import com.drama.feature.player.engine.PlaybackEngine
 import com.drama.feature.player.engine.PlaybackEngineFactory
 import com.drama.feature.player.engine.PlaybackEvent
+import com.drama.feature.player.engine.TrackSelectionMapper
 import com.drama.feature.player.navigation.PlayerRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -41,6 +48,9 @@ import javax.inject.Inject
  * - Progress is reported every [PROGRESS_INTERVAL_MS] while playing, on pause, on page change, on
  *   background and when the screen leaves; the end of an episode reports `completed = true` (M-15).
  * - Resume: server position wins over local (see `DefaultStartPlaybackUseCase`).
+ * - Settings (S03-A2-01/02): speed, quality cap and subtitle mode come from [PlayerSettingsRepository]; every
+ *   change is persisted first and applied to the engine from the flow, so it survives episode changes and
+ *   app restarts. The subtitle language is resolved per episode (device language in `Auto` mode).
  */
 @HiltViewModel
 class PlayerViewModel
@@ -53,6 +63,8 @@ class PlayerViewModel
         private val analytics: AnalyticsTracker,
         private val clock: Clock,
         private val logger: Logger,
+        private val playerSettings: PlayerSettingsRepository,
+        private val deviceLocale: DeviceLocaleProvider,
         engineFactory: PlaybackEngineFactory,
     ) : ViewModel() {
         private val seriesId: String = checkNotNull(savedStateHandle[PlayerRoute.ARG_SERIES_ID])
@@ -74,11 +86,79 @@ class PlayerViewModel
         private var countdownJob: Job? = null
         private var lastReportedPositionMs = -1L
         private var startedEpisodeId: String? = null
+        private var settingsApplied = false
+        private var subtitlesApplied = false
 
         init {
             viewModelScope.launch { engine.events.collect(::onEvent) }
             viewModelScope.launch { engine.position.collect { pos -> uiStateFlow.update { it.copy(position = pos) } } }
+            viewModelScope.launch { engine.tracks.collect(::onTracksChanged) }
+            viewModelScope.launch { playerSettings.settings.collect(::applySettings) }
             load()
+        }
+
+        // --- settings (M-13 / M-14) ---
+
+        fun onSpeedSelected(speed: Float) {
+            if (speed !in PlayerSettings.SPEEDS) return
+            applySettings(uiStateFlow.value.settings.copy(speed = speed))
+            viewModelScope.launch { playerSettings.setSpeed(speed) }
+        }
+
+        fun onQualitySelected(quality: VideoQuality) {
+            applySettings(uiStateFlow.value.settings.copy(quality = quality))
+            viewModelScope.launch { playerSettings.setQuality(quality) }
+        }
+
+        fun onSubtitleSelected(mode: SubtitleMode) {
+            applySettings(uiStateFlow.value.settings.copy(subtitles = mode))
+            viewModelScope.launch { playerSettings.setSubtitles(mode) }
+        }
+
+        /** Applies [settings] to the engine (idempotent) and refreshes the derived labels. */
+        private fun applySettings(settings: PlayerSettings) {
+            val previous = uiStateFlow.value.settings
+            uiStateFlow.update { it.copy(settings = settings) }
+            if (previous.speed != settings.speed || !settingsApplied) engine.setPlaybackSpeed(settings.speed)
+            if (previous.quality != settings.quality ||
+                !settingsApplied
+            ) {
+                engine.setMaxVideoShortSide(settings.quality.maxHeight)
+            }
+            settingsApplied = true
+            applySubtitles()
+        }
+
+        /** Resolves the text track for the current episode from the mode, what `/play` offers and the device language. */
+        private fun applySubtitles() {
+            val state = uiStateFlow.value
+            val offered = state.currentEpisode?.let { sessions[it.id]?.subtitles }.orEmpty()
+            val language =
+                TrackSelectionMapper.resolveSubtitleLanguage(
+                    state.settings.subtitles,
+                    offered,
+                    deviceLocale.language,
+                )
+            if (offered != state.subtitleOptions || language != state.activeSubtitleLanguage || !subtitlesApplied) {
+                engine.setSubtitleLanguage(language)
+                subtitlesApplied = true
+                logger.i(
+                    TAG,
+                    "subtitles mode=${state.settings.subtitles} offered=${offered.map {
+                        it.language
+                    }} active=${language ?: "off"}",
+                )
+            }
+            uiStateFlow.update { it.copy(subtitleOptions = offered, activeSubtitleLanguage = language) }
+        }
+
+        private fun onTracksChanged(tracks: AvailableTracks) {
+            uiStateFlow.update {
+                it.copy(
+                    qualityOptions = TrackSelectionMapper.qualityOptions(tracks.videoShortSides),
+                    playingShortSide = tracks.playingShortSide,
+                )
+            }
         }
 
         private fun load() {
@@ -244,6 +324,8 @@ class PlayerViewModel
             engine.setSource(index, start.session.source)
             uiStateFlow.update { it.copy(pages = it.pages + (index to PageState.Ready), errorMessage = null) }
             if (!playWhenReady || uiStateFlow.value.currentIndex != index) return
+            // The subtitle choice depends on what this episode offers: resolve it before the player starts.
+            applySubtitles()
             engine.play(index, start.startPositionMs)
             trackStart(episode, resumed = start.isResume)
         }

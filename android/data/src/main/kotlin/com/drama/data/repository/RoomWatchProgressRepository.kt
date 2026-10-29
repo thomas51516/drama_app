@@ -65,5 +65,8 @@ class RoomWatchHistoryRepository
         override fun observeRecent(limit: Int): Flow<List<WatchHistoryEntry>> =
             dao.observeRecent(limit).map { list -> list.map { it.toDomain() } }
 
+        override fun observeForSeries(seriesId: String): Flow<WatchHistoryEntry?> =
+            dao.observeBySeries(seriesId).map { it?.toDomain() }
+
         override suspend fun clear() = dao.clear()
     }

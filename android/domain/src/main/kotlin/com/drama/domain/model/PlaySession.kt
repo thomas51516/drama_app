@@ -17,7 +17,9 @@ data class PlaySession(
     fun isExpired(nowEpochMs: Long): Boolean = nowEpochMs >= expiresAtEpochMs
 }
 
+/** One WebVTT track (M-14). [language] is an ISO 639-1 code, [label] the human name shown in the selector. */
 data class Subtitle(
     val language: String,
     val url: String,
+    val label: String = language,
 )

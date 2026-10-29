@@ -19,8 +19,6 @@ import com.drama.data.mapper.toDomain
 import com.drama.data.media.MediaUrlResolver
 import com.drama.domain.model.Episode
 import com.drama.domain.model.HomeContent
-import com.drama.domain.model.HomeItem
-import com.drama.domain.model.HomeRow
 import com.drama.domain.model.Series
 import com.drama.domain.repository.CatalogRepository
 import kotlinx.coroutines.flow.Flow
@@ -111,21 +109,7 @@ class RemoteCatalogRepository(
             .map { dto ->
                 HomeContent(
                     banners = dto.banners.map { it.toDomain(media) },
-                    rows =
-                        dto.rows.map { row ->
-                            HomeRow(
-                                key = row.key,
-                                title = row.title,
-                                items =
-                                    row.items.map { item ->
-                                        HomeItem(
-                                            series = item.series.toDomain(media),
-                                            episode = item.episode?.toDomain(media),
-                                            positionMs = item.positionSeconds?.let { (it * MS_PER_SECOND).toLong() },
-                                        )
-                                    },
-                            )
-                        },
+                    rows = dto.rows.map { it.toDomain(media) },
                 )
             }.also { result -> if (result is AppResult.Success) local.saveHome(result.value, clock.nowEpochMs()) }
             .map { }
@@ -158,7 +142,6 @@ class RemoteCatalogRepository(
 
     companion object {
         private const val TAG = "Catalog"
-        private const val MS_PER_SECOND = 1_000.0
         const val HOME_TTL_MS = 5 * 60 * 1_000L
         const val SERIES_TTL_MS = 10 * 60 * 1_000L
     }

@@ -1,5 +1,6 @@
 package com.drama.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -46,6 +47,8 @@ data class HomeRowEntity(
     @PrimaryKey val key: String,
     val position: Int,
     val title: String,
+    /** `HomeRowType` name (v3); rows cached by v2 read back as MANUAL and are re-typed from their key. */
+    @ColumnInfo(defaultValue = "MANUAL") val type: String = "MANUAL",
 )
 
 @Entity(
@@ -59,6 +62,17 @@ data class HomeRowItemEntity(
     val seriesId: String,
     val episodeId: String?,
     val positionMs: Long?,
+)
+
+/** Configured banners of `GET /home` (addendum v1.1, schema v3). */
+@Entity(tableName = "home_banners")
+data class HomeBannerEntity(
+    @PrimaryKey val id: String,
+    val position: Int,
+    val seriesId: String,
+    val imageUrl: String?,
+    val title: String,
+    val subtitle: String?,
 )
 
 /** Last successful fetch per cache key (`home`, `series:<id>`, `episodes:<id>`): drives stale-while-revalidate. */

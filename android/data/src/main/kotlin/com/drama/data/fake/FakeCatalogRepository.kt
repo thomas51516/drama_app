@@ -6,6 +6,7 @@ import com.drama.core.common.result.Resource
 import com.drama.core.network.BuildConfig
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.HomeBanner
 import com.drama.domain.model.HomeContent
 import com.drama.domain.model.HomeItem
 import com.drama.domain.model.HomeRow
@@ -36,7 +37,16 @@ class FakeCatalogRepository
                 emit(
                     Resource.Success(
                         HomeContent(
-                            banners = listOf(testSeries),
+                            banners =
+                                listOf(
+                                    HomeBanner(
+                                        id = "banner-1",
+                                        seriesId = testSeries.id,
+                                        imageUrl = null,
+                                        title = testSeries.title,
+                                        subtitle = "Catalogue factice",
+                                    ),
+                                ),
                             rows = listOf(HomeRow("trending", "Tendances", listOf(HomeItem(testSeries)))),
                         ),
                     ),

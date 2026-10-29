@@ -113,8 +113,12 @@ async function main(): Promise<void> {
     });
     await prisma.subtitle.upsert({
       where: { episodeId_language: { episodeId: saved.id, language: 'fr' } },
-      update: {},
-      create: { episodeId: saved.id, language: 'fr', fileUrl: `subtitles/${saved.id}/fr.vtt` },
+      update: { fileUrl: `hls/samples/ep${ep.number}/subtitles/fr.vtt` },
+      create: {
+        episodeId: saved.id,
+        language: 'fr',
+        fileUrl: `hls/samples/ep${ep.number}/subtitles/fr.vtt`,
+      },
     });
   }
   console.log(

@@ -16,6 +16,7 @@ import com.drama.data.media.MediaUrlResolver
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.HomeContent
+import com.drama.domain.model.HomeRowType
 import com.drama.domain.model.Series
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,7 +98,13 @@ class RemoteCatalogRepositoryTest {
                         .first()
                         .title,
                 )
-                assertEquals(1, success.data.banners.size)
+                val banner = success.data.banners.single()
+                assertEquals("b1", banner.id)
+                assertEquals("s1", banner.seriesId)
+                assertEquals("À la une", banner.title)
+                assertEquals("2 épisodes gratuits", banner.subtitle)
+                assertEquals("http://10.0.2.2:9000/drama-media/banners/b1.jpg", banner.imageUrl)
+                assertEquals(listOf(HomeRowType.TRENDING, HomeRowType.GENRE), success.data.rows.map { it.type })
                 cancelAndIgnoreRemainingEvents()
             }
             assertEquals(1, server.requestCount)
@@ -313,9 +320,16 @@ class RemoteCatalogRepositoryTest {
         const val SERIES_SUMMARY = """{"id":"s1","slug":"le-secret-du-lagon","title":"Le Secret du Lagon","genres":["romance","drame"],
             "posterVerticalUrl":"https://placehold.co/1080x1920","posterHorizontalUrl":null,"episodeCount":3,
             "freeEpisodeCount":2,"coinCostPerEpisode":10,"ageRating":"PG12","publishedAt":"2026-10-01T08:00:00.000Z"}"""
+        const val BANNER =
+            """{"id":"s1","slug":"le-secret-du-lagon","title":"Le Secret du Lagon","genres":["romance"],
+            "posterVerticalUrl":"https://placehold.co/1080x1920","posterHorizontalUrl":null,"episodeCount":3,
+            "freeEpisodeCount":2,"coinCostPerEpisode":10,"ageRating":"PG12","publishedAt":null,
+            "bannerId":"b1","imageUrl":"http://localhost:9000/drama-media/banners/b1.jpg",
+            "bannerTitle":"À la une","bannerSubtitle":"2 épisodes gratuits"}"""
         const val HOME_JSON =
-            """{"banners":[$SERIES_SUMMARY],
-            "rows":[{"key":"trending","title":"Tendances","items":[{"series":$SERIES_SUMMARY}]}]}"""
+            """{"banners":[$BANNER],
+            "rows":[{"key":"trending","type":"TRENDING","title":"Tendances","items":[{"series":$SERIES_SUMMARY}]},
+            {"key":"genre-drame","type":"GENRE","title":"Drame","items":[]}]}"""
         const val SERIES_JSON = """{"id":"s1","slug":"le-secret-du-lagon","title":"Le Secret du Lagon","genres":["romance"],
             "posterVerticalUrl":null,"posterHorizontalUrl":null,"episodeCount":3,"freeEpisodeCount":2,"coinCostPerEpisode":10,
             "ageRating":"PG12","publishedAt":null,"synopsis":"Une famille, un lagon.","tags":[],"originalLanguage":"fr","status":"PUBLISHED"}"""

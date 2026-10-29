@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.media3.common.Player
 import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
+import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
@@ -12,12 +13,18 @@ import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.PlaybackSource
+import com.drama.domain.model.PlayerSettings
 import com.drama.domain.model.StreamFormat
+import com.drama.domain.model.Subtitle
+import com.drama.domain.model.SubtitleMode
+import com.drama.domain.model.VideoQuality
 import com.drama.domain.model.WatchProgress
+import com.drama.domain.repository.PlayerSettingsRepository
 import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.PlaybackStart
 import com.drama.domain.usecase.ReportProgressUseCase
 import com.drama.domain.usecase.StartPlaybackUseCase
+import com.drama.feature.player.engine.AvailableTracks
 import com.drama.feature.player.engine.PlaybackEngine
 import com.drama.feature.player.engine.PlaybackEngineFactory
 import com.drama.feature.player.engine.PlaybackEvent
@@ -29,6 +36,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -72,6 +80,9 @@ class PlayerViewModelTest {
             AppResult.Success(Unit)
         }
     private var resumePositions = mutableMapOf<String, Long>()
+    private val subtitlesByEpisode = mutableMapOf<String, List<Subtitle>>()
+    private val settingsRepository = FakePlayerSettingsRepository()
+    private var deviceLanguage = "fr"
     private val playCalls = mutableListOf<String>()
     private val startPlayback =
         StartPlaybackUseCase { episodeId ->
@@ -81,6 +92,7 @@ class PlayerViewModelTest {
                 AppResult.Failure(AppError.Locked(episodeId, "s1", 10))
             } else {
                 val resume = resumePositions[episodeId] ?: 0L
+                val subtitles = subtitlesByEpisode[episodeId].orEmpty()
                 AppResult.Success(
                     PlaybackStart(
                         session =
@@ -88,12 +100,17 @@ class PlayerViewModelTest {
                                 episodeId = episodeId,
                                 seriesId = "s1",
                                 episodeNumber = episode.index,
-                                source = PlaybackSource("https://cdn/$episodeId.m3u8", StreamFormat.HLS),
+                                source =
+                                    PlaybackSource(
+                                        "https://cdn/$episodeId.m3u8",
+                                        StreamFormat.HLS,
+                                        subtitles = subtitles,
+                                    ),
                                 expiresAtEpochMs = Long.MAX_VALUE,
                                 resumePositionMs = resume,
                                 durationMs = 30_000,
                                 nextEpisodeId = episodes.getOrNull(episode.index)?.id,
-                                subtitles = emptyList(),
+                                subtitles = subtitles,
                             ),
                         startPositionMs = resume,
                     ),
@@ -126,6 +143,8 @@ class PlayerViewModelTest {
             analytics = analytics,
             clock = Clock { 0L },
             logger = NoOpLogger,
+            playerSettings = settingsRepository,
+            deviceLocale = FixedDeviceLocale(deviceLanguage, "FR"),
             engineFactory = PlaybackEngineFactory { engine },
         )
 
@@ -372,6 +391,129 @@ class PlayerViewModelTest {
             assertEquals(420L, state.lastStartup?.startupMs)
         }
 
+    // --- settings (S03-A2-01 / S03-A2-02) ---
+
+    @Test
+    fun `persisted settings are applied to the engine on start`() =
+        runTest(dispatcher) {
+            settingsRepository.state.value =
+                PlayerSettings(speed = 1.5f, quality = VideoQuality.P360, subtitles = SubtitleMode.Off)
+            createViewModel()
+            advanceUntilIdle()
+
+            assertEquals(1.5f, engine.speed)
+            assertEquals(360, engine.maxShortSide)
+            assertNull(engine.activeSubtitle)
+        }
+
+    @Test
+    fun `selecting speed and quality persists them and applies immediately`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            viewModel.onSpeedSelected(2f)
+            viewModel.onQualitySelected(VideoQuality.P540)
+            advanceUntilIdle()
+
+            assertEquals(2f, engine.speed)
+            assertEquals(540, engine.maxShortSide)
+            assertEquals(2f, settingsRepository.state.value.speed)
+            assertEquals(VideoQuality.P540, settingsRepository.state.value.quality)
+            assertEquals("2x", viewModel.uiState.value.speedLabel)
+            assertEquals("540p", viewModel.uiState.value.qualityLabel)
+            // unknown speeds are ignored
+            viewModel.onSpeedSelected(3f)
+            assertEquals(2f, engine.speed)
+        }
+
+    @Test
+    fun `settings survive an episode change`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onSpeedSelected(1.25f)
+            viewModel.onQualitySelected(VideoQuality.P360)
+            advanceUntilIdle()
+
+            viewModel.onPageSettled(1)
+            advanceUntilIdle()
+
+            assertEquals(1, viewModel.uiState.value.currentIndex)
+            assertEquals(1.25f, engine.speed)
+            assertEquals(360, engine.maxShortSide)
+            assertEquals(1.25f, viewModel.uiState.value.settings.speed)
+        }
+
+    @Test
+    fun `auto subtitles default to the device language when the episode offers it`() =
+        runTest(dispatcher) {
+            subtitlesByEpisode["ep1"] =
+                listOf(Subtitle("fr", "u/fr.vtt", "Français"), Subtitle("en", "u/en.vtt", "English"))
+            subtitlesByEpisode["ep2"] = listOf(Subtitle("en", "u/en.vtt", "English"))
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            assertEquals("fr", engine.activeSubtitle)
+            assertEquals("fr", viewModel.uiState.value.activeSubtitleLanguage)
+            assertEquals(2, viewModel.uiState.value.subtitleOptions.size)
+
+            // Episode 2 has no French track: subtitles switch off without touching the preference.
+            viewModel.onPageSettled(1)
+            advanceUntilIdle()
+            assertNull(engine.activeSubtitle)
+            assertEquals(SubtitleMode.Auto, settingsRepository.state.value.subtitles)
+        }
+
+    @Test
+    fun `choosing a subtitle language persists it and off disables the text track`() =
+        runTest(dispatcher) {
+            subtitlesByEpisode["ep1"] = listOf(Subtitle("fr", "u/fr.vtt"), Subtitle("en", "u/en.vtt"))
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            viewModel.onSubtitleSelected(SubtitleMode.Language("en"))
+            advanceUntilIdle()
+            assertEquals("en", engine.activeSubtitle)
+            assertEquals(SubtitleMode.Language("en"), settingsRepository.state.value.subtitles)
+            assertEquals("CC EN".removePrefix("CC "), viewModel.uiState.value.subtitleLabel)
+
+            viewModel.onSubtitleSelected(SubtitleMode.Off)
+            advanceUntilIdle()
+            assertNull(engine.activeSubtitle)
+            assertEquals(SubtitleMode.Off, settingsRepository.state.value.subtitles)
+            assertEquals("Off", viewModel.uiState.value.subtitleLabel)
+        }
+
+    @Test
+    fun `quality options and live rendition follow the engine tracks`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            engine.setTracks(
+                AvailableTracks(videoShortSides = listOf(360, 720), playingWidth = 360, playingHeight = 640),
+            )
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(VideoQuality.AUTO, VideoQuality.P720, VideoQuality.P360),
+                viewModel.uiState.value.qualityOptions,
+            )
+            assertEquals("Auto · 360p", viewModel.uiState.value.qualityLabel)
+        }
+
+    private class FakePlayerSettingsRepository : PlayerSettingsRepository {
+        val state = MutableStateFlow(PlayerSettings())
+        override val settings: StateFlow<PlayerSettings> = state
+
+        override suspend fun setSpeed(speed: Float) = state.update { it.copy(speed = speed) }
+
+        override suspend fun setQuality(quality: VideoQuality) = state.update { it.copy(quality = quality) }
+
+        override suspend fun setSubtitles(mode: SubtitleMode) = state.update { it.copy(subtitles = mode) }
+    }
+
     private class RecordingAnalytics : AnalyticsTracker {
         val events = mutableListOf<AnalyticsEvent>()
 
@@ -388,6 +530,15 @@ class PlayerViewModelTest {
         override val activePlayer: StateFlow<Player?> = MutableStateFlow(null)
         private val positionFlow = MutableStateFlow(PlaybackPosition())
         override val position: StateFlow<PlaybackPosition> = positionFlow
+        private val tracksFlow = MutableStateFlow(AvailableTracks())
+        override val tracks: StateFlow<AvailableTracks> = tracksFlow
+        var speed = 1f
+        var maxShortSide = 0
+        var activeSubtitle: String? = null
+
+        fun setTracks(tracks: AvailableTracks) {
+            tracksFlow.value = tracks
+        }
 
         var playlistSize = 0
         private val sources = mutableMapOf<Int, PlaybackSource>()
@@ -447,6 +598,18 @@ class PlayerViewModelTest {
 
         override fun setMuted(muted: Boolean) {
             isMutedNow = muted
+        }
+
+        override fun setPlaybackSpeed(speed: Float) {
+            this.speed = speed
+        }
+
+        override fun setMaxVideoShortSide(shortSide: Int) {
+            maxShortSide = shortSide
+        }
+
+        override fun setSubtitleLanguage(language: String?) {
+            activeSubtitle = language
         }
 
         override fun currentPositionMs(): Long = positionFlow.value.positionMs

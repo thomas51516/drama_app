@@ -3,6 +3,7 @@ name: android-ci
 on:
   push:
     branches: [main, develop]
+    tags: ["v*"]
     paths:
       - "android/**"
       - ".github/workflows/android-ci.yml"
@@ -76,3 +77,108 @@ jobs:
             android/**/build/reports/ktlint/**
           retention-days: 7
           if-no-files-found: ignore
+
+  # S03-OPS-01: on a version tag (v1.2.3), build the release AAB (R8 + resource shrinking). When the signing
+  # secrets exist the bundle is signed with the release key and, when the Firebase service account exists too,
+  # uploaded to Firebase App Distribution (group "internal-testers"). Without secrets the job still produces a
+  # debug-signed AAB as a build artifact so the release pipeline stays verifiable.
+  #
+  # Secrets (repository settings):
+  #   DRAMA_KEYSTORE_BASE64      keystore file, base64 (`base64 -w0 drama-release.jks`)
+  #   DRAMA_KEYSTORE_PASSWORD    keystore password
+  #   DRAMA_KEY_ALIAS            key alias
+  #   DRAMA_KEY_PASSWORD         key password
+  #   GOOGLE_SERVICES_JSON       content of android/app/google-services.json (app id is read from it)
+  #   FIREBASE_APP_DISTRIBUTION_SA  Firebase service account JSON (role "Firebase App Distribution Admin")
+  bundle:
+    name: Release bundle (tags v*)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: android
+    env:
+      KEYSTORE_BASE64: ${{ secrets.DRAMA_KEYSTORE_BASE64 }}
+      DRAMA_KEYSTORE_PASSWORD: ${{ secrets.DRAMA_KEYSTORE_PASSWORD }}
+      DRAMA_KEY_ALIAS: ${{ secrets.DRAMA_KEY_ALIAS }}
+      DRAMA_KEY_PASSWORD: ${{ secrets.DRAMA_KEY_PASSWORD }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      FIREBASE_SA: ${{ secrets.FIREBASE_APP_DISTRIBUTION_SA }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Resolve configuration from secrets
+        id: config
+        run: |
+          signed=false
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$DRAMA_KEYSTORE_PASSWORD" ] && [ -n "$DRAMA_KEY_ALIAS" ] && [ -n "$DRAMA_KEY_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/drama-release.jks"
+            echo "DRAMA_KEYSTORE_PATH=$RUNNER_TEMP/drama-release.jks" >> "$GITHUB_ENV"
+            signed=true
+          fi
+          firebase=false
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            app_id=$(jq -r '.client[] | select(.client_info.android_client_info.package_name == "com.drama.app") | .client_info.mobilesdk_app_id' app/google-services.json | head -n1)
+            echo "app_id=$app_id" >> "$GITHUB_OUTPUT"
+            if [ "$signed" = true ] && [ -n "$FIREBASE_SA" ] && [ -n "$app_id" ]; then
+              printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/firebase-sa.json"
+              firebase=true
+            fi
+          fi
+          version="${GITHUB_REF_NAME#v}"
+          echo "version_name=$version" >> "$GITHUB_OUTPUT"
+          echo "version_code=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "signed=$signed" >> "$GITHUB_OUTPUT"
+          echo "distribute=$firebase" >> "$GITHUB_OUTPUT"
+          echo "Release signing: $signed - Firebase App Distribution: $firebase - version $version ($GITHUB_RUN_NUMBER)"
+
+      - name: Build release AAB
+        run: >
+          ./gradlew :app:bundleRelease --no-daemon
+          -PdramaVersionName=${{ steps.config.outputs.version_name }}
+          -PdramaVersionCode=${{ steps.config.outputs.version_code }}
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-${{ steps.config.outputs.version_name }}${{ steps.config.outputs.signed == 'true' && '' || '-debugsigned' }}
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+
+      - name: Upload R8 mapping
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-${{ steps.config.outputs.version_name }}
+          path: android/app/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: Distribute to Firebase App Distribution
+        if: steps.config.outputs.distribute == 'true'
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ steps.config.outputs.app_id }}
+          serviceCredentialsFile: ${{ runner.temp }}/firebase-sa.json
+          groups: internal-testers
+          file: android/app/build/outputs/bundle/release/app-release.aab
+          releaseNotes: "DRAMA ${{ steps.config.outputs.version_name }} (build ${{ steps.config.outputs.version_code }}) - ${{ github.sha }}"
+
+      - name: Clean up secrets
+        if: always()
+        run: rm -f app/google-services.json "$RUNNER_TEMP/drama-release.jks" "$RUNNER_TEMP/firebase-sa.json"

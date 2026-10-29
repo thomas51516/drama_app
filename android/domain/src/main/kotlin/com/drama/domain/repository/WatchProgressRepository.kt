@@ -23,5 +23,8 @@ interface WatchHistoryRepository {
 
     fun observeRecent(limit: Int = 20): Flow<List<WatchHistoryEntry>>
 
+    /** Last episode watched in [seriesId], null when the series was never opened. */
+    fun observeForSeries(seriesId: String): Flow<WatchHistoryEntry?>
+
     suspend fun clear()
 }

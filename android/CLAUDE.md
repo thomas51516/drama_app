@@ -25,8 +25,10 @@ core:common                     (pure Kotlin/JVM)
   `PlaybackApi`), DTOs mirroring `docs/api/openapi.v0.1.json`, `ApiErrorMapper` (ApiErrorDto -> `AppError`),
   `SessionManager` + `AuthInterceptor` + `TokenAuthenticator` (guest session, single-flight refresh),
   `RetryInterceptor` (GET only), `BuildConfig.API_BASE_URL/MEDIA_BASE_URL/USE_FAKE_CATALOG`.
-  `:core:database` = Room (`DramaDatabase` v2, exported schemas in `core/database/schemas/`), DataStore
-  (`user_preferences`, `session` with tokens encrypted by `AndroidKeystoreTokenCipher`).
+  `:core:database` = Room (`DramaDatabase` v3, exported schemas in `core/database/schemas/`), DataStore
+  (`user_preferences` incl. player settings, `session` with tokens encrypted by `AndroidKeystoreTokenCipher`).
+- `DeviceLocaleProvider` (:core:common) is the single source for language/country: `LocaleHeadersInterceptor`
+  (`Accept-Language`, `X-Country`) and the default subtitle language read it; :app binds `AndroidDeviceLocale`.
 - `:core:network` never depends on `:core:database`: it declares `SessionStore`/`DeviceIdProvider` and `:data`
   implements them over DataStore. Session tokens never leave `:core:network`/`:data`; the UI only sees `SessionState`.
 - Analytics: `AnalyticsTracker`/`AnalyticsEvent` live in `:core:common`; `:app` binds Firebase when
@@ -38,6 +40,11 @@ core:common                     (pure Kotlin/JVM)
 - `:feature:player/engine` is the only module that touches Media3 ExoPlayer; the view model talks to the
   `PlaybackEngine` interface so it stays JVM-testable. Playlist slots are declared first (`setPlaylist(count)`) and
   streams attached per page (`setSource`) when `/play` answers; the engine preloads whatever is already attached.
+  Speed / quality cap / subtitle language are engine state re-applied on every `play()`; quality "Np" means the
+  short side of the frame (`TrackSelectionMapper`). Player preferences go through `PlayerSettingsRepository`
+  (:domain) and are persisted before being applied, so they survive episode changes and restarts.
+- Home rows are `HomeRowType`-typed; the view model merges the local watch history into the CONTINUE_WATCHING row
+  (`HomeViewModel.buildRows`). The series sheet derives its primary button from `ResumeTarget.resolve`.
 
 ## Build conventions
 
@@ -54,5 +61,8 @@ core:common                     (pure Kotlin/JVM)
   changes), build once so the new `schemas/.../N.json` is exported, commit it with the code.
 - Firebase: `app/google-services.json` is gitignored; the Google services and Crashlytics plugins are applied only
   when the file exists, so CI builds green without it. Never commit the file.
+- Release: R8 + resource shrinking are on; new reflection-based libraries need rules in `app/proguard-rules.pro`.
+  Signing comes from `DRAMA_KEYSTORE_*` (env or `local.properties`), falling back to the debug key so
+  `:app:bundleRelease` always builds. The CI `bundle` job (tags `v*`) signs and distributes only when secrets exist.
 - Strings shown to users are French; code, identifiers, log tags and comments are English.
 - The server is the source of truth for balances, prices and entitlements: no monetisation logic on the client.

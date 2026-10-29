@@ -5,12 +5,19 @@ import com.drama.core.database.entity.SeriesEntity
 import com.drama.core.database.entity.WatchHistoryEntity
 import com.drama.core.database.entity.WatchProgressEntity
 import com.drama.core.network.dto.EpisodeSummaryDto
+import com.drama.core.network.dto.HomeBannerDto
+import com.drama.core.network.dto.HomeRowDto
 import com.drama.core.network.dto.PlaySessionDto
+import com.drama.core.network.dto.PlaySubtitleDto
 import com.drama.core.network.dto.SeriesDetailDto
 import com.drama.core.network.dto.SeriesSummaryDto
 import com.drama.data.media.MediaUrlResolver
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.HomeBanner
+import com.drama.domain.model.HomeItem
+import com.drama.domain.model.HomeRow
+import com.drama.domain.model.HomeRowType
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.Series
@@ -74,11 +81,44 @@ fun String.toEpisodeAccess(): EpisodeAccess =
         else -> EpisodeAccess.LOCKED
     }
 
+/** Banner of the configured home; a v1.0 banner (plain series summary) maps with its posters as visual. */
+fun HomeBannerDto.toDomain(media: MediaUrlResolver): HomeBanner =
+    HomeBanner(
+        id = bannerId ?: id,
+        seriesId = seriesId ?: id,
+        imageUrl = media.resolve(imageUrl ?: posterHorizontalUrl ?: posterVerticalUrl),
+        title = bannerTitle?.takeIf { it.isNotBlank() } ?: title,
+        subtitle = (bannerSubtitle ?: subtitle)?.takeIf { it.isNotBlank() },
+    )
+
+fun HomeRowDto.toDomain(media: MediaUrlResolver): HomeRow =
+    HomeRow(
+        key = key,
+        title = title,
+        type = HomeRowType.from(type, key),
+        items =
+            items.map { item ->
+                HomeItem(
+                    series = item.series.toDomain(media),
+                    episode = item.episode?.toDomain(media),
+                    positionMs = item.positionSeconds?.let { (it * MS_PER_SECOND).toLong() },
+                )
+            },
+    )
+
+fun PlaySubtitleDto.toDomain(media: MediaUrlResolver): Subtitle =
+    Subtitle(
+        language = language.lowercase(),
+        url = media.resolve(url) ?: url,
+        label = label?.takeIf { it.isNotBlank() } ?: language,
+    )
+
 fun PlaySessionDto.toDomain(
     media: MediaUrlResolver,
     nowEpochMs: Long,
-): PlaySession =
-    PlaySession(
+): PlaySession {
+    val tracks = subtitles.map { it.toDomain(media) }
+    return PlaySession(
         episodeId = episodeId,
         seriesId = seriesId,
         episodeNumber = episodeNumber,
@@ -87,13 +127,15 @@ fun PlaySessionDto.toDomain(
                 url = media.resolve(manifestUrl) ?: manifestUrl,
                 format = StreamFormat.HLS,
                 drmLicenseUrl = drm.licenseUrl.takeIf { drm.type.equals("widevine", ignoreCase = true) },
+                subtitles = tracks,
             ),
         expiresAtEpochMs = parseInstantMs(expiresAt) ?: (nowEpochMs + DEFAULT_URL_TTL_MS),
         resumePositionMs = (resumePositionSeconds * MS_PER_SECOND).toLong().coerceAtLeast(0L),
         durationMs = (durationSeconds * MS_PER_SECOND).toLong().coerceAtLeast(0L),
         nextEpisodeId = nextEpisodeId,
-        subtitles = subtitles.map { Subtitle(it.language, media.resolve(it.url) ?: it.url) },
+        subtitles = tracks,
     )
+}
 
 private const val DEFAULT_URL_TTL_MS = 5 * 60 * 1_000L
 

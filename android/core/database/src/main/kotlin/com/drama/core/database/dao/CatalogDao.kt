@@ -6,6 +6,7 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import com.drama.core.database.entity.CacheMetaEntity
 import com.drama.core.database.entity.EpisodeEntity
+import com.drama.core.database.entity.HomeBannerEntity
 import com.drama.core.database.entity.HomeRowEntity
 import com.drama.core.database.entity.HomeRowItemEntity
 import com.drama.core.database.entity.SeriesEntity
@@ -71,8 +72,15 @@ interface CatalogDao {
     @Query("DELETE FROM home_row_items")
     suspend fun deleteHomeRowItems()
 
+    @Upsert
+    suspend fun upsertHomeBanners(banners: List<HomeBannerEntity>)
+
+    @Query("DELETE FROM home_banners")
+    suspend fun deleteHomeBanners()
+
     @Transaction
     suspend fun replaceHome(
+        banners: List<HomeBannerEntity>,
         rows: List<HomeRowEntity>,
         items: List<HomeRowItemEntity>,
         series: List<SeriesEntity>,
@@ -80,11 +88,16 @@ interface CatalogDao {
     ) {
         deleteHomeRowItems()
         deleteHomeRows()
+        deleteHomeBanners()
         upsertSeries(series)
         if (episodes.isNotEmpty()) upsertEpisodes(episodes)
+        upsertHomeBanners(banners)
         upsertHomeRows(rows)
         upsertHomeRowItems(items)
     }
+
+    @Query("SELECT * FROM home_banners ORDER BY position ASC")
+    fun observeHomeBanners(): Flow<List<HomeBannerEntity>>
 
     @Query("SELECT * FROM home_rows ORDER BY position ASC")
     fun observeHomeRows(): Flow<List<HomeRowEntity>>
@@ -107,6 +120,7 @@ interface CatalogDao {
     suspend fun clearCatalogCache() {
         deleteHomeRowItems()
         deleteHomeRows()
+        deleteHomeBanners()
         clearEpisodes()
         clearSeries()
         clearCacheMeta()

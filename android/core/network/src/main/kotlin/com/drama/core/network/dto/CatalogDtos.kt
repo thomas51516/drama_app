@@ -48,6 +48,8 @@ data class EpisodeSummaryDto(
     val access: String,
     val coinCost: Int = 0,
     val subtitleLanguages: List<String> = emptyList(),
+    /** Addendum v1.1: full tracks `{language,label,url}`; empty until the backend exposes them. */
+    val subtitles: List<PlaySubtitleDto> = emptyList(),
     val publishedAt: String? = null,
 )
 
@@ -62,12 +64,34 @@ data class HomeItemDto(
 data class HomeRowDto(
     val key: String,
     val title: String,
+    /** `MANUAL|TRENDING|NEW|GENRE|CONTINUE_WATCHING` once the configured home lands; inferred from [key] otherwise. */
+    val type: String? = null,
     val items: List<HomeItemDto> = emptyList(),
+)
+
+/**
+ * Banner of `GET /home`. The backend (S04-BE-01) sends the series summary enriched with the banner fields
+ * (`bannerId`, `imageUrl`, `bannerTitle`, `bannerSubtitle`); the addendum's canonical shape
+ * (`{id, seriesId, imageUrl, title, subtitle}`) and the v1.0 plain summary are accepted too: every field but
+ * `id` and `title` is optional and the mapper falls back to the series posters.
+ */
+@Serializable
+data class HomeBannerDto(
+    val id: String,
+    val title: String,
+    val bannerId: String? = null,
+    val seriesId: String? = null,
+    val imageUrl: String? = null,
+    val bannerTitle: String? = null,
+    val bannerSubtitle: String? = null,
+    val subtitle: String? = null,
+    val posterHorizontalUrl: String? = null,
+    val posterVerticalUrl: String? = null,
 )
 
 @Serializable
 data class HomeResponseDto(
-    val banners: List<SeriesSummaryDto> = emptyList(),
+    val banners: List<HomeBannerDto> = emptyList(),
     val rows: List<HomeRowDto> = emptyList(),
 )
 

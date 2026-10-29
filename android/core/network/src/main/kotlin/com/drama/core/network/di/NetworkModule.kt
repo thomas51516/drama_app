@@ -7,6 +7,7 @@ import com.drama.core.network.api.CatalogApi
 import com.drama.core.network.api.PlaybackApi
 import com.drama.core.network.auth.AuthInterceptor
 import com.drama.core.network.auth.TokenAuthenticator
+import com.drama.core.network.locale.LocaleHeadersInterceptor
 import com.drama.core.network.retry.RetryInterceptor
 import dagger.Module
 import dagger.Provides
@@ -50,7 +51,10 @@ object NetworkModule {
     @Provides
     @Singleton
     @BareClient
-    fun provideBareOkHttpClient(logger: Logger): OkHttpClient {
+    fun provideBareOkHttpClient(
+        logger: Logger,
+        localeHeaders: LocaleHeadersInterceptor,
+    ): OkHttpClient {
         val logging =
             HttpLoggingInterceptor { message -> logger.i(HTTP_LOG_TAG, message) }.apply {
                 level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
@@ -63,6 +67,7 @@ object NetworkModule {
             .writeTimeout(WRITE_TIMEOUT_S, TimeUnit.SECONDS)
             .callTimeout(CALL_TIMEOUT_S, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
+            .addInterceptor(localeHeaders)
             .addInterceptor(logging)
             .build()
     }
