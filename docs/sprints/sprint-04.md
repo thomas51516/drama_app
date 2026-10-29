@@ -17,9 +17,9 @@ Contrat partagé : `docs/api/public-contract-v1.2.md`.
 | S05-BE-06 | BE | Recherche plein texte et suggestions (avancé) | En cours |
 | B-04 / B-11 | BE | Publication programmée et statistiques v0 (avancé) | En cours |
 | S04-WEB-xx | WEB | Upload, transcodage, sous-titres | Terminés |
-| B-04 | WEB | Planification : dates de publication, calendrier des sorties (avancé) | En cours |
-| B-11 v0 | WEB | Tableau de bord : utilisateurs actifs, top séries, épisodes vus (avancé) | En cours |
-| S06-WEB-02 | WEB | Guide back-office v1 (avancé) | En cours |
+| B-04 | WEB | Planification : dates de publication, calendrier des sorties (avancé) | Terminé, vérifié, commité |
+| B-11 v0 | WEB | Tableau de bord : utilisateurs actifs, top séries, épisodes vus (avancé) | Terminé, vérifié, commité |
+| S06-WEB-02 | WEB | Guide back-office v1 (avancé) | Terminé, vérifié, commité |
 | S04-A1-01 | A1 | Flux vertical « Pour vous » M-02 | En cours |
 | S04-A1-02 | A1 | Continuer à regarder | Terminé au sprint 3 |
 | S04-A1-03 | A1 | Partage par lien profond, App Links M-16 | En cours |
