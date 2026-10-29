@@ -65,3 +65,54 @@ Clés : `sources/{seriesId}/{episodeId}/{fileName}` et `hls/{episodeId}/master.m
 - Adaptateur service géré : `POST /webhooks/transcode/{provider}` avec vérification de signature, à brancher
   dès que le fournisseur est choisi (S02-PM-01).
 - Le back-office interroge `GET /admin/series/{id}/episodes` toutes les 5 s tant qu'un épisode est en PROCESSING.
+
+---
+
+# Addendum v1.1 — sprint 3 (29 octobre 2026)
+
+## Sous-titres (B-03)
+
+`Subtitle = { id, episodeId, language (fr|en|es|pt|…, code ISO 639-1), fileUrl, label, createdAt }`
+
+| Méthode et route | Corps | Réponse |
+| --- | --- | --- |
+| `GET /admin/episodes/{id}/subtitles` | | `Subtitle[]` |
+| `POST /admin/episodes/{id}/subtitles` | multipart : `file` (.srt ou .vtt, 2 Mo max), `language` | `201 Subtitle` (SRT converti en VTT côté serveur, stocké sous `subtitles/{episodeId}/{language}.vtt`) |
+| `DELETE /admin/subtitles/{id}` | | `204` |
+
+Côté public, `GET /series/{id}/episodes` et `POST /episodes/{id}/play` exposent `subtitles: [{ language, label, url }]`.
+Les fichiers VTT sont servis par le stockage avec CORS ouvert en lecture.
+
+## Mise en avant (B-05)
+
+`HomeBanner = { id, seriesId, imageUrl, title, subtitle, countries: string[] (vide = partout), position, isActive, startsAt, endsAt }`
+`HomeRow = { id, key, type: MANUAL|TRENDING|NEW|GENRE|CONTINUE_WATCHING, titles: { fr, en, es, pt }, genre?, seriesIds?: string[], countries: string[], position, isActive }`
+
+| Méthode et route | Corps | Réponse |
+| --- | --- | --- |
+| `GET /admin/home/banners` · `POST` · `PATCH /admin/home/banners/{id}` · `DELETE` | champs éditables | `HomeBanner` |
+| `PUT /admin/home/banners/order` | `{ ids: string[] }` | `HomeBanner[]` |
+| `GET /admin/home/rows` · `POST` · `PATCH /admin/home/rows/{id}` · `DELETE` | champs éditables | `HomeRow` |
+| `PUT /admin/home/rows/order` | `{ ids: string[] }` | `HomeRow[]` |
+| `GET /admin/home/preview?country=TG&lang=fr` | | la réponse publique `GET /home` telle que la verrait un utilisateur |
+
+`GET /home` public : bannières actives puis rangées actives filtrées par pays (en-tête `X-Country` ou pays du compte) et
+titrées dans la langue de `Accept-Language` (repli fr). `TRENDING` = séries les plus regardées sur 7 jours, `NEW` = dernières
+publiées, `GENRE` = séries publiées du genre, `CONTINUE_WATCHING` = progression de l'utilisateur connecté, `MANUAL` = liste
+ordonnée. Rôles : EDITOR et ADMIN. La réponse `/home` est mise en cache Redis 60 s et invalidée à toute modification.
+
+## Comptes internes et journal d'audit (B-13)
+
+`AdminAccount = { id, email, displayName, role, isActive, totpEnrolled, lastLoginAt, createdAt }`
+`AuditLog = { id, actorId, actorEmail, action, targetType, targetId, oldValue, newValue, ip, createdAt }`
+
+| Méthode et route | Corps | Réponse |
+| --- | --- | --- |
+| `GET /admin/accounts` | | `AdminAccount[]` |
+| `POST /admin/accounts` | `{ email, displayName, role, password }` | `201 AdminAccount` |
+| `PATCH /admin/accounts/{id}` | `{ displayName?, role?, isActive? }` | `AdminAccount` |
+| `POST /admin/accounts/{id}/reset-totp` | | `AdminAccount` (`totpEnrolled=false`, nouvelle configuration à la prochaine connexion) |
+| `POST /admin/accounts/{id}/reset-password` | `{ password }` | `204` |
+| `GET /admin/audit-logs?page&pageSize&actorId&action&targetType&targetId&from&to` | | `{ items: AuditLog[], total, page, pageSize }` |
+
+Rôle ADMIN uniquement. Un admin ne peut ni se désactiver ni se retirer le rôle ADMIN. Toute action est auditée.
