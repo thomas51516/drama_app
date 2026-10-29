@@ -1,0 +1,200 @@
+[
+  {
+    "id": "aud_01HZX0L0000000000000000012",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K9",
+    "actorEmail": "admin@drama.local",
+    "action": "admin.login",
+    "targetType": "admin_account",
+    "targetId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K9",
+    "oldValue": null,
+    "newValue": {
+      "method": "totp"
+    },
+    "ip": "192.168.1.24",
+    "createdAt": "2026-10-29T07:45:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000011",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K8",
+    "actorEmail": "editor@drama.local",
+    "action": "episode.reorder",
+    "targetType": "series",
+    "targetId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+    "oldValue": {
+      "episodeIds": ["ep_01HZX0E0000000000000000002", "ep_01HZX0E0000000000000000001"]
+    },
+    "newValue": {
+      "episodeIds": ["ep_01HZX0E0000000000000000001", "ep_01HZX0E0000000000000000002"]
+    },
+    "ip": "10.0.0.7",
+    "createdAt": "2026-10-28T16:30:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000010",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K8",
+    "actorEmail": "editor@drama.local",
+    "action": "series.update",
+    "targetType": "series",
+    "targetId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+    "oldValue": {
+      "title": "Le Prince oublie",
+      "territories": ["FR", "BE", "CH"]
+    },
+    "newValue": {
+      "title": "Le Prince oublié",
+      "territories": ["FR", "BE", "CH", "CI", "SN", "CM"]
+    },
+    "ip": "10.0.0.7",
+    "createdAt": "2026-10-26T14:32:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000009",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K7",
+    "actorEmail": "money@drama.local",
+    "action": "series.update",
+    "targetType": "series",
+    "targetId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+    "oldValue": {
+      "coinCostPerEpisode": 20,
+      "freeEpisodeCount": 3
+    },
+    "newValue": {
+      "coinCostPerEpisode": 30,
+      "freeEpisodeCount": 5
+    },
+    "ip": "10.0.0.9",
+    "createdAt": "2026-10-25T10:02:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000008",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K9",
+    "actorEmail": "admin@drama.local",
+    "action": "home_banner.create",
+    "targetType": "home_banner",
+    "targetId": "bnr_01HZX0B0000000000000000002",
+    "oldValue": null,
+    "newValue": {
+      "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+      "title": "Mariage sous contrat",
+      "countries": ["CI", "SN"],
+      "isActive": true
+    },
+    "ip": "192.168.1.24",
+    "createdAt": "2026-10-24T09:15:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000007",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K9",
+    "actorEmail": "admin@drama.local",
+    "action": "admin_account.update",
+    "targetType": "admin_account",
+    "targetId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K5",
+    "oldValue": {
+      "isActive": true
+    },
+    "newValue": {
+      "isActive": false
+    },
+    "ip": "192.168.1.24",
+    "createdAt": "2026-10-03T08:00:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000006",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K8",
+    "actorEmail": "editor@drama.local",
+    "action": "subtitle.create",
+    "targetType": "subtitle",
+    "targetId": "sub_01HZX0S0000000000000000002",
+    "oldValue": null,
+    "newValue": {
+      "episodeId": "ep_01HZX0E0000000000000000001",
+      "language": "en"
+    },
+    "ip": "10.0.0.7",
+    "createdAt": "2026-09-22T09:05:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000005",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K8",
+    "actorEmail": "editor@drama.local",
+    "action": "series.publish",
+    "targetType": "series",
+    "targetId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+    "oldValue": {
+      "status": "DRAFT"
+    },
+    "newValue": {
+      "status": "PUBLISHED"
+    },
+    "ip": "10.0.0.7",
+    "createdAt": "2026-10-01T08:00:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000004",
+    "actorId": null,
+    "actorEmail": null,
+    "action": "episode.transcode_failed",
+    "targetType": "episode",
+    "targetId": "ep_01HZX0E0000000000000000004",
+    "oldValue": {
+      "transcodeStatus": "PROCESSING"
+    },
+    "newValue": {
+      "transcodeStatus": "FAILED",
+      "transcodeError": "ffmpeg exited with code 1"
+    },
+    "ip": null,
+    "createdAt": "2026-09-23T11:40:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000003",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K9",
+    "actorEmail": "admin@drama.local",
+    "action": "admin_account.create",
+    "targetType": "admin_account",
+    "targetId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K7",
+    "oldValue": null,
+    "newValue": {
+      "email": "money@drama.local",
+      "displayName": "Mona Tisation",
+      "role": "MONETIZATION"
+    },
+    "ip": "192.168.1.24",
+    "createdAt": "2026-10-27T09:00:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000002",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K9",
+    "actorEmail": "admin@drama.local",
+    "action": "home_row.update",
+    "targetType": "home_row",
+    "targetId": "row_01HZX0R0000000000000000005",
+    "oldValue": {
+      "seriesIds": ["ser_01HZX0A1B2C3D4E5F6G7H8J9K0"],
+      "countries": []
+    },
+    "newValue": {
+      "seriesIds": ["ser_01HZX0A1B2C3D4E5F6G7H8J9K1", "ser_01HZX0A1B2C3D4E5F6G7H8J9K0"],
+      "countries": ["FR", "BE", "CH"]
+    },
+    "ip": "192.168.1.24",
+    "createdAt": "2026-10-24T09:20:00.000Z"
+  },
+  {
+    "id": "aud_01HZX0L0000000000000000001",
+    "actorId": "adm_01HZX0A1B2C3D4E5F6G7H8J9K9",
+    "actorEmail": "admin@drama.local",
+    "action": "series.create",
+    "targetType": "series",
+    "targetId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+    "oldValue": null,
+    "newValue": {
+      "title": "Le Prince oublie",
+      "language": "fr",
+      "ageRating": "PG12",
+      "genres": ["romance", "drame"]
+    },
+    "ip": "192.168.1.24",
+    "createdAt": "2026-09-20T10:00:00.000Z"
+  }
+]

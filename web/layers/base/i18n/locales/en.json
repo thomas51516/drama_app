@@ -65,7 +65,8 @@
     "back": "Back",
     "search": "Search",
     "remove": "Remove",
-    "clear": "Clear all"
+    "clear": "Clear all",
+    "close": "Close"
   },
   "errors": {
     "title": "Error",
@@ -78,7 +79,8 @@
     "boundaryTitle": "This page ran into an error",
     "boundaryHint": "The error has been logged. You can retry or go back to the catalogue.",
     "goHome": "Back to catalogue",
-    "pageNotFound": "Page not found"
+    "pageNotFound": "Page not found",
+    "forbiddenHint": "Your role does not grant access to this page."
   },
   "validation": {
     "required": "This field is required.",
@@ -92,7 +94,14 @@
     "max": "The maximum value is {max}.",
     "isoCountry": "\"{value}\" is not a two-letter ISO country code.",
     "duplicate": "Some values are duplicated.",
-    "fixErrors": "Fix the highlighted fields before saving."
+    "fixErrors": "Fix the highlighted fields before saving.",
+    "dateRange": "The end date must be after the start date.",
+    "requiredFrench": "The French title is required.",
+    "email": "Enter a valid e-mail address.",
+    "passwordLength": "The password must be at least {min} characters long.",
+    "passwordCase": "The password must contain upper and lower case letters.",
+    "passwordDigit": "The password must contain at least one digit.",
+    "rowKey": "Invalid key: lowercase letters, digits, “-” or “_”, 2 to 80 characters."
   },
   "series": {
     "title": "Catalogue — series",
@@ -289,12 +298,298 @@
     },
     "preview": {
       "title": "Episode preview",
-      "unsupported": "HLS playback is not supported by this browser."
+      "unsupported": "HLS playback is not supported by this browser.",
+      "noSubtitles": "No subtitles",
+      "subtitles": "Subtitles",
+      "noTracks": "No subtitles for this episode."
     }
   },
   "module": {
     "comingSoon": "Module coming soon — ticket {ticket}",
     "hint": "This back-office module is planned for a later sprint. See the backlog for details.",
     "backToCatalogue": "Back to catalogue"
+  },
+  "subtitles": {
+    "title": "Subtitles",
+    "hint": "One file per language; uploading an existing language replaces the current file.",
+    "loadError": "Could not load subtitles.",
+    "otherLanguage": "Other language (ISO code)…",
+    "invalidLanguage": "Enter an ISO 639-1 language code (two letters, e.g. “de”).",
+    "addedOn": "Added on {date}",
+    "readOnly": "Your role can only view subtitles.",
+    "empty": {
+      "title": "No subtitles",
+      "hint": "Add one .srt or .vtt file per language below."
+    },
+    "upload": {
+      "title": "Add or replace a file",
+      "language": "Language",
+      "customPlaceholder": "e.g. de",
+      "customLanguage": "ISO 639-1 language code",
+      "willReplace": "A {language} subtitle already exists: the new file will replace it.",
+      "choose": "Choose a file",
+      "limits": "SRT or VTT, {max} max. SRT files are converted to VTT by the server."
+    },
+    "rejected": {
+      "type": "Unsupported format: .srt or .vtt files only.",
+      "size": "File too large (max {max}).",
+      "empty": "The file is empty."
+    },
+    "actions": {
+      "open": "Open the VTT file",
+      "replace": "Replace",
+      "delete": "Delete subtitle",
+      "deleteConfirm": "Delete the {language} subtitle? It will no longer be offered in the app."
+    },
+    "toasts": {
+      "uploaded": "{language} subtitle added.",
+      "replaced": "{language} subtitle replaced.",
+      "uploadFailed": "Subtitle upload failed",
+      "deleted": "Subtitle deleted."
+    },
+    "pickSeries": {
+      "hint": "Subtitles are managed per episode: pick a series, then “Subtitles” on a ready episode."
+    }
+  },
+  "featured": {
+    "title": "Featuring",
+    "subtitle": "Banners and rows of the app home, per country (B-05).",
+    "tabs": {
+      "banners": "Banners",
+      "rows": "Rows",
+      "preview": "Preview"
+    },
+    "loadError": "Could not load the featuring settings.",
+    "everywhere": "Everywhere",
+    "seriesPicker": {
+      "placeholder": "Search a series…"
+    },
+    "form": {
+      "countries": "Countries",
+      "countriesHint": "ISO 3166-1 alpha-2 codes. Empty list: shown in every country.",
+      "active": "Active"
+    },
+    "actions": {
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "edit": "Edit",
+      "reorder": "Reorder"
+    },
+    "columns": {
+      "position": "Order",
+      "image": "Image",
+      "title": "Title",
+      "countries": "Countries",
+      "schedule": "Schedule",
+      "active": "Active",
+      "type": "Type",
+      "scope": "Content"
+    },
+    "schedule": {
+      "live": "Live",
+      "scheduled": "Scheduled",
+      "expired": "Ended",
+      "inactive": "Disabled"
+    },
+    "banners": {
+      "create": "New banner",
+      "edit": "Edit banner",
+      "delete": "Delete banner",
+      "deleteConfirm": "Delete the banner “{title}”?",
+      "summary": "{count} banner, {live} live | {count} banners, {live} live",
+      "empty": {
+        "title": "No banners",
+        "hint": "Create a banner to feature a series at the top of the home."
+      },
+      "form": {
+        "series": "Featured series",
+        "image": "Banner image (16:9)",
+        "title": "Title",
+        "subtitle": "Subtitle",
+        "startsAt": "Start",
+        "endsAt": "End",
+        "scheduleHint": "Optional dates: without dates the banner is shown as long as it is active."
+      }
+    },
+    "rows": {
+      "create": "New row",
+      "edit": "Edit row",
+      "delete": "Delete row",
+      "deleteConfirm": "Delete the row “{title}”?",
+      "summary": "{count} row | {count} rows",
+      "empty": {
+        "title": "No rows",
+        "hint": "Add rows (Trending, New, genre, manual selection…) to compose the home."
+      },
+      "form": {
+        "type": "Row type",
+        "titles": "Displayed titles",
+        "titlesHint": "The French title is required; other languages fall back to French when empty.",
+        "genre": "Genre",
+        "genrePlaceholder": "Pick a genre",
+        "series": "Series (display order)",
+        "addSeries": "Add a series…",
+        "noSeries": "No series selected.",
+        "key": "Technical key",
+        "keyHint": "Stable identifier exposed to the app: lowercase letters, digits, “-” or “_” (2 to 80 characters). Suggested automatically, editable.",
+        "keyReset": "Use the suggested key again"
+      },
+      "types": {
+        "MANUAL": "Manual selection",
+        "TRENDING": "Trending",
+        "NEW": "New",
+        "GENRE": "By genre",
+        "CONTINUE_WATCHING": "Continue watching"
+      },
+      "typeHints": {
+        "MANUAL": "Hand-picked, ordered list of series.",
+        "TRENDING": "Most watched series over 7 days (server computed).",
+        "NEW": "Latest published series.",
+        "GENRE": "Published series of the chosen genre.",
+        "CONTINUE_WATCHING": "Resume list of the signed-in user (empty in the preview)."
+      }
+    },
+    "toasts": {
+      "bannerCreated": "Banner created.",
+      "bannerSaved": "Banner saved.",
+      "bannerDeleted": "Banner deleted.",
+      "rowCreated": "Row created.",
+      "rowSaved": "Row saved.",
+      "rowDeleted": "Row deleted.",
+      "saveFailed": "Could not save",
+      "activated": "Activated.",
+      "deactivated": "Deactivated.",
+      "reordered": "Order saved."
+    },
+    "preview": {
+      "country": "Viewer country",
+      "language": "Language",
+      "refresh": "Refresh preview",
+      "hint": "Rendering of GET /home as an anonymous viewer of this country would see it, in this language (60 s server cache).",
+      "error": "Could not load the preview.",
+      "noBanners": "No banner shown for this country.",
+      "noRows": "No row for this country.",
+      "emptyRow": "Empty row for this country.",
+      "free": "{count} free"
+    }
+  },
+  "administration": {
+    "title": "Administration",
+    "subtitle": "Internal accounts, roles and audit log (B-13).",
+    "adminOnly": "This page is restricted to the Administrator role.",
+    "tabs": {
+      "accounts": "Accounts",
+      "audit": "Audit log"
+    },
+    "roleHints": {
+      "ADMIN": "All rights, including account management.",
+      "EDITOR": "Catalogue, episodes, subtitles and featuring.",
+      "MONETIZATION": "Prices, free episodes, offers and promotions.",
+      "SUPPORT": "Read access and user support."
+    },
+    "password": {
+      "title": "Initial password",
+      "generate": "Generate a password",
+      "generated": "Generated password",
+      "typed": "Typed password",
+      "regenerate": "Regenerate",
+      "policy": "At least {min} characters, with upper case, lower case and digits."
+    },
+    "accounts": {
+      "create": "New account",
+      "createAction": "Create account",
+      "edit": "Edit account",
+      "columns": {
+        "email": "E-mail",
+        "displayName": "Display name",
+        "role": "Role",
+        "active": "Active",
+        "totp": "Two-factor",
+        "lastLogin": "Last login"
+      },
+      "firstLoginHint": "On first login the person will have to enrol two-factor authentication (TOTP).",
+      "summary": "{count} account, {active} active | {count} accounts, {active} active",
+      "loadError": "Could not load accounts.",
+      "you": "you",
+      "active": "Active",
+      "inactive": "Disabled",
+      "totpEnrolled": "Enrolled",
+      "totpPending": "To enrol",
+      "neverLoggedIn": "Never logged in",
+      "resetTotp": "Reset two-factor authentication",
+      "resetTotpConfirm": "Reset two-factor authentication of {email}? A new enrolment will be required at next login.",
+      "resetTotpAction": "Reset",
+      "resetPassword": "Reset password",
+      "resetPasswordHint": "New password for {email}. It is shown once after confirmation.",
+      "resetPasswordAction": "Reset password"
+    },
+    "lockout": {
+      "selfDeactivate": "You cannot deactivate your own account.",
+      "selfDemote": "You cannot remove your own Administrator role.",
+      "selfHint": "This is your account: you cannot deactivate it or remove its Administrator role yourself."
+    },
+    "toasts": {
+      "created": "Account {email} created.",
+      "createFailed": "Could not create the account",
+      "saved": "Account updated.",
+      "saveFailed": "Could not update",
+      "passwordReset": "Password of {email} reset.",
+      "passwordResetFailed": "Could not reset",
+      "totpReset": "Two-factor authentication of {email} reset."
+    },
+    "reveal": {
+      "title": "Password to hand over",
+      "hint": "Give this password to {email} through a safe channel. It must be changed at first login.",
+      "copy": "Copy",
+      "copied": "Password copied.",
+      "copyFailed": "Could not copy: select the text manually.",
+      "once": "This password is shown only once and cannot be retrieved afterwards."
+    },
+    "audit": {
+      "id": "Identifier",
+      "noValues": "No value recorded for this action.",
+      "count": "{count} entry | {count} entries",
+      "loadError": "Could not load the audit log.",
+      "empty": "No entry matches the filters.",
+      "system": "system",
+      "columns": {
+        "date": "Date",
+        "actor": "Actor",
+        "action": "Action",
+        "target": "Target",
+        "ip": "IP address"
+      },
+      "filters": {
+        "actor": "Actor",
+        "allActors": "All actors",
+        "action": "Action",
+        "actionPlaceholder": "e.g. series.update",
+        "targetType": "Target type",
+        "allTargets": "All targets",
+        "targetId": "Target id",
+        "targetIdPlaceholder": "ser_…, ep_…",
+        "period": "Period",
+        "periodPlaceholder": "From… to…"
+      },
+      "targetTypes": {
+        "series": "Series",
+        "episode": "Episode",
+        "subtitle": "Subtitle",
+        "home_banner": "Banner",
+        "home_row": "Row",
+        "admin_account": "Internal account",
+        "upload": "File upload"
+      },
+      "diff": {
+        "field": "Field",
+        "before": "Before",
+        "after": "After",
+        "noChange": "No difference between the old and the new value.",
+        "onlyChanged": "Show only changed fields",
+        "showAll": "Show all fields ({count})",
+        "showRaw": "Show raw JSON",
+        "hideRaw": "Hide raw JSON"
+      }
+    }
   }
 }

@@ -12,4 +12,10 @@ describe('back-office modules registry', () => {
     expect(findModuleByPath('/series')?.ticket).toBe('B-01')
     expect(findModuleByPath('/nope')).toBeUndefined()
   })
+
+  it('points the sprint 3 modules to their real pages', () => {
+    expect(findModuleByPath('/subtitles')?.ticket).toBe('B-03')
+    expect(findModuleByPath('/featured')?.ticket).toBe('B-05')
+    expect(findModuleByPath('/administration')?.ticket).toBe('B-13')
+  })
 })

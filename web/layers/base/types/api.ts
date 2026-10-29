@@ -215,6 +215,203 @@ export const EPISODE_MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024
 export const EPISODE_ACCEPTED_TYPES = ['video/mp4', 'video/quicktime'] as const
 
 // ---------------------------------------------------------------------------
+// Subtitles (B-03) — addendum v1.1
+// ---------------------------------------------------------------------------
+
+/** Languages offered first in the subtitle language picker; any ISO 639-1 code is accepted. */
+export const SUBTITLE_LANGUAGES = ['fr', 'en', 'es', 'pt'] as const
+export type KnownSubtitleLanguage = (typeof SUBTITLE_LANGUAGES)[number]
+
+export interface Subtitle {
+  id: string
+  episodeId: string
+  /** ISO 639-1 code (`fr`, `en`, `es`, `pt`, …). One subtitle per language and episode. */
+  language: string
+  /** Public URL of the VTT file (SRT is converted server-side). */
+  fileUrl: string
+  label: string | null
+  createdAt: string
+}
+
+/** Limits of `POST /admin/episodes/{id}/subtitles` (multipart `file` + `language`). */
+export const SUBTITLE_MAX_FILE_BYTES = 2 * 1024 * 1024
+export const SUBTITLE_ACCEPTED_EXTENSIONS = ['.srt', '.vtt'] as const
+
+// ---------------------------------------------------------------------------
+// Home curation (B-05) — addendum v1.1
+// ---------------------------------------------------------------------------
+
+export interface HomeBanner {
+  id: string
+  seriesId: string
+  imageUrl: string | null
+  title: string
+  subtitle: string | null
+  /** ISO 3166-1 alpha-2 codes; empty = shown everywhere. */
+  countries: string[]
+  position: number
+  isActive: boolean
+  startsAt: string | null
+  endsAt: string | null
+}
+
+/** Editable fields of POST /admin/home/banners and PATCH /admin/home/banners/{id}. */
+export type HomeBannerInput = Partial<Omit<HomeBanner, 'id' | 'position'>>
+
+export type HomeRowType = 'MANUAL' | 'TRENDING' | 'NEW' | 'GENRE' | 'CONTINUE_WATCHING'
+export const HOME_ROW_TYPES: readonly HomeRowType[] = [
+  'MANUAL',
+  'TRENDING',
+  'NEW',
+  'GENRE',
+  'CONTINUE_WATCHING',
+]
+
+export const HOME_TITLE_LANGUAGES = ['fr', 'en', 'es', 'pt'] as const
+export type HomeTitleLanguage = (typeof HOME_TITLE_LANGUAGES)[number]
+/** French is the fallback language and is required; the backend may return `null` for the others. */
+export type HomeRowTitles = { fr: string } & Partial<Record<'en' | 'es' | 'pt', string | null>>
+
+/** Unique key of a row, chosen by the editor (backend rule: 2 to 80 chars, `[a-z0-9_-]`). */
+export const HOME_ROW_KEY_RE = /^[a-z0-9][a-z0-9_-]{1,79}$/
+
+export interface HomeRow {
+  id: string
+  /** Stable key exposed to the app (`trending`, `new`, `genre-romance`, …), unique. */
+  key: string
+  type: HomeRowType
+  titles: HomeRowTitles
+  /** Only for `GENRE` rows. */
+  genre: string | null
+  /** Ordered list, only for `MANUAL` rows. */
+  seriesIds: string[]
+  countries: string[]
+  position: number
+  isActive: boolean
+}
+
+/** Editable fields of POST /admin/home/rows and PATCH /admin/home/rows/{id} (`key` required on create). */
+export type HomeRowInput = Partial<Omit<HomeRow, 'id' | 'position'>>
+
+/** PUT /admin/home/banners/order and /admin/home/rows/order */
+export interface HomeOrderInput {
+  ids: string[]
+}
+
+/** GET /admin/home/preview?country&lang */
+export interface HomePreviewQuery {
+  country: string
+  lang: string
+}
+
+/** `SeriesSummaryDto` of the public API (what the app renders in a poster card). */
+export interface PublicSeriesSummary {
+  id: string
+  slug: string
+  title: string
+  genres: string[]
+  posterVerticalUrl: string | null
+  posterHorizontalUrl: string | null
+  episodeCount: number
+  freeEpisodeCount: number
+  coinCostPerEpisode: number
+  ageRating: AgeRating
+  publishedAt: string | null
+}
+
+export interface PublicHomeItem {
+  series: PublicSeriesSummary
+  episode?: { id: string; number: number; title: string | null } | null
+  positionSeconds?: number
+}
+
+export interface PublicHomeRow {
+  key: string
+  title: string
+  type?: HomeRowType
+  items: PublicHomeItem[]
+}
+
+/**
+ * Banner of the public `GET /home`. The backend may send either the series summary directly
+ * (v1 shape) or the curated banner with its `series`; `normalizeHomePreview()` handles both.
+ */
+export type PublicHomeBanner = Partial<PublicSeriesSummary> & {
+  seriesId?: string
+  imageUrl?: string | null
+  subtitle?: string | null
+  series?: PublicSeriesSummary | null
+}
+
+/** Response of the public `GET /home`, returned as-is by `GET /admin/home/preview`. */
+export interface PublicHomeResponse {
+  banners: PublicHomeBanner[]
+  rows: PublicHomeRow[]
+}
+
+// ---------------------------------------------------------------------------
+// Internal accounts and audit log (B-13) — addendum v1.1
+// ---------------------------------------------------------------------------
+
+export interface AdminAccount {
+  id: string
+  email: string
+  displayName: string
+  role: AdminRole
+  isActive: boolean
+  totpEnrolled: boolean
+  lastLoginAt: string | null
+  createdAt: string
+}
+
+/** POST /admin/accounts */
+export interface AdminAccountCreateInput {
+  email: string
+  displayName: string
+  role: AdminRole
+  password: string
+}
+
+/** PATCH /admin/accounts/{id} */
+export interface AdminAccountUpdateInput {
+  displayName?: string
+  role?: AdminRole
+  isActive?: boolean
+}
+
+/** POST /admin/accounts/{id}/reset-password */
+export interface AdminAccountResetPasswordInput {
+  password: string
+}
+
+export interface AuditLog {
+  id: string
+  actorId: string | null
+  actorEmail: string | null
+  /** Stable verb `<target>.<action>` (`series.update`, `home_banner.create`, `admin.login`…). */
+  action: string
+  targetType: string
+  targetId: string | null
+  oldValue: unknown
+  newValue: unknown
+  ip: string | null
+  createdAt: string
+}
+
+/** Query of GET /admin/audit-logs */
+export interface AuditLogQuery {
+  page?: number
+  pageSize?: number
+  actorId?: string
+  action?: string
+  targetType?: string
+  targetId?: string
+  /** ISO date-time bounds (inclusive). */
+  from?: string
+  to?: string
+}
+
+// ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
 

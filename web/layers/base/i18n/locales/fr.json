@@ -65,7 +65,8 @@
     "back": "Retour",
     "search": "Rechercher",
     "remove": "Retirer",
-    "clear": "Tout effacer"
+    "clear": "Tout effacer",
+    "close": "Fermer"
   },
   "errors": {
     "title": "Erreur",
@@ -78,7 +79,8 @@
     "boundaryTitle": "Cette page a rencontré une erreur",
     "boundaryHint": "L'erreur a été consignée. Vous pouvez réessayer ou revenir au catalogue.",
     "goHome": "Retour au catalogue",
-    "pageNotFound": "Page introuvable"
+    "pageNotFound": "Page introuvable",
+    "forbiddenHint": "Votre rôle ne permet pas d'accéder à cette page."
   },
   "validation": {
     "required": "Ce champ est obligatoire.",
@@ -92,7 +94,14 @@
     "max": "La valeur maximale est {max}.",
     "isoCountry": "« {value} » n'est pas un code pays ISO à deux lettres.",
     "duplicate": "Des valeurs sont en double.",
-    "fixErrors": "Corrigez les champs en erreur avant d'enregistrer."
+    "fixErrors": "Corrigez les champs en erreur avant d'enregistrer.",
+    "dateRange": "La date de fin doit être postérieure à la date de début.",
+    "requiredFrench": "Le titre français est obligatoire.",
+    "email": "Saisissez une adresse e-mail valide.",
+    "passwordLength": "Le mot de passe doit faire au moins {min} caractères.",
+    "passwordCase": "Le mot de passe doit contenir des majuscules et des minuscules.",
+    "passwordDigit": "Le mot de passe doit contenir au moins un chiffre.",
+    "rowKey": "Clé invalide : minuscules, chiffres, « - » ou « _ », de 2 à 80 caractères."
   },
   "series": {
     "title": "Catalogue — séries",
@@ -289,12 +298,298 @@
     },
     "preview": {
       "title": "Aperçu de l'épisode",
-      "unsupported": "La lecture HLS n'est pas prise en charge par ce navigateur."
+      "unsupported": "La lecture HLS n'est pas prise en charge par ce navigateur.",
+      "noSubtitles": "Sans sous-titres",
+      "subtitles": "Sous-titres",
+      "noTracks": "Aucun sous-titre pour cet épisode."
     }
   },
   "module": {
     "comingSoon": "Module à venir — ticket {ticket}",
     "hint": "Ce module du back-office est prévu dans un sprint ultérieur. Voir le backlog pour le détail des fonctions.",
     "backToCatalogue": "Retour au catalogue"
+  },
+  "subtitles": {
+    "title": "Sous-titres",
+    "hint": "Un fichier par langue ; l'envoi d'une langue déjà présente remplace le fichier existant.",
+    "loadError": "Impossible de charger les sous-titres.",
+    "otherLanguage": "Autre langue (code ISO)…",
+    "invalidLanguage": "Saisissez un code de langue ISO 639-1 (deux lettres, par exemple « de »).",
+    "addedOn": "Ajouté le {date}",
+    "readOnly": "Votre rôle permet uniquement de consulter les sous-titres.",
+    "empty": {
+      "title": "Aucun sous-titre",
+      "hint": "Ajoutez un fichier .srt ou .vtt par langue ci-dessous."
+    },
+    "upload": {
+      "title": "Ajouter ou remplacer un fichier",
+      "language": "Langue",
+      "customPlaceholder": "ex. de",
+      "customLanguage": "Code de langue ISO 639-1",
+      "willReplace": "Un sous-titre {language} existe déjà : le nouveau fichier le remplacera.",
+      "choose": "Choisir un fichier",
+      "limits": "SRT ou VTT, {max} maximum. Les SRT sont convertis en VTT par le serveur."
+    },
+    "rejected": {
+      "type": "Format non pris en charge : fichiers .srt ou .vtt uniquement.",
+      "size": "Fichier trop lourd (maximum {max}).",
+      "empty": "Le fichier est vide."
+    },
+    "actions": {
+      "open": "Ouvrir le fichier VTT",
+      "replace": "Remplacer",
+      "delete": "Supprimer le sous-titre",
+      "deleteConfirm": "Supprimer le sous-titre {language} ? Il ne sera plus proposé dans l'application."
+    },
+    "toasts": {
+      "uploaded": "Sous-titre {language} ajouté.",
+      "replaced": "Sous-titre {language} remplacé.",
+      "uploadFailed": "Envoi du sous-titre impossible",
+      "deleted": "Sous-titre supprimé."
+    },
+    "pickSeries": {
+      "hint": "Les sous-titres se gèrent épisode par épisode : choisissez une série, puis « Sous-titres » sur un épisode prêt."
+    }
+  },
+  "featured": {
+    "title": "Mise en avant",
+    "subtitle": "Bannières et rangées de l'accueil de l'application, par pays (B-05).",
+    "tabs": {
+      "banners": "Bannières",
+      "rows": "Rangées",
+      "preview": "Aperçu"
+    },
+    "loadError": "Impossible de charger la mise en avant.",
+    "everywhere": "Partout",
+    "seriesPicker": {
+      "placeholder": "Rechercher une série…"
+    },
+    "form": {
+      "countries": "Pays",
+      "countriesHint": "Codes ISO 3166-1 alpha-2. Liste vide : affiché dans tous les pays.",
+      "active": "Actif"
+    },
+    "actions": {
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "edit": "Modifier",
+      "reorder": "Réordonner"
+    },
+    "columns": {
+      "position": "Ordre",
+      "image": "Image",
+      "title": "Titre",
+      "countries": "Pays",
+      "schedule": "Diffusion",
+      "active": "Actif",
+      "type": "Type",
+      "scope": "Contenu"
+    },
+    "schedule": {
+      "live": "En ligne",
+      "scheduled": "Programmée",
+      "expired": "Terminée",
+      "inactive": "Désactivée"
+    },
+    "banners": {
+      "create": "Nouvelle bannière",
+      "edit": "Modifier la bannière",
+      "delete": "Supprimer la bannière",
+      "deleteConfirm": "Supprimer la bannière « {title} » ?",
+      "summary": "{count} bannière, {live} en ligne | {count} bannières, {live} en ligne",
+      "empty": {
+        "title": "Aucune bannière",
+        "hint": "Créez une bannière pour mettre une série en avant en haut de l'accueil."
+      },
+      "form": {
+        "series": "Série mise en avant",
+        "image": "Image de la bannière (16:9)",
+        "title": "Titre",
+        "subtitle": "Sous-titre",
+        "startsAt": "Début de diffusion",
+        "endsAt": "Fin de diffusion",
+        "scheduleHint": "Dates facultatives : sans dates, la bannière est diffusée tant qu'elle est active."
+      }
+    },
+    "rows": {
+      "create": "Nouvelle rangée",
+      "edit": "Modifier la rangée",
+      "delete": "Supprimer la rangée",
+      "deleteConfirm": "Supprimer la rangée « {title} » ?",
+      "summary": "{count} rangée | {count} rangées",
+      "empty": {
+        "title": "Aucune rangée",
+        "hint": "Ajoutez des rangées (Tendances, Nouveautés, genre, sélection manuelle…) pour composer l'accueil."
+      },
+      "form": {
+        "type": "Type de rangée",
+        "titles": "Titres affichés",
+        "titlesHint": "Le titre français est obligatoire ; les autres langues reprennent le français si vides.",
+        "genre": "Genre",
+        "genrePlaceholder": "Choisir un genre",
+        "series": "Séries (dans l'ordre d'affichage)",
+        "addSeries": "Ajouter une série…",
+        "noSeries": "Aucune série sélectionnée.",
+        "key": "Clé technique",
+        "keyHint": "Identifiant stable exposé à l'application : minuscules, chiffres, « - » ou « _ » (2 à 80 caractères). Proposée automatiquement, modifiable.",
+        "keyReset": "Reprendre la clé proposée"
+      },
+      "types": {
+        "MANUAL": "Sélection manuelle",
+        "TRENDING": "Tendances",
+        "NEW": "Nouveautés",
+        "GENRE": "Par genre",
+        "CONTINUE_WATCHING": "Continuer à regarder"
+      },
+      "typeHints": {
+        "MANUAL": "Liste de séries choisies et ordonnées à la main.",
+        "TRENDING": "Séries les plus regardées sur 7 jours (calcul serveur).",
+        "NEW": "Dernières séries publiées.",
+        "GENRE": "Séries publiées du genre choisi.",
+        "CONTINUE_WATCHING": "Reprise de lecture de l'utilisateur connecté (vide dans l'aperçu)."
+      }
+    },
+    "toasts": {
+      "bannerCreated": "Bannière créée.",
+      "bannerSaved": "Bannière enregistrée.",
+      "bannerDeleted": "Bannière supprimée.",
+      "rowCreated": "Rangée créée.",
+      "rowSaved": "Rangée enregistrée.",
+      "rowDeleted": "Rangée supprimée.",
+      "saveFailed": "Enregistrement impossible",
+      "activated": "Activé.",
+      "deactivated": "Désactivé.",
+      "reordered": "Ordre enregistré."
+    },
+    "preview": {
+      "country": "Pays du spectateur",
+      "language": "Langue",
+      "refresh": "Actualiser l'aperçu",
+      "hint": "Rendu de GET /home tel que le verrait un spectateur anonyme de ce pays, dans cette langue (cache serveur de 60 s).",
+      "error": "Impossible de charger l'aperçu.",
+      "noBanners": "Aucune bannière diffusée pour ce pays.",
+      "noRows": "Aucune rangée pour ce pays.",
+      "emptyRow": "Rangée vide pour ce pays.",
+      "free": "{count} gratuits"
+    }
+  },
+  "administration": {
+    "title": "Administration",
+    "subtitle": "Comptes internes, rôles et journal d'audit (B-13).",
+    "adminOnly": "Cette page est réservée au rôle Administrateur.",
+    "tabs": {
+      "accounts": "Comptes",
+      "audit": "Journal d'audit"
+    },
+    "roleHints": {
+      "ADMIN": "Tous les droits, dont la gestion des comptes.",
+      "EDITOR": "Catalogue, épisodes, sous-titres et mise en avant.",
+      "MONETIZATION": "Prix, épisodes gratuits, offres et promotions.",
+      "SUPPORT": "Consultation et assistance aux utilisateurs."
+    },
+    "password": {
+      "title": "Mot de passe initial",
+      "generate": "Générer un mot de passe",
+      "generated": "Mot de passe généré",
+      "typed": "Mot de passe saisi",
+      "regenerate": "Régénérer",
+      "policy": "Au moins {min} caractères, avec majuscules, minuscules et chiffres."
+    },
+    "accounts": {
+      "create": "Nouveau compte",
+      "createAction": "Créer le compte",
+      "edit": "Modifier le compte",
+      "columns": {
+        "email": "E-mail",
+        "displayName": "Nom affiché",
+        "role": "Rôle",
+        "active": "Actif",
+        "totp": "Double authentification",
+        "lastLogin": "Dernière connexion"
+      },
+      "firstLoginHint": "À la première connexion, la personne devra enrôler la double authentification (TOTP).",
+      "summary": "{count} compte, {active} actif | {count} comptes, {active} actifs",
+      "loadError": "Impossible de charger les comptes.",
+      "you": "vous",
+      "active": "Actif",
+      "inactive": "Désactivé",
+      "totpEnrolled": "Enrôlée",
+      "totpPending": "À enrôler",
+      "neverLoggedIn": "Jamais connecté",
+      "resetTotp": "Réinitialiser la double authentification",
+      "resetTotpConfirm": "Réinitialiser la double authentification de {email} ? Un nouvel enrôlement sera demandé à sa prochaine connexion.",
+      "resetTotpAction": "Réinitialiser",
+      "resetPassword": "Réinitialiser le mot de passe",
+      "resetPasswordHint": "Nouveau mot de passe pour {email}. Il sera affiché une seule fois après validation.",
+      "resetPasswordAction": "Réinitialiser le mot de passe"
+    },
+    "lockout": {
+      "selfDeactivate": "Vous ne pouvez pas désactiver votre propre compte.",
+      "selfDemote": "Vous ne pouvez pas vous retirer le rôle Administrateur.",
+      "selfHint": "Il s'agit de votre compte : l'activation et le rôle Administrateur ne peuvent pas être retirés par vous-même."
+    },
+    "toasts": {
+      "created": "Compte {email} créé.",
+      "createFailed": "Création du compte impossible",
+      "saved": "Compte mis à jour.",
+      "saveFailed": "Mise à jour impossible",
+      "passwordReset": "Mot de passe de {email} réinitialisé.",
+      "passwordResetFailed": "Réinitialisation impossible",
+      "totpReset": "Double authentification de {email} réinitialisée."
+    },
+    "reveal": {
+      "title": "Mot de passe à transmettre",
+      "hint": "Transmettez ce mot de passe à {email} par un canal sûr. Il devra être changé à la première connexion.",
+      "copy": "Copier",
+      "copied": "Mot de passe copié.",
+      "copyFailed": "Copie impossible : sélectionnez le texte manuellement.",
+      "once": "Ce mot de passe n'est affiché qu'une seule fois et n'est pas récupérable ensuite."
+    },
+    "audit": {
+      "id": "Identifiant",
+      "noValues": "Aucune valeur enregistrée pour cette action.",
+      "count": "{count} entrée | {count} entrées",
+      "loadError": "Impossible de charger le journal d'audit.",
+      "empty": "Aucune entrée ne correspond aux filtres.",
+      "system": "système",
+      "columns": {
+        "date": "Date",
+        "actor": "Auteur",
+        "action": "Action",
+        "target": "Cible",
+        "ip": "Adresse IP"
+      },
+      "filters": {
+        "actor": "Auteur",
+        "allActors": "Tous les auteurs",
+        "action": "Action",
+        "actionPlaceholder": "ex. series.update",
+        "targetType": "Type de cible",
+        "allTargets": "Toutes les cibles",
+        "targetId": "Identifiant de cible",
+        "targetIdPlaceholder": "ser_…, ep_…",
+        "period": "Période",
+        "periodPlaceholder": "Du… au…"
+      },
+      "targetTypes": {
+        "series": "Série",
+        "episode": "Épisode",
+        "subtitle": "Sous-titre",
+        "home_banner": "Bannière",
+        "home_row": "Rangée",
+        "admin_account": "Compte interne",
+        "upload": "Envoi de fichier"
+      },
+      "diff": {
+        "field": "Champ",
+        "before": "Avant",
+        "after": "Après",
+        "noChange": "Aucune différence entre l'ancienne et la nouvelle valeur.",
+        "onlyChanged": "Afficher seulement les champs modifiés",
+        "showAll": "Afficher tous les champs ({count})",
+        "showRaw": "Voir le JSON brut",
+        "hideRaw": "Masquer le JSON brut"
+      }
+    }
   }
 }

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "sub_01HZX0S0000000000000000001",
+    "episodeId": "ep_01HZX0E0000000000000000001",
+    "language": "fr",
+    "fileUrl": "mock://assets/subtitles/ep_01HZX0E0000000000000000001/fr.vtt",
+    "label": "Français",
+    "createdAt": "2026-09-22T09:00:00.000Z"
+  },
+  {
+    "id": "sub_01HZX0S0000000000000000002",
+    "episodeId": "ep_01HZX0E0000000000000000001",
+    "language": "en",
+    "fileUrl": "mock://assets/subtitles/ep_01HZX0E0000000000000000001/en.vtt",
+    "label": "English",
+    "createdAt": "2026-09-22T09:05:00.000Z"
+  },
+  {
+    "id": "sub_01HZX0S0000000000000000003",
+    "episodeId": "ep_01HZX0E0000000000000000002",
+    "language": "fr",
+    "fileUrl": "mock://assets/subtitles/ep_01HZX0E0000000000000000002/fr.vtt",
+    "label": "Français",
+    "createdAt": "2026-09-22T09:10:00.000Z"
+  },
+  {
+    "id": "sub_01HZX0S0000000000000000011",
+    "episodeId": "ep_01HZX0E0000000000000000011",
+    "language": "fr",
+    "fileUrl": "mock://assets/subtitles/ep_01HZX0E0000000000000000011/fr.vtt",
+    "label": "Français",
+    "createdAt": "2026-09-25T09:10:00.000Z"
+  }
+]

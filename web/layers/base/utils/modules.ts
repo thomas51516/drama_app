@@ -43,7 +43,7 @@ export const backofficeModules: readonly BackofficeModule[] = [
     key: 'featuring',
     ticket: 'B-05',
     labelKey: 'nav.featuring',
-    path: '/featuring',
+    path: '/featured',
     icon: 'pi pi-star',
   },
   {

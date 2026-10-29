@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { AdminEpisode } from '#base/types/api'
+import type { AdminEpisode, Subtitle } from '#base/types/api'
 import { ApiError } from '#base/utils/api-error'
+import { subtitleTracks, type SubtitleTrack } from '#base/utils/subtitles'
 import { formatDuration } from '#base/utils/format'
 import { createPoller, EPISODES_POLL_INTERVAL_MS, hasTranscodeInFlight } from '#base/utils/polling'
 import { canEditCatalogue } from '#base/utils/series-form'
 
-const { t, d } = useI18n()
+const { t, d, locale } = useI18n()
 const route = useRoute()
 const api = useCatalogueApi()
+const subtitlesApi = useSubtitlesApi()
 const notify = useNotify()
 const confirm = useConfirm()
 const auth = useAuthStore()
@@ -164,15 +166,45 @@ async function onRowReorder(event: { value: AdminEpisode[] }): Promise<void> {
   }
 }
 
+// --- subtitles (B-03) ----------------------------------------------------------------------
+const subtitlesByEpisode = ref<Record<string, Subtitle[]>>({})
+const subtitlesVisible = ref(false)
+const subtitlesEpisode = ref<AdminEpisode | null>(null)
+
+function openSubtitles(episode: AdminEpisode): void {
+  subtitlesEpisode.value = episode
+  subtitlesVisible.value = true
+}
+
+function onSubtitlesChanged(episodeId: string, subtitles: Subtitle[]): void {
+  subtitlesByEpisode.value = { ...subtitlesByEpisode.value, [episodeId]: subtitles }
+}
+
 // --- preview -------------------------------------------------------------------------------
 const previewVisible = ref(false)
 const previewSrc = ref<string | null>(null)
 const previewTitle = ref('')
+const previewTracks = ref<SubtitleTrack[]>([])
 
-function preview(episode: AdminEpisode): void {
+async function preview(episode: AdminEpisode): Promise<void> {
   previewSrc.value = media.resolve(episode.hlsKey)
   previewTitle.value = `${episode.number}. ${episode.title}`
+  previewTracks.value = subtitleTracks(
+    subtitlesByEpisode.value[episode.id] ?? [],
+    (url) => media.resolve(url),
+    locale.value,
+  )
   previewVisible.value = true
+  // Side-load the subtitles of the episode so the editor can check their timing.
+  try {
+    const subtitles = await subtitlesApi.listSubtitles(episode.id)
+    onSubtitlesChanged(episode.id, subtitles)
+    if (previewVisible.value && previewTitle.value === `${episode.number}. ${episode.title}`) {
+      previewTracks.value = subtitleTracks(subtitles, (url) => media.resolve(url), locale.value)
+    }
+  } catch (err) {
+    notify.apiError(err, t('subtitles.loadError'))
+  }
 }
 
 const notFound = computed(() => ApiError.is(seriesError.value) && seriesError.value.status === 404)
@@ -363,7 +395,7 @@ const readyCount = computed(
           </template>
         </Column>
 
-        <Column class="w-36">
+        <Column class="w-44">
           <template #body="{ data: row }: { data: AdminEpisode }">
             <div class="flex justify-end gap-1">
               <Button
@@ -374,6 +406,16 @@ const readyCount = computed(
                 :aria-label="t('episodes.actions.preview')"
                 :title="t('episodes.actions.preview')"
                 @click="preview(row)"
+              />
+              <Button
+                v-if="row.transcodeStatus === 'READY'"
+                icon="pi pi-language"
+                size="small"
+                text
+                :aria-label="t('subtitles.title')"
+                :title="t('subtitles.title')"
+                data-testid="subtitles-button"
+                @click="openSubtitles(row)"
               />
               <Button
                 v-if="canEdit && row.transcodeStatus === 'FAILED'"
@@ -405,6 +447,14 @@ const readyCount = computed(
       v-model:visible="previewVisible"
       :src="previewSrc"
       :title="previewTitle"
+      :tracks="previewTracks"
+    />
+
+    <EpisodesSubtitlesPanel
+      v-model:visible="subtitlesVisible"
+      :episode="subtitlesEpisode"
+      :can-edit="canEdit"
+      @changed="onSubtitlesChanged"
     />
   </div>
 </template>

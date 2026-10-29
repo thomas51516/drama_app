@@ -1,0 +1,122 @@
+{
+  "banners": [
+    {
+      "id": "bnr_01HZX0B0000000000000000001",
+      "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+      "imageUrl": "http://localhost:9000/drama-media/hls/samples/ep1/thumbnail.jpg",
+      "title": "Le Prince oublié",
+      "subtitle": "Nouveaux épisodes chaque jour",
+      "countries": [],
+      "position": 1,
+      "isActive": true,
+      "startsAt": null,
+      "endsAt": null
+    },
+    {
+      "id": "bnr_01HZX0B0000000000000000002",
+      "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+      "imageUrl": "http://localhost:9000/drama-media/hls/samples/ep2/thumbnail.jpg",
+      "title": "Mariage sous contrat",
+      "subtitle": "Spécial Côte d'Ivoire et Sénégal",
+      "countries": ["CI", "SN"],
+      "position": 2,
+      "isActive": true,
+      "startsAt": "2026-10-01T00:00:00.000Z",
+      "endsAt": "2026-12-31T23:59:59.000Z"
+    },
+    {
+      "id": "bnr_01HZX0B0000000000000000003",
+      "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K3",
+      "imageUrl": "http://localhost:9000/drama-media/hls/samples/ep3/thumbnail.jpg",
+      "title": "Retour à Abidjan",
+      "subtitle": "Bannière désactivée (série archivée)",
+      "countries": ["CI"],
+      "position": 3,
+      "isActive": false,
+      "startsAt": null,
+      "endsAt": null
+    }
+  ],
+  "rows": [
+    {
+      "id": "row_01HZX0R0000000000000000001",
+      "key": "continue_watching",
+      "type": "CONTINUE_WATCHING",
+      "titles": {
+        "fr": "Continuer à regarder",
+        "en": "Continue watching",
+        "es": "Seguir viendo",
+        "pt": "Continuar a assistir"
+      },
+      "genre": null,
+      "seriesIds": [],
+      "countries": [],
+      "position": 1,
+      "isActive": true
+    },
+    {
+      "id": "row_01HZX0R0000000000000000002",
+      "key": "trending",
+      "type": "TRENDING",
+      "titles": {
+        "fr": "Tendances",
+        "en": "Trending",
+        "es": "Tendencias",
+        "pt": "Em alta"
+      },
+      "genre": null,
+      "seriesIds": [],
+      "countries": [],
+      "position": 2,
+      "isActive": true
+    },
+    {
+      "id": "row_01HZX0R0000000000000000003",
+      "key": "new",
+      "type": "NEW",
+      "titles": {
+        "fr": "Nouveautés",
+        "en": "New",
+        "es": "Novedades",
+        "pt": "Novidades"
+      },
+      "genre": null,
+      "seriesIds": [],
+      "countries": [],
+      "position": 3,
+      "isActive": true
+    },
+    {
+      "id": "row_01HZX0R0000000000000000004",
+      "key": "genre-romance",
+      "type": "GENRE",
+      "titles": {
+        "fr": "Romance",
+        "en": "Romance",
+        "es": "Romance",
+        "pt": "Romance"
+      },
+      "genre": "romance",
+      "seriesIds": [],
+      "countries": [],
+      "position": 4,
+      "isActive": true
+    },
+    {
+      "id": "row_01HZX0R0000000000000000005",
+      "key": "selection-de-la-redaction",
+      "type": "MANUAL",
+      "titles": {
+        "fr": "Sélection de la rédaction",
+        "en": "Editors' picks",
+        "es": "",
+        "pt": ""
+      },
+      "genre": null,
+      "seriesIds": ["ser_01HZX0A1B2C3D4E5F6G7H8J9K1", "ser_01HZX0A1B2C3D4E5F6G7H8J9K0"],
+      "countries": ["FR", "BE", "CH"],
+      "position": 5,
+      "isActive": true
+    }
+  ]
+}
