@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { resolveMediaUrl } from '../catalog/catalog.mapper.js';
-import { visibleEpisodeWhere } from '../catalog/catalog.where.js';
+import { resolveMediaUrl, toSubtitleTrack } from '../catalog/catalog.mapper.js';
+import { subtitleSelect, visibleEpisodeWhere } from '../catalog/catalog.where.js';
 import { computeAccess, EntitlementService } from '../catalog/entitlement.service.js';
 import { AppConfig } from '../config/app-config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -30,7 +30,7 @@ export class PlaybackService {
   async play(userId: string, episodeId: string): Promise<PlaySessionDto> {
     const episode = await this.prisma.episode.findFirst({
       where: { id: episodeId, ...visibleEpisodeWhere(), series: { status: 'PUBLISHED' } },
-      include: { series: true, subtitles: true },
+      include: { series: true, subtitles: subtitleSelect },
     });
     if (!episode) {
       throw new NotFoundException({ code: 'EPISODE_NOT_FOUND', message: 'Episode not found' });
@@ -80,10 +80,7 @@ export class PlaybackService {
       manifestUrl,
       expiresAt: new Date(Date.now() + this.config.playbackUrlTtlSeconds * 1000).toISOString(),
       drm: { type: 'none' },
-      subtitles: episode.subtitles.map((s) => ({
-        language: s.language,
-        url: resolveMediaUrl(s.fileUrl, this.config.cdnBaseUrl) ?? s.fileUrl,
-      })),
+      subtitles: episode.subtitles.map((s) => toSubtitleTrack(s, this.config.cdnBaseUrl)),
       resumePositionSeconds: progress && !progress.completed ? progress.positionSeconds : 0,
       durationSeconds: episode.durationSeconds,
       nextEpisodeId: next?.id ?? null,

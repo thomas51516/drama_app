@@ -321,8 +321,46 @@
     },
     "/home": {
       "get": {
-        "operationId": "home",
-        "parameters": [],
+        "description": "Construit à partir de la configuration du back-office (B-05) : bannières actives puis rangées actives (TRENDING = séries les plus regardées sur 7 jours, NEW = dernières publiées, GENRE, MANUAL, CONTINUE_WATCHING uniquement avec un jeton). Filtré par `X-Country`, titré selon `Accept-Language`. Mis en cache 60 s par pays et langue (hors « Continuer à regarder »).",
+        "operationId": "getHome",
+        "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Langue des titres de rangées : fr (défaut), en, es, pt.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr-FR,fr;q=0.9,en;q=0.8"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accept-language",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -350,6 +388,26 @@
       "get": {
         "operationId": "list",
         "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Langue des titres de rangées : fr (défaut), en, es, pt.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr-FR,fr;q=0.9,en;q=0.8"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
           {
             "name": "genre",
             "required": false,
@@ -379,6 +437,14 @@
               "maximum": 50,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -410,11 +476,39 @@
         "operationId": "detail",
         "parameters": [
           {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Langue des titres de rangées : fr (défaut), en, es, pt.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr-FR,fr;q=0.9,en;q=0.8"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
+          {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
               "type": "string"
             }
           }
@@ -446,7 +540,7 @@
             "bearer": []
           }
         ],
-        "summary": "Fiche série (M-10)",
+        "summary": "Fiche série (M-10) — mise en cache 120 s",
         "tags": [
           "catalog"
         ]
@@ -454,14 +548,43 @@
     },
     "/series/{id}/episodes": {
       "get": {
+        "description": "La liste anonyme est mise en cache 120 s ; le statut d’accès est recalculé pour le spectateur authentifié. `subtitles` expose les pistes WebVTT (B-03).",
         "operationId": "episodes",
         "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Langue des titres de rangées : fr (défaut), en, es, pt.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr-FR,fr;q=0.9,en;q=0.8"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
           {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
               "type": "string"
             }
           }
@@ -496,7 +619,7 @@
             "bearer": []
           }
         ],
-        "summary": "Grille des épisodes avec statut gratuit / débloqué / verrouillé (M-10)",
+        "summary": "Grille des épisodes avec statut gratuit / débloqué / verrouillé et sous-titres (M-10)",
         "tags": [
           "catalog"
         ]
@@ -506,6 +629,26 @@
       "get": {
         "operationId": "feed",
         "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Langue des titres de rangées : fr (défaut), en, es, pt.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr-FR,fr;q=0.9,en;q=0.8"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
           {
             "name": "cursor",
             "required": false,
@@ -524,6 +667,14 @@
               "maximum": 30,
               "default": 10,
               "type": "number"
+            }
+          },
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -555,6 +706,26 @@
         "description": "Recherche plein texte sur les séries publiées. Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
         "operationId": "search",
         "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Langue des titres de rangées : fr (défaut), en, es, pt.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr-FR,fr;q=0.9,en;q=0.8"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
           {
             "name": "q",
             "required": true,
@@ -3065,12 +3236,1505 @@
           "admin-episodes"
         ]
       }
+    },
+    "/admin/episodes/{id}/subtitles": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminSubtitleDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Pistes de sous-titres d'un épisode",
+        "tags": [
+          "admin-subtitles"
+        ]
+      },
+      "post": {
+        "description": "Le SRT est converti en WebVTT côté serveur (BOM, CRLF, numéros de cue, virgules des horodatages), stocké sous `subtitles/{episodeId}/{language}.vtt` et servi publiquement avec CORS ouvert en lecture.",
+        "operationId": "upload",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "language"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Fichier .srt ou .vtt (2 Mo max)"
+                  },
+                  "language": {
+                    "type": "string",
+                    "example": "fr",
+                    "description": "Code ISO 639-1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSubtitleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | SUBTITLE_FILE_REQUIRED | SUBTITLE_INVALID_FORMAT | SUBTITLE_PARSE_ERROR (details.line)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE (> 2 Mo)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Importer un fichier SRT ou VTT pour une langue (remplace la piste existante)",
+        "tags": [
+          "admin-subtitles"
+        ]
+      }
+    },
+    "/admin/subtitles/{id}": {
+      "delete": {
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SUBTITLE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer une piste de sous-titres (et son fichier)",
+        "tags": [
+          "admin-subtitles"
+        ]
+      }
+    },
+    "/admin/home/banners": {
+      "get": {
+        "operationId": "listBanners",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HomeBannerAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Lister les bannières (toutes, dans l’ordre d’affichage)",
+        "tags": [
+          "admin-home"
+        ]
+      },
+      "post": {
+        "operationId": "createBanner",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHomeBannerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeBannerAdminDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | HOME_BANNER_WINDOW_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer une bannière (position = dernière)",
+        "tags": [
+          "admin-home"
+        ]
+      }
+    },
+    "/admin/home/banners/order": {
+      "put": {
+        "operationId": "reorderBanners",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderHomeItemsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HomeBannerAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "HOME_ORDER_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Réordonner les bannières (toutes les bannières, nouvel ordre)",
+        "tags": [
+          "admin-home"
+        ]
+      }
+    },
+    "/admin/home/banners/{id}": {
+      "patch": {
+        "operationId": "updateBanner",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHomeBannerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeBannerAdminDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | HOME_BANNER_WINDOW_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "HOME_BANNER_NOT_FOUND | SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une bannière",
+        "tags": [
+          "admin-home"
+        ]
+      },
+      "delete": {
+        "operationId": "removeBanner",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "HOME_BANNER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer une bannière",
+        "tags": [
+          "admin-home"
+        ]
+      }
+    },
+    "/admin/home/rows": {
+      "get": {
+        "operationId": "listRows",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HomeRowAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Lister les rangées (toutes, dans l’ordre d’affichage)",
+        "tags": [
+          "admin-home"
+        ]
+      },
+      "post": {
+        "description": "Types : TRENDING (séries les plus regardées sur 7 jours), NEW (dernières publiées), GENRE (`genre` requis), MANUAL (`seriesIds` requis, ordre conservé), CONTINUE_WATCHING (progression du spectateur connecté). `titles.fr` obligatoire, en/es/pt optionnels (repli fr).",
+        "operationId": "createRow",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHomeRowDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeRowAdminDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | HOME_ROW_GENRE_REQUIRED | HOME_ROW_SERIES_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "HOME_ROW_KEY_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer une rangée (position = dernière)",
+        "tags": [
+          "admin-home"
+        ]
+      }
+    },
+    "/admin/home/rows/order": {
+      "put": {
+        "operationId": "reorderRows",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderHomeItemsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HomeRowAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "HOME_ORDER_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Réordonner les rangées (toutes les rangées, nouvel ordre)",
+        "tags": [
+          "admin-home"
+        ]
+      }
+    },
+    "/admin/home/rows/{id}": {
+      "patch": {
+        "operationId": "updateRow",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHomeRowDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeRowAdminDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | HOME_ROW_GENRE_REQUIRED | HOME_ROW_SERIES_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "HOME_ROW_NOT_FOUND | SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "HOME_ROW_KEY_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une rangée",
+        "tags": [
+          "admin-home"
+        ]
+      },
+      "delete": {
+        "operationId": "removeRow",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "HOME_ROW_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer une rangée",
+        "tags": [
+          "admin-home"
+        ]
+      }
+    },
+    "/admin/home/preview": {
+      "get": {
+        "operationId": "preview",
+        "parameters": [
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Pays simulé (ISO 3166-1 alpha-2)",
+            "schema": {
+              "example": "TG",
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "fr",
+              "type": "string",
+              "enum": [
+                "fr",
+                "en",
+                "es",
+                "pt"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Aperçu de `GET /home` pour un pays et une langue (sans cache, spectateur anonyme)",
+        "tags": [
+          "admin-home"
+        ]
+      }
+    },
+    "/admin/accounts": {
+      "get": {
+        "operationId": "list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminAccountDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | ADMIN_SELF_LOCKOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Lister les comptes internes",
+        "tags": [
+          "admin-accounts"
+        ]
+      },
+      "post": {
+        "description": "Mot de passe de 10 caractères minimum (Argon2id). La 2FA est configurée par la personne à sa première connexion.",
+        "operationId": "create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | ADMIN_SELF_LOCKOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ADMIN_EMAIL_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer un compte interne",
+        "tags": [
+          "admin-accounts"
+        ]
+      }
+    },
+    "/admin/accounts/{id}": {
+      "patch": {
+        "description": "Un admin ne peut ni se désactiver ni se retirer le rôle ADMIN (403 `ADMIN_SELF_LOCKOUT`) ; le dernier ADMIN actif ne peut être ni désactivé ni rétrogradé (409 `LAST_ADMIN`).",
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | ADMIN_SELF_LOCKOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ADMIN_ACCOUNT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "LAST_ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier nom, rôle ou activation",
+        "tags": [
+          "admin-accounts"
+        ]
+      }
+    },
+    "/admin/accounts/{id}/reset-totp": {
+      "post": {
+        "operationId": "resetTotp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | ADMIN_SELF_LOCKOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ADMIN_ACCOUNT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Réinitialiser la 2FA (nouvelle configuration à la prochaine connexion)",
+        "tags": [
+          "admin-accounts"
+        ]
+      }
+    },
+    "/admin/accounts/{id}/reset-password": {
+      "post": {
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetAdminPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | ADMIN_SELF_LOCKOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ADMIN_ACCOUNT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Définir un nouveau mot de passe (10 caractères minimum)",
+        "tags": [
+          "admin-accounts"
+        ]
+      }
+    },
+    "/admin/audit-logs": {
+      "get": {
+        "description": "`action` accepte une valeur exacte (`series.update`) ou un préfixe terminé par un point (`series.`). Tri antichronologique.",
+        "operationId": "auditLogs",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "description": "Auteur",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "Action exacte (`series.update`) ou préfixe terminé par un point (`series.`)",
+            "schema": {
+              "example": "series.",
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "series",
+                "episode",
+                "subtitle",
+                "home_banner",
+                "home_row",
+                "admin_account",
+                "upload"
+              ]
+            }
+          },
+          {
+            "name": "targetId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Borne inférieure (incluse)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Borne supérieure (incluse)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | ADMIN_SELF_LOCKOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Journal d'audit (paginé, filtres auteur / action / cible / période)",
+        "tags": [
+          "admin-accounts"
+        ]
+      }
     }
   },
   "info": {
     "title": "DRAMA API",
-    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique).\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/guest`, `/auth/refresh`, `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).",
-    "version": "1.0.0",
+    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique).\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/guest`, `/auth/refresh`, `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office.",
+    "version": "1.1.0",
     "contact": {
       "name": "Équipe backend DRAMA",
       "url": "",
@@ -3129,6 +4793,18 @@
     {
       "name": "admin-episodes",
       "description": "Back-office : épisodes, upload, transcodage (B-02)"
+    },
+    {
+      "name": "admin-subtitles",
+      "description": "Back-office : sous-titres SRT/VTT par langue (B-03)"
+    },
+    {
+      "name": "admin-home",
+      "description": "Back-office : bannières et rangées de l’accueil, par pays (B-05)"
+    },
+    {
+      "name": "admin-accounts",
+      "description": "Back-office : comptes internes, rôles et journal d’audit (B-13)"
     }
   ],
   "servers": [
@@ -3518,6 +5194,107 @@
           "code"
         ]
       },
+      "HomeBannerDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "le-secret-du-lagon"
+          },
+          "title": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "genres": {
+            "example": [
+              "romance",
+              "drame"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "posterVerticalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 9:16"
+          },
+          "posterHorizontalUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affiche 16:9 (bannières)"
+          },
+          "episodeCount": {
+            "type": "number",
+            "description": "Nombre d’épisodes publiés et prêts",
+            "example": 3
+          },
+          "freeEpisodeCount": {
+            "type": "number",
+            "example": 2
+          },
+          "coinCostPerEpisode": {
+            "type": "number",
+            "description": "Coût en pièces d’un épisode payant",
+            "example": 10
+          },
+          "ageRating": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "PG12",
+              "PG16",
+              "R18"
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "bannerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identifiant de la bannière"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Visuel 16:9 de la bannière (repli : affiche horizontale de la série)"
+          },
+          "bannerTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Accroche (repli : titre de la série)"
+          },
+          "bannerSubtitle": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "genres",
+          "posterVerticalUrl",
+          "posterHorizontalUrl",
+          "episodeCount",
+          "freeEpisodeCount",
+          "coinCostPerEpisode",
+          "ageRating",
+          "publishedAt",
+          "bannerId",
+          "imageUrl",
+          "bannerTitle",
+          "bannerSubtitle"
+        ]
+      },
       "SeriesSummaryDto": {
         "type": "object",
         "properties": {
@@ -3596,6 +5373,30 @@
           "publishedAt"
         ]
       },
+      "SubtitleTrackDto": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "example": "fr",
+            "description": "Code ISO 639-1"
+          },
+          "label": {
+            "type": "string",
+            "example": "Français",
+            "description": "Nom de la langue, dans cette langue"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL publique du fichier WebVTT (CORS ouvert en lecture)"
+          }
+        },
+        "required": [
+          "language",
+          "label",
+          "url"
+        ]
+      },
       "EpisodeSummaryDto": {
         "type": "object",
         "properties": {
@@ -3641,9 +5442,17 @@
               "fr",
               "en"
             ],
+            "deprecated": true,
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "subtitles": {
+            "description": "Pistes de sous-titres (B-03)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubtitleTrackDto"
             }
           },
           "publishedAt": {
@@ -3662,6 +5471,7 @@
           "access",
           "coinCost",
           "subtitleLanguages",
+          "subtitles",
           "publishedAt"
         ]
       },
@@ -3693,12 +5503,23 @@
         "properties": {
           "key": {
             "type": "string",
-            "description": "Clé stable : trending, new, continue_watching, genre:<genre>",
+            "description": "Clé stable configurée en back-office (ex. trending, new, continue_watching, genre-romance)",
             "example": "trending"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "TRENDING",
+              "NEW",
+              "GENRE",
+              "CONTINUE_WATCHING"
+            ],
+            "description": "Type de rangée (B-05)"
           },
           "title": {
             "type": "string",
-            "description": "Titre affichable (langue du spectateur)",
+            "description": "Titre dans la langue de `Accept-Language` (fr, en, es, pt ; repli fr)",
             "example": "Tendances"
           },
           "items": {
@@ -3710,6 +5531,7 @@
         },
         "required": [
           "key",
+          "type",
           "title",
           "items"
         ]
@@ -3718,10 +5540,10 @@
         "type": "object",
         "properties": {
           "banners": {
-            "description": "Bannières de mise en avant (M-01)",
+            "description": "Bannières actives (M-01, B-05), filtrées par pays et fenêtre de diffusion",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/SeriesSummaryDto"
+              "$ref": "#/components/schemas/HomeBannerDto"
             }
           },
           "rows": {
@@ -3936,15 +5758,22 @@
         "properties": {
           "language": {
             "type": "string",
-            "example": "fr"
+            "example": "fr",
+            "description": "Code ISO 639-1"
+          },
+          "label": {
+            "type": "string",
+            "example": "Français",
+            "description": "Nom de la langue, dans cette langue"
           },
           "url": {
             "type": "string",
-            "description": "URL du fichier WebVTT"
+            "description": "URL publique du fichier WebVTT (CORS ouvert en lecture)"
           }
         },
         "required": [
           "language",
+          "label",
           "url"
         ]
       },
@@ -5545,6 +7374,704 @@
           "key",
           "publicUrl",
           "expiresAt"
+        ]
+      },
+      "AdminSubtitleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string",
+            "example": "fr",
+            "description": "Code ISO 639-1 (fr, en, es, pt, …)"
+          },
+          "label": {
+            "type": "string",
+            "example": "Français",
+            "description": "Nom de la langue, dans cette langue"
+          },
+          "fileUrl": {
+            "type": "string",
+            "description": "URL publique du fichier WebVTT (`subtitles/{episodeId}/{language}.vtt`)",
+            "example": "http://localhost:9000/drama-media/subtitles/0192f1f0-…/fr.vtt"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "episodeId",
+          "language",
+          "label",
+          "fileUrl",
+          "createdAt"
+        ]
+      },
+      "HomeBannerAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesTitle": {
+            "type": "string",
+            "description": "Titre de la série mise en avant (lecture seule)"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Visuel 16:9 ; null = affiche horizontale"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "countries": {
+            "description": "ISO 3166-1 alpha-2 ; vide = partout",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "position": {
+            "type": "number",
+            "example": 1
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "seriesId",
+          "seriesTitle",
+          "imageUrl",
+          "title",
+          "subtitle",
+          "countries",
+          "position",
+          "isActive",
+          "startsAt",
+          "endsAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateHomeBannerDto": {
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Série mise en avant (doit exister)"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL publique du visuel 16:9"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          },
+          "countries": {
+            "example": [
+              "TG",
+              "CI"
+            ],
+            "description": "Vide = partout",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "seriesId"
+        ]
+      },
+      "ReorderHomeItemsDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "Tous les identifiants (bannières ou rangées) dans le nouvel ordre",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "UpdateHomeBannerDto": {
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Série mise en avant (doit exister)"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL publique du visuel 16:9"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          },
+          "countries": {
+            "example": [
+              "TG",
+              "CI"
+            ],
+            "description": "Vide = partout",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        }
+      },
+      "HomeRowTitlesResponseDto": {
+        "type": "object",
+        "properties": {
+          "fr": {
+            "type": "string",
+            "example": "Tendances"
+          },
+          "en": {
+            "type": "string",
+            "nullable": true
+          },
+          "es": {
+            "type": "string",
+            "nullable": true
+          },
+          "pt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "fr",
+          "en",
+          "es",
+          "pt"
+        ]
+      },
+      "HomeRowAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "example": "trending",
+            "description": "Clé stable exposée à l’application"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "TRENDING",
+              "NEW",
+              "GENRE",
+              "CONTINUE_WATCHING"
+            ]
+          },
+          "titles": {
+            "$ref": "#/components/schemas/HomeRowTitlesResponseDto"
+          },
+          "genre": {
+            "type": "string",
+            "nullable": true,
+            "description": "Type GENRE"
+          },
+          "seriesIds": {
+            "description": "Type MANUAL : séries dans l’ordre d’affichage",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "countries": {
+            "description": "ISO 3166-1 alpha-2 ; vide = partout",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "position": {
+            "type": "number",
+            "example": 1
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "type",
+          "titles",
+          "genre",
+          "seriesIds",
+          "countries",
+          "position",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "HomeRowTitlesDto": {
+        "type": "object",
+        "properties": {
+          "fr": {
+            "type": "string",
+            "example": "Tendances",
+            "description": "Obligatoire (langue de repli)"
+          },
+          "en": {
+            "type": "string",
+            "nullable": true,
+            "example": "Trending"
+          },
+          "es": {
+            "type": "string",
+            "nullable": true,
+            "example": "Tendencias"
+          },
+          "pt": {
+            "type": "string",
+            "nullable": true,
+            "example": "Tendências"
+          }
+        },
+        "required": [
+          "fr"
+        ]
+      },
+      "CreateHomeRowDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "genre-romance",
+            "description": "Clé unique : minuscules, chiffres, `-` ou `_` (2 à 80 caractères)",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "TRENDING",
+              "NEW",
+              "GENRE",
+              "CONTINUE_WATCHING"
+            ]
+          },
+          "titles": {
+            "description": "Titres par langue (fr, en, es, pt)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HomeRowTitlesDto"
+              }
+            ]
+          },
+          "genre": {
+            "type": "string",
+            "nullable": true,
+            "example": "romance",
+            "description": "Requis pour GENRE"
+          },
+          "seriesIds": {
+            "description": "Requis (non vide) pour MANUAL",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "countries": {
+            "example": [],
+            "description": "Vide = partout",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "key",
+          "type",
+          "titles"
+        ]
+      },
+      "UpdateHomeRowDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "genre-romance",
+            "description": "Clé unique : minuscules, chiffres, `-` ou `_` (2 à 80 caractères)",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "TRENDING",
+              "NEW",
+              "GENRE",
+              "CONTINUE_WATCHING"
+            ]
+          },
+          "titles": {
+            "description": "Titres par langue (fr, en, es, pt)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HomeRowTitlesDto"
+              }
+            ]
+          },
+          "genre": {
+            "type": "string",
+            "nullable": true,
+            "example": "romance",
+            "description": "Requis pour GENRE"
+          },
+          "seriesIds": {
+            "description": "Requis (non vide) pour MANUAL",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "countries": {
+            "example": [],
+            "description": "Vide = partout",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "AdminAccountDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "editor@drama.local"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Éditeur"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "EDITOR",
+              "MONETIZATION",
+              "SUPPORT",
+              "ADMIN"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "totpEnrolled": {
+            "type": "boolean",
+            "description": "2FA active ; `false` = configuration à la prochaine connexion"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role",
+          "isActive",
+          "totpEnrolled",
+          "lastLoginAt",
+          "createdAt"
+        ]
+      },
+      "CreateAdminAccountDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "editor@drama.local"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Éditeur",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "EDITOR",
+              "MONETIZATION",
+              "SUPPORT",
+              "ADMIN"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 200,
+            "description": "Mot de passe initial (10 caractères minimum)"
+          }
+        },
+        "required": [
+          "email",
+          "displayName",
+          "role",
+          "password"
+        ]
+      },
+      "UpdateAdminAccountDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "EDITOR",
+              "MONETIZATION",
+              "SUPPORT",
+              "ADMIN"
+            ]
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "`false` désactive le compte (connexion et jetons refusés)"
+          }
+        }
+      },
+      "ResetAdminPasswordDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "AuditLogDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "null = action système"
+          },
+          "actorEmail": {
+            "type": "string",
+            "nullable": true,
+            "example": "editor@drama.local"
+          },
+          "action": {
+            "type": "string",
+            "example": "series.update",
+            "description": "Verbe stable `<cible>.<action>`"
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "series",
+              "episode",
+              "subtitle",
+              "home_banner",
+              "home_row",
+              "admin_account",
+              "upload"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "oldValue": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "newValue": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "actorId",
+          "actorEmail",
+          "action",
+          "targetType",
+          "targetId",
+          "oldValue",
+          "newValue",
+          "ip",
+          "createdAt"
+        ]
+      },
+      "AuditLogListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
         ]
       }
     }

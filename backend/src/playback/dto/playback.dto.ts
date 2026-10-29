@@ -3,10 +3,13 @@ import { IsBoolean, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator'
 import { EPISODE_ACCESS, type EpisodeAccess } from '../../catalog/dto/catalog.dto.js';
 
 export class PlaySubtitleDto {
-  @ApiProperty({ example: 'fr' })
+  @ApiProperty({ example: 'fr', description: 'Code ISO 639-1' })
   language: string;
 
-  @ApiProperty({ description: 'URL du fichier WebVTT' })
+  @ApiProperty({ example: 'Français', description: 'Nom de la langue, dans cette langue' })
+  label: string;
+
+  @ApiProperty({ description: 'URL publique du fichier WebVTT (CORS ouvert en lecture)' })
   url: string;
 }
 

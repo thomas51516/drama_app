@@ -64,6 +64,11 @@ describe('Admin API (e2e)', () => {
     config = app.get(AppConfig);
     configureApp(app, config);
     await app.init();
+
+    // Les compteurs de limitation de débit (login par IP et par e-mail) persistent dans Redis entre
+    // deux exécutions de la suite : on repart de zéro pour que les scénarios restent déterministes.
+    const rlKeys = await app.get(RedisService).client.keys('rl:*');
+    if (rlKeys.length > 0) await app.get(RedisService).client.del(...rlKeys);
     prisma = app.get(PrismaService);
 
     const redis = app.get(RedisService).client;

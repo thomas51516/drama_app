@@ -13,13 +13,15 @@ docker compose -f infra/docker-compose.dev.yml down       # arrêter (les volume
 docker compose -f infra/docker-compose.dev.yml down -v    # arrêter ET supprimer les données
 ```
 
-Le service one-shot `minio-init` s'exécute automatiquement après que MinIO est sain : il crée le bucket `drama-media` (idempotent) et lui donne une politique de lecture anonyme (`download`), pratique pour tester des manifestes HLS en local. MinIO n'accepte les requêtes navigateur (PUT direct sur URL pré-signée depuis le back-office) que depuis les origines de `MINIO_CORS_ORIGINS` (défaut `http://localhost:3100,http://localhost:3000`) ; vérification :
+Le service one-shot `minio-init` s'exécute automatiquement après que MinIO est sain : il crée le bucket `drama-media` (idempotent) et lui donne une politique de lecture anonyme (`download`) : manifestes HLS, affiches et sous-titres WebVTT (`subtitles/{episodeId}/{langue}.vtt`, S03-BE-03) sont lisibles sans signature. MinIO n'accepte les requêtes navigateur (PUT direct sur URL pré-signée depuis le back-office, lecture des `.vtt` par un lecteur web) que depuis les origines de `MINIO_CORS_ORIGINS` ; le défaut est désormais `*` (lecture depuis n'importe quelle origine, les PUT restant protégés par la signature des URLs). Un conteneur créé avec l'ancien défaut (`http://localhost:3100,http://localhost:3000`) garde sa configuration tant qu'il n'est pas recréé : `docker compose -f infra/docker-compose.dev.yml up -d minio` (les données du volume sont conservées). L'application Android (Media3) n'est pas soumise au CORS. Vérification :
 
 ```bash
 curl -s -i -X OPTIONS http://localhost:9000/drama-media/sources/test.mp4 \
   -H "Origin: http://localhost:3100" -H "Access-Control-Request-Method: PUT" \
   -H "Access-Control-Request-Headers: content-type" | grep -i access-control
-# attendu : Access-Control-Allow-Origin: http://localhost:3100 et Access-Control-Allow-Methods: PUT
+# attendu : Access-Control-Allow-Origin: http://localhost:3100 (ou *) et Access-Control-Allow-Methods: PUT
+curl -s -i http://localhost:9000/drama-media/subtitles/<episodeId>/fr.vtt -H "Origin: http://localhost:3100" | grep -i -E "content-type|access-control-allow-origin"
+# attendu : Content-Type: text/vtt et Access-Control-Allow-Origin présent
 ```
 
 Pour relancer l'initialisation du bucket à la main :
@@ -57,7 +59,7 @@ Toutes les variables ont une valeur par défaut. Pour les surcharger, exporter l
 | `MINIO_PORT` | `9000` | Port API S3 |
 | `MINIO_CONSOLE_PORT` | `9001` | Port console web |
 | `S3_BUCKET` | `drama-media` | Bucket créé au démarrage |
-| `MINIO_CORS_ORIGINS` | `http://localhost:3100,http://localhost:3000` | Origines autorisées pour les PUT navigateur (CORS de l'API S3) |
+| `MINIO_CORS_ORIGINS` | `*` | Origines autorisées par le CORS de l'API S3 (PUT navigateur du back-office, lecture des sous-titres VTT par les lecteurs web) |
 | `PROMETHEUS_PORT`, `GRAFANA_PORT` | `9090`, `3300` | Ports de la pile de supervision |
 | `GRAFANA_USER`, `GRAFANA_PASSWORD` | `admin` / `admin` | Identifiants Grafana |
 

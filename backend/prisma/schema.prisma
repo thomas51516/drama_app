@@ -160,6 +160,17 @@ enum TokenSubjectType {
   @@map("token_subject_type")
 }
 
+/// Type de rangée de l'accueil (B-05, S04-BE-01).
+enum HomeRowType {
+  MANUAL
+  TRENDING
+  NEW
+  GENRE
+  CONTINUE_WATCHING
+
+  @@map("home_row_type")
+}
+
 // -----------------------------------------------------------------------------
 // Utilisateurs finaux
 // -----------------------------------------------------------------------------
@@ -228,8 +239,9 @@ model Series {
   createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  episodes  Episode[]
-  favorites Favorite[]
+  episodes    Episode[]
+  favorites   Favorite[]
+  homeBanners HomeBanner[]
 
   @@index([status, publishedAt(sort: Desc)])
   @@index([genres], type: Gin)
@@ -281,6 +293,55 @@ model Subtitle {
 
   @@unique([episodeId, language])
   @@map("subtitles")
+}
+
+// -----------------------------------------------------------------------------
+// Mise en avant : configuration de l'accueil (B-05, S04-BE-01)
+// -----------------------------------------------------------------------------
+
+/// Bannière de l'accueil (M-01). `countries` vide = partout ; fenêtre d'affichage optionnelle.
+model HomeBanner {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  seriesId  String    @map("series_id") @db.Uuid
+  /// Visuel 16:9 ; `null` = affiche horizontale de la série.
+  imageUrl  String?   @map("image_url")
+  title     String?   @db.VarChar(200)
+  subtitle  String?   @db.VarChar(300)
+  /// ISO 3166-1 alpha-2 ; vide = tous les pays.
+  countries String[]  @default([])
+  position  Int       @default(0)
+  isActive  Boolean   @default(true) @map("is_active")
+  startsAt  DateTime? @map("starts_at") @db.Timestamptz(3)
+  endsAt    DateTime? @map("ends_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  series Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@index([isActive, position])
+  @@map("home_banners")
+}
+
+/// Rangée de l'accueil : titres par langue (`{ fr, en, es, pt }`), filtre pays, ordre.
+model HomeRow {
+  id        String      @id @default(uuid(7)) @db.Uuid
+  /// Clé stable exposée à l'application (ex. `trending`, `genre-romance`).
+  key       String      @unique @db.VarChar(80)
+  type      HomeRowType
+  /// Titres localisés `{ "fr": "Tendances", "en": "Trending", ... }` ; `fr` obligatoire.
+  titles    Json
+  /// Genre ciblé (type GENRE).
+  genre     String?     @db.VarChar(40)
+  /// Liste ordonnée de séries (type MANUAL).
+  seriesIds String[]    @default([]) @map("series_ids") @db.Uuid
+  countries String[]    @default([])
+  position  Int         @default(0)
+  isActive  Boolean     @default(true) @map("is_active")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive, position])
+  @@map("home_rows")
 }
 
 // -----------------------------------------------------------------------------
@@ -500,6 +561,7 @@ model AuditLog {
 
   @@index([targetType, targetId])
   @@index([actorId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@map("audit_logs")
 }

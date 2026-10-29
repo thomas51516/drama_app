@@ -2,7 +2,7 @@
 
 API REST du MVP de micro-séries verticales : monolithe modulaire **NestJS 12** (TypeScript, ESM) sur **PostgreSQL 16** (Prisma 7) et **Redis 7**. Documentation OpenAPI servie sur `/docs`.
 
-Référence fonctionnelle : `docs/Cahier des charges — Application de micro-séries verticales (Android).md` (§5, §8, §9). Contrat back-office : `docs/api/admin-contract-v1.md`. Tickets livrés : Sprint 1 (S01-BE-01/02/03), Sprint 2 (S02-BE-01 auth invité, S02-BE-02 limitation de débit, S02-BE-03 OpenAPI v1, S02-BE-04 upload pré-signé, S02-BE-05 transcodage, S02-OPS-02 observabilité) et, avancés du Sprint 3, S03-BE-01 (admin séries), S03-BE-02 (admin épisodes), S03-BE-04 (comptes internes, 2FA, audit).
+Référence fonctionnelle : `docs/Cahier des charges — Application de micro-séries verticales (Android).md` (§5, §8, §9). Contrat back-office : `docs/api/admin-contract-v1.md` (+ addendum v1.1). Tickets livrés : Sprint 1 (S01-BE-01/02/03), Sprint 2 (S02-BE-01 auth invité, S02-BE-02 limitation de débit, S02-BE-03 OpenAPI v1, S02-BE-04 upload pré-signé, S02-BE-05 transcodage, S02-OPS-02 observabilité), Sprint 3 : S03-BE-01 (admin séries), S03-BE-02 (admin épisodes), S03-BE-03 (sous-titres SRT/VTT), S03-BE-04 (auth admin 2FA), S04-BE-01 (accueil paramétré par la mise en avant B-05, Tendances réelles, i18n des rangées), S04-BE-04 (cache Redis du catalogue), B-13 (comptes internes et journal d'audit).
 
 ## Prérequis
 
@@ -17,7 +17,7 @@ cd backend
 cp .env.example .env            # valeurs par défaut alignées sur infra/docker-compose.dev.yml
 npm install                     # installe les dépendances et génère le client Prisma (postinstall)
 npm run prisma:deploy           # applique les migrations
-npm run db:seed                 # 4 comptes internes (admin, editor, monetization, support @drama.local), 1 série publiée (3 épisodes), 1 brouillon
+npm run db:seed                 # 4 comptes internes (admin, editor, monetization, support @drama.local), 1 série publiée (3 épisodes), 1 brouillon, accueil (1 bannière, 6 rangées)
 npm run dev                     # http://localhost:3000 — Swagger : http://localhost:3000/docs — métriques : /metrics
 ```
 
@@ -77,19 +77,23 @@ Toutes les variables sont documentées dans **`.env.example`** et validées au d
 | --- | --- | --- |
 | `config/` | Validation zod de l'environnement, `AppConfig` injectable | Fait |
 | `prisma/`, `redis/` | Connexions partagées (modules globaux) | Fait |
-| `common/` | Décorateurs `@Public()` / `@CurrentUser()` / `@AdminRoute()` / `@Roles()` / `@CurrentAdmin()`, filtre d'exceptions (`ApiErrorDto`, capture Sentry des 5xx), journal des requêtes, `rate-limit/` (garde Redis + `@RateLimit()`), `crypto/` (TOTP RFC 6238, `SecretBox` AES-256-GCM) | Fait |
+| `cache/` | `CatalogCacheService` (global) : cache Redis des réponses publiques non personnalisées et invalidation par série / accueil | Fait (S04-BE-04) |
+| `common/` | Décorateurs `@Public()` / `@CurrentUser()` / `@AdminRoute()` / `@Roles()` / `@CurrentAdmin()`, filtre d'exceptions (`ApiErrorDto`, capture Sentry des 5xx), journal des requêtes, `rate-limit/` (garde Redis + `@RateLimit()`), `crypto/` (TOTP RFC 6238, `SecretBox` AES-256-GCM), `i18n/` (`Accept-Language`, `X-Country`, libellés de langues), `subtitles/` (conversion SRT → WebVTT) | Fait |
 | `health/` | `GET /health` (PostgreSQL + Redis, 503 si dégradé), `GET /health/live` | Fait |
 | `metrics/` | `GET /metrics` Prometheus : métriques Node, histogramme HTTP par route/statut | Fait (S02-OPS-02) |
 | `observability/` | Initialisation Sentry conditionnelle (`SENTRY_DSN`) | Fait |
 | `storage/` | Client S3 (MinIO en dev) : URLs pré-signées PUT/GET, head, upload de dossier, suppression par préfixe, URL publique CDN | Fait (S02-BE-04) |
 | `transcode/` | Port `TranscodeProvider` + adaptateurs `local` (file BullMQ `transcode`, worker ffmpeg : HLS CMAF 360p→1080p, extrait 15 s, vignette) et `webhook` ; `POST /webhooks/transcode/{provider}` signé HMAC ; compteurs Prometheus | Fait (S02-BE-05) |
 | `auth/` | `POST /auth/guest`, `POST /auth/refresh` (rotation, détection de réutilisation), garde JWT globale, limites de débit | Fait ; `/auth/google`, `/auth/otp/*` documentés, 501 jusqu'à S05 |
-| `catalog/` | `GET /home`, `/series`, `/series/{id}`, `/series/{id}/episodes`, `/feed` ; calcul des droits (`EntitlementService`) | Fait ; `GET /search` documenté, 501 jusqu'à S05 |
+| `catalog/` | `GET /home` (construit par `HomeService` à partir de la configuration B-05), `/series`, `/series/{id}`, `/series/{id}/episodes` (pistes de sous-titres), `/feed` ; calcul des droits (`EntitlementService`) ; en-têtes `X-Country` / `Accept-Language` | Fait ; `GET /search` documenté, 501 jusqu'à S05 |
 | `playback/` | `POST /episodes/{id}/play` (403 `EPISODE_LOCKED`), `PUT /progress` | Fait ; URL signée : S04-BE-02 |
 | `unlock/`, `wallet/`, `billing/`, `rewards/`, `users/` | Endpoints §8.2 documentés avec leurs DTO (contrat figé pour le mock Android) | 501 `NOT_IMPLEMENTED` — S05, S07, S08, S09 |
 | `admin/auth/` | `POST /admin/auth/login` (Argon2id) → `POST /admin/auth/totp/verify` (TOTP obligatoire, enrôlement à la première connexion) → JWT admin ; `GET /me`, `POST /logout` (liste de révocation Redis) ; `AdminAuthGuard` + `@Roles()` | Fait (S03-BE-04) |
 | `admin/series/` | CRUD séries, publication (409 sans épisode READY), archivage, règles de rôle sur la monétisation | Fait (S03-BE-01) |
 | `admin/episodes/` | Épisodes (numérotation auto, réordonnancement, suppression), URL d'upload pré-signée, `/uploaded`, `/retranscode`, `POST /admin/uploads/presign` (affiches) | Fait (S03-BE-02) |
+| `admin/subtitles/` | `GET/POST /admin/episodes/{id}/subtitles` (multipart `.srt` / `.vtt`, 2 Mo, conversion WebVTT, une piste par langue), `DELETE /admin/subtitles/{id}` | Fait (S03-BE-03) |
+| `admin/home/` | Bannières et rangées de l'accueil (`/admin/home/banners`, `/admin/home/rows`, `…/order`), `GET /admin/home/preview` | Fait (B-05, S04-BE-01) |
+| `admin/accounts/` | `GET/POST /admin/accounts`, `PATCH /admin/accounts/{id}`, `reset-totp`, `reset-password`, `GET /admin/audit-logs` (rôle ADMIN) | Fait (B-13) |
 | `admin/audit/` | `AuditService` : auteur, action, cible, ancienne / nouvelle valeur, IP pour chaque mutation | Fait |
 | `openapi/` | Construction du document Swagger v1 (`/docs`, `/docs-json`, `/docs-yaml`) | Fait |
 | `generated/prisma/` | Client Prisma généré — **ne pas modifier, ignoré par git** | — |
@@ -109,7 +113,31 @@ Chaque méthode encore planifiée porte un `TODO <ticket>` et répond `501 NOT_I
 3. Toutes les routes `/admin/*` portent `@AdminRoute()` + `AdminAuthGuard` : jeton valide, non révoqué (`POST /admin/auth/logout` inscrit le `jti` dans Redis jusqu'à expiration), compte actif, rôle autorisé par `@Roles()` (403 `FORBIDDEN_ROLE`).
 4. Rôles : lecture pour tout compte actif ; séries et épisodes : EDITOR et ADMIN ; `freeEpisodeCount` / `coinCostPerEpisode` : MONETIZATION et ADMIN uniquement (403 `FORBIDDEN_FIELDS` sinon).
 5. Le secret TOTP est stocké chiffré (AES-256-GCM, clé dérivée de `TOTP_ENCRYPTION_KEY`) ; `totp_enabled_at` distingue l'enrôlement en attente de la 2FA active.
-6. Chaque mutation écrit une ligne `audit_logs` (`series.create|update|publish|archive`, `episode.create|update|delete|reorder|upload_url|uploaded|retranscode|transcoded|transcode_failed`, `upload.presign`, `admin.login|logout|totp_enrolled`) avec l'ancienne et la nouvelle valeur des champs modifiés.
+6. Chaque mutation écrit une ligne `audit_logs` (`series.create|update|publish|archive`, `episode.create|update|delete|reorder|upload_url|uploaded|retranscode|transcoded|transcode_failed`, `subtitle.upload|replace|delete`, `home_banner.create|update|delete|reorder`, `home_row.create|update|delete|reorder`, `admin_account.create|update|reset_totp|reset_password`, `upload.presign`, `admin.login|logout|totp_enrolled`) avec l'ancienne et la nouvelle valeur des champs modifiés.
+
+### Sous-titres (S03-BE-03, B-03)
+
+1. `POST /admin/episodes/{id}/subtitles` en `multipart/form-data` : champ `file` (`.srt` ou `.vtt`, 2 Mo max, sinon `413 PAYLOAD_TOO_LARGE`) et champ `language` (ISO 639-1, `pt-BR` accepté). Rôles EDITOR et ADMIN.
+2. Le SRT est converti en WebVTT côté serveur (`src/common/subtitles/srt-to-vtt.ts`, sans dépendance : BOM, CRLF, numéros de cue, `,` → `.`, heures absentes, balises `{\an8}` retirées) ; un `.vtt` est normalisé (en-tête `WEBVTT` obligatoire). Erreurs : `400 SUBTITLE_INVALID_FORMAT | SUBTITLE_PARSE_ERROR (details.line) | SUBTITLE_FILE_REQUIRED`.
+3. Fichier déposé sous `subtitles/{episodeId}/{language}.vtt` (`Content-Type: text/vtt`), une piste par (épisode, langue) : ré-importer remplace. `DELETE /admin/subtitles/{id}` supprime la ligne et l'objet.
+4. Côté public, `GET /series/{id}/episodes` et `POST /episodes/{id}/play` exposent `subtitles: [{ language, label, url }]` (`label` = nom de la langue dans sa langue : « Français », « English », « Español », « Português » ; `subtitleLanguages` est conservé pour compatibilité). Le bucket est en lecture anonyme avec CORS ouvert (`infra/README.md`).
+
+### Accueil paramétré (B-05, S04-BE-01)
+
+1. Tables `home_banners` et `home_rows` (`prisma/schema.prisma`), administrées par `/admin/home/*` (rôles EDITOR et ADMIN) : bannière = série + visuel + accroche + pays + fenêtre `startsAt`/`endsAt` ; rangée = `key` unique, `type` (`TRENDING | NEW | GENRE | MANUAL | CONTINUE_WATCHING`), `titles { fr (obligatoire), en, es, pt }`, `genre` (GENRE), `seriesIds` ordonnés (MANUAL), `countries` (vide = partout), `position`, `isActive`. `PUT …/order` exige la liste complète des identifiants (`400 HOME_ORDER_MISMATCH`).
+2. `GET /home` : bannières actives (dans leur fenêtre, série publiée et autorisée sur le territoire) puis rangées actives, filtrées par pays et titrées dans la langue de `Accept-Language` (repli fr). `TRENDING` = séries classées par spectateurs distincts dont `watch_progress` a bougé sur 7 jours (complétées par les nouveautés), `NEW` = dernières publiées, `GENRE` = séries publiées du genre, `MANUAL` = liste ordonnée, `CONTINUE_WATCHING` = uniquement avec un jeton utilisateur. Les rangées vides sont omises ; 12 séries par rangée.
+3. Pays du spectateur : en-tête `X-Country` (ISO 3166-1 alpha-2), sinon pays du compte, sinon aucun filtre (toutes les rangées, tous les territoires). `GET /admin/home/preview?country=TG&lang=en` renvoie la réponse publique sans cache.
+4. Réponse (`HomeResponseDto`) : `banners[]` = `SeriesSummaryDto` + `bannerId`, `imageUrl` (repli : affiche horizontale), `bannerTitle`, `bannerSubtitle` ; `rows[] = { key, type, title, items }` (compatible v1.0, champ `type` ajouté).
+
+### Cache Redis du catalogue (S04-BE-04)
+
+- `GET /home` : 60 s par (pays, langue), hors « Continuer à regarder » (calculé après le cache). `GET /series/{id}` et `GET /series/{id}/episodes` : 120 s par (série, pays) ; la grille est mise en cache dans sa variante anonyme et le statut `access` / `coinCost` est recalculé pour le spectateur connecté.
+- Clés `cache:v1:home:{pays|*}:{langue}` et `cache:v1:series:{id}:{detail|episodes}:{pays|*}`. Invalidation explicite (`CatalogCacheService.invalidateSeries` / `invalidateHome`) à chaque PATCH / publication / archivage de série, modification / suppression / réordonnancement d'épisode, passage d'un épisode en READY, import ou suppression de sous-titres, et modification de la configuration de l'accueil. Sans Redis : calcul direct (fail-open, journalisé).
+
+### Comptes internes et journal d'audit (B-13)
+
+- `/admin/accounts` (rôle ADMIN) : création (`password` ≥ 10 caractères, Argon2id, `409 ADMIN_EMAIL_TAKEN`), modification du nom / rôle / activation, `POST …/reset-totp` (secret et enrôlement effacés : `totp_setup_required` à la prochaine connexion), `POST …/reset-password`. Garde-fous : un admin ne peut ni se désactiver ni se retirer le rôle ADMIN (`403 ADMIN_SELF_LOCKOUT`) ; le dernier ADMIN actif ne peut être ni désactivé ni rétrogradé (`409 LAST_ADMIN`).
+- `GET /admin/audit-logs?page&pageSize&actorId&action&targetType&targetId&from&to` : antichronologique, `action` exacte ou préfixe terminé par un point (`series.`), index sur `created_at`, `(actor_id, created_at)`, `(action, created_at)`, `(target_type, target_id)`.
 
 ### Upload et transcodage (§9)
 
@@ -151,8 +179,8 @@ Règles : ne jamais éditer une migration déjà fusionnée ; une migration de d
 
 ## Tests
 
-- **Unitaires** (`npm test`) : services avec Prisma, Redis, S3 et ffmpeg simulés (`vi.fn()`). Couverts : santé, auth (création invité, rotation, réutilisation), catalogue, TOTP (vecteurs RFC 6238) et chiffrement, auth admin (enrôlement, vérification, révocation) et garde de rôles, séries (règle de publication, règles de rôle, journal d'audit), épisodes (numérotation, renumérotation, upload), pipeline de transcodage (ffmpeg simulé, succès / échec), signature des webhooks, garde de limitation de débit.
-- **E2E** (`npm run test:e2e`) : montent l'application complète sur `DATABASE_URL` (migrations appliquées), Redis et MinIO ; `test/app.e2e-spec.ts` (santé, auth invité, catalogue, `/docs-json`) et `test/admin.e2e-spec.ts` (connexion 2FA complète, révocation, 429, CRUD séries et épisodes, PUT réel sur l'URL pré-signée, `/uploaded`, webhook signé → READY → publication, `/metrics`). Le fournisseur de transcodage y est forcé en `webhook` ; le pipeline ffmpeg réel est couvert par `scripts/smoke-ingest.ts`. Les lignes créées sont supprimées en fin de test.
+- **Unitaires** (`npm test`) : services avec Prisma, Redis, S3 et ffmpeg simulés (`vi.fn()`). Couverts : santé, auth (création invité, rotation, réutilisation), catalogue (cache par pays, recalcul de l'accès après cache), constructeur de l'accueil (types de rangées, classement Tendances, filtre pays, choix de la langue, « Continuer à regarder » hors cache), cache et invalidation, conversion SRT → VTT (BOM, CRLF, numéros, horodatages), `Accept-Language` / `X-Country` / libellés de langues, TOTP (vecteurs RFC 6238) et chiffrement, auth admin (enrôlement, vérification, révocation) et garde de rôles, séries (règle de publication, règles de rôle, journal d'audit), épisodes (numérotation, renumérotation, upload), règles de la mise en avant (genre / séries requis, fenêtre, ordre), comptes internes (auto-verrouillage, dernier admin, politique de mot de passe, filtres du journal), pipeline de transcodage (ffmpeg simulé, succès / échec), signature des webhooks, garde de limitation de débit.
+- **E2E** (`npm run test:e2e`) : montent l'application complète sur `DATABASE_URL` (migrations appliquées), Redis et MinIO ; `test/app.e2e-spec.ts` (santé, auth invité, catalogue, `/docs-json`), `test/admin.e2e-spec.ts` (connexion 2FA complète, révocation, 429, CRUD séries et épisodes, PUT réel sur l'URL pré-signée, `/uploaded`, webhook signé → READY → publication, `/metrics`) et `test/admin-sprint3.e2e-spec.ts` (import SRT réel → VTT lu sur MinIO avec en-tête `Origin`, exposition sur `/episodes` et `/play`, configuration de l'accueil → `GET /home` par pays et langue avec invalidation du cache, comptes internes, `reset-totp`, journal d'audit). Le fournisseur de transcodage y est forcé en `webhook` ; le pipeline ffmpeg réel est couvert par `scripts/smoke-ingest.ts`. Les lignes créées sont supprimées en fin de test.
 
 ## Intégration continue
 

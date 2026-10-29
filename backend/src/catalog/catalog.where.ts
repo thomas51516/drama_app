@@ -1,9 +1,12 @@
+import { type SupportedLanguage } from '../common/i18n/accept-language.js';
 import { type Prisma } from '../generated/prisma/client.js';
 
 export interface ViewerContext {
   userId?: string;
-  /** Pays ISO 3166-1 alpha-2 de l'utilisateur, pour le filtre territorial. */
+  /** Pays ISO 3166-1 alpha-2 (en-tête `X-Country`, sinon pays du compte), pour les filtres territoriaux. */
   country?: string | null;
+  /** Langue d'affichage issue de `Accept-Language` (repli fr). */
+  lang?: SupportedLanguage;
 }
 
 /** Séries visibles par le public : publiées et autorisées sur le territoire du spectateur. */
@@ -19,6 +22,12 @@ export function publishedSeriesWhere(viewer: ViewerContext): Prisma.SeriesWhereI
 export function visibleEpisodeWhere(now = new Date()): Prisma.EpisodeWhereInput {
   return { publishedAt: { lte: now }, transcodeStatus: 'READY' };
 }
+
+/** Pistes de sous-titres d'un épisode (B-03), triées par langue. */
+export const subtitleSelect = {
+  select: { language: true, fileUrl: true },
+  orderBy: { language: 'asc' },
+} satisfies Prisma.Episode$subtitlesArgs;
 
 /** Inclusion standard : nombre d'épisodes visibles de la série. */
 export function seriesInclude(now = new Date()) {

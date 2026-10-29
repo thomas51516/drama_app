@@ -3,12 +3,23 @@ import { type AuthenticatedAdmin } from '../../common/request-context.js';
 import { type Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
+export const AUDIT_TARGET_TYPES = [
+  'series',
+  'episode',
+  'subtitle',
+  'home_banner',
+  'home_row',
+  'admin_account',
+  'upload',
+] as const;
+export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
+
 export interface AuditEntry {
   /** Auteur ; `null` pour une action système (worker de transcodage, webhook). */
   actor: Pick<AuthenticatedAdmin, 'id' | 'email'> | null;
   /** Verbe stable `<cible>.<action>` : `series.update`, `episode.reorder`, `admin.login`... */
   action: string;
-  targetType: 'series' | 'episode' | 'admin_account' | 'upload';
+  targetType: AuditTargetType;
   targetId?: string | null;
   oldValue?: unknown;
   newValue?: unknown;

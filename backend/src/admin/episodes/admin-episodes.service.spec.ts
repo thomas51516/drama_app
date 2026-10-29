@@ -84,14 +84,16 @@ function makeService(episodes: Episode[], headResult: { sizeBytes: number } | nu
     ),
   };
   const config = new AppConfig({ UPLOAD_URL_TTL_SECONDS: 900 } as unknown as Env);
+  const cache = { invalidateSeries: vi.fn(() => Promise.resolve(0)) };
   const service = new AdminEpisodesService(
     prisma as never,
     audit as never,
     storage as never,
     transcode as never,
     config,
+    cache as never,
   );
-  return { service, prisma, audit, storage, transcode, updates };
+  return { service, prisma, audit, storage, transcode, updates, cache };
 }
 
 describe('AdminEpisodesService.create', () => {

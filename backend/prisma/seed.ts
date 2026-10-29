@@ -136,6 +136,85 @@ async function main(): Promise<void> {
     },
   });
   console.log('draft series "Ombres sur Abidjan" (hidden from the public catalog)');
+
+  // Mise en avant (B-05) : une bannière et les rangées de l'accueil (M-01), titrées en fr/en/es/pt.
+  const existingBanner = await prisma.homeBanner.findFirst({ where: { seriesId: series.id } });
+  if (!existingBanner) {
+    await prisma.homeBanner.create({
+      data: {
+        seriesId: series.id,
+        title: 'Le Secret du Lagon',
+        subtitle: 'Nouvelle saison : 2 épisodes gratuits',
+        countries: [],
+        position: 1,
+        isActive: true,
+      },
+    });
+  }
+  const rows: Array<{
+    key: string;
+    type: 'TRENDING' | 'NEW' | 'GENRE' | 'MANUAL' | 'CONTINUE_WATCHING';
+    titles: Record<string, string>;
+    genre?: string;
+  }> = [
+    {
+      key: 'trending',
+      type: 'TRENDING',
+      titles: { fr: 'Tendances', en: 'Trending', es: 'Tendencias', pt: 'Tendências' },
+    },
+    {
+      key: 'continue_watching',
+      type: 'CONTINUE_WATCHING',
+      titles: {
+        fr: 'Continuer à regarder',
+        en: 'Continue watching',
+        es: 'Seguir viendo',
+        pt: 'Continuar assistindo',
+      },
+    },
+    {
+      key: 'new',
+      type: 'NEW',
+      titles: { fr: 'Nouveautés', en: 'New releases', es: 'Novedades', pt: 'Novidades' },
+    },
+    {
+      key: 'genre-romance',
+      type: 'GENRE',
+      genre: 'romance',
+      titles: { fr: 'Romance', en: 'Romance', es: 'Romance', pt: 'Romance' },
+    },
+    {
+      key: 'genre-drame',
+      type: 'GENRE',
+      genre: 'drame',
+      titles: { fr: 'Drame', en: 'Drama', es: 'Drama', pt: 'Drama' },
+    },
+    {
+      key: 'genre-thriller',
+      type: 'GENRE',
+      genre: 'thriller',
+      titles: { fr: 'Thriller', en: 'Thriller', es: 'Suspenso', pt: 'Suspense' },
+    },
+  ];
+  for (const [index, row] of rows.entries()) {
+    await prisma.homeRow.upsert({
+      where: { key: row.key },
+      update: {},
+      create: {
+        key: row.key,
+        type: row.type,
+        titles: row.titles,
+        genre: row.genre ?? null,
+        seriesIds: [],
+        countries: [],
+        position: index + 1,
+        isActive: true,
+      },
+    });
+  }
+  console.log(
+    `home configuration: 1 banner, ${rows.length} rows (${rows.map((r) => r.key).join(', ')})`,
+  );
 }
 
 main()

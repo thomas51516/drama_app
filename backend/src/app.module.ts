@@ -3,6 +3,7 @@ import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BillingModule } from './billing/billing.module.js';
+import { CatalogCacheModule } from './cache/catalog-cache.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
@@ -25,6 +26,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     ConfigModule,
     PrismaModule,
     RedisModule,
+    CatalogCacheModule,
     MetricsModule,
     StorageModule,
     RateLimitModule,

@@ -5,6 +5,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -108,6 +109,26 @@ export class StorageService {
         ContentType: contentType ?? contentTypeFor(filePath),
       }),
     );
+  }
+
+  /** Dépose un petit objet en mémoire (sous-titres WebVTT) ; lecture publique via `publicUrl()`. */
+  async putObject(key: string, body: Buffer | string, contentType: string): Promise<void> {
+    const data = Buffer.isBuffer(body) ? body : Buffer.from(body, 'utf8');
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: data,
+        ContentLength: data.byteLength,
+        ContentType: contentType,
+        CacheControl: 'public, max-age=300',
+      }),
+    );
+  }
+
+  /** Supprime un objet (absent = succès). */
+  async deleteObject(key: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   /** Dépose récursivement un dossier local sous `prefix/` ; renvoie le nombre d'objets envoyés. */

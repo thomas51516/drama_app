@@ -47,20 +47,32 @@ function fakeEpisode(number: number) {
     publishedAt: new Date('2026-10-02T08:00:00Z'),
     createdAt: new Date(),
     updatedAt: new Date(),
-    subtitles: [{ language: 'fr' }],
+    subtitles: [{ language: 'fr', fileUrl: `subtitles/ep-${number}/fr.vtt` }],
   };
 }
 
-function makeService() {
+function makeService(cached: Map<string, unknown> = new Map()) {
   const prisma = {
     user: { findUnique: vi.fn() },
     series: { findMany: vi.fn(), count: vi.fn(), findFirst: vi.fn() },
     episode: { findMany: vi.fn() },
-    watchProgress: { findMany: vi.fn(() => Promise.resolve([])) },
   };
   const entitlements = { forViewer: vi.fn(() => Promise.resolve(NO_ENTITLEMENTS)) };
-  const service = new CatalogService(prisma as never, entitlements as never, config);
-  return { service, prisma, entitlements };
+  const cache = {
+    remember: vi.fn(async (key: string, _ttl: number, compute: () => Promise<unknown>) => {
+      if (cached.has(key)) return cached.get(key);
+      const value = await compute();
+      cached.set(key, value);
+      return value;
+    }),
+  };
+  const service = new CatalogService(
+    prisma as never,
+    entitlements as never,
+    config,
+    cache as never,
+  );
+  return { service, prisma, entitlements, cache, cached };
 }
 
 describe('computeAccess', () => {
@@ -97,6 +109,28 @@ describe('computeAccess', () => {
         country: null,
       }),
     ).toBe('locked');
+  });
+});
+
+describe('CatalogService.viewerContext', () => {
+  it('prefers X-Country over the account country and parses Accept-Language', async () => {
+    const { service, prisma } = makeService();
+    prisma.user.findUnique.mockResolvedValue({ country: 'CI' });
+
+    await expect(
+      service.viewerContext('u1', { country: 'tg', acceptLanguage: 'en-GB,en;q=0.8' }),
+    ).resolves.toEqual({ userId: 'u1', country: 'TG', lang: 'en' });
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+
+    await expect(service.viewerContext('u1', {})).resolves.toEqual({
+      userId: 'u1',
+      country: 'CI',
+      lang: 'fr',
+    });
+    await expect(service.viewerContext(undefined, { country: 'xx1' })).resolves.toEqual({
+      country: null,
+      lang: 'fr',
+    });
   });
 });
 
@@ -142,26 +176,34 @@ describe('CatalogService.listSeries', () => {
 });
 
 describe('CatalogService.getSeries', () => {
-  it('throws SERIES_NOT_FOUND for unknown or unpublished series', async () => {
-    const { service, prisma } = makeService();
+  it('throws SERIES_NOT_FOUND for unknown or unpublished series (not cached)', async () => {
+    const { service, prisma, cached } = makeService();
     prisma.series.findFirst.mockResolvedValue(null);
     await expect(service.getSeries(SERIES_ID, {})).rejects.toBeInstanceOf(NotFoundException);
+    expect(cached.size).toBe(0);
   });
 
-  it('returns the detail with synopsis and status', async () => {
-    const { service, prisma } = makeService();
+  it('returns the detail and caches it per series and country for 120 s', async () => {
+    const { service, prisma, cache } = makeService();
     prisma.series.findFirst.mockResolvedValue(fakeSeries());
-    await expect(service.getSeries(SERIES_ID, {})).resolves.toMatchObject({
+    await expect(service.getSeries(SERIES_ID, { country: 'TG' })).resolves.toMatchObject({
       synopsis: 'Synopsis',
       status: 'PUBLISHED',
       genres: ['romance', 'drame'],
     });
+    await service.getSeries(SERIES_ID, { country: 'TG' });
+    expect(cache.remember).toHaveBeenCalledWith(
+      `cache:v1:series:${SERIES_ID}:detail:TG`,
+      120,
+      expect.any(Function),
+    );
+    expect(prisma.series.findFirst).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('CatalogService.listEpisodes', () => {
-  it('computes free / unlocked / locked per episode for the viewer', async () => {
-    const { service, prisma, entitlements } = makeService();
+  it('caches the anonymous list and recomputes access per viewer after the cache', async () => {
+    const { service, prisma, entitlements, cached } = makeService();
     prisma.series.findFirst.mockResolvedValue({
       id: SERIES_ID,
       freeEpisodeCount: 2,
@@ -173,14 +215,33 @@ describe('CatalogService.listEpisodes', () => {
       fakeEpisode(3),
       fakeEpisode(4),
     ]);
+
+    const anonymous = await service.listEpisodes(SERIES_ID, {});
+    expect(anonymous.map((e) => [e.number, e.access, e.coinCost])).toEqual([
+      [1, 'free', 0],
+      [2, 'free', 0],
+      [3, 'locked', 10],
+      [4, 'locked', 10],
+    ]);
+    expect(anonymous[0]?.subtitles).toEqual([
+      { language: 'fr', label: 'Français', url: 'https://cdn.test/media/subtitles/ep-1/fr.vtt' },
+    ]);
+    expect(anonymous[0]?.subtitleLanguages).toEqual(['fr']);
+    expect(entitlements.forViewer).not.toHaveBeenCalled();
+    // Le cache ne contient jamais de champ personnalisé autre que la variante anonyme.
+    const stored = cached.get(`cache:v1:series:${SERIES_ID}:episodes:*`) as {
+      episodes: { access: string }[];
+    };
+    expect(stored.episodes.map((e) => e.access)).toEqual(['free', 'free', 'locked', 'locked']);
+
     entitlements.forViewer.mockResolvedValue({
       isVip: false,
       unlocked: new Set(['ep-3']),
       country: null,
     });
-
     const result = await service.listEpisodes(SERIES_ID, { userId: 'u1' });
 
+    expect(prisma.episode.findMany).toHaveBeenCalledTimes(1);
     expect(entitlements.forViewer).toHaveBeenCalledWith('u1', ['ep-1', 'ep-2', 'ep-3', 'ep-4']);
     expect(result.map((e) => [e.number, e.access, e.coinCost])).toEqual([
       [1, 'free', 0],
@@ -188,26 +249,6 @@ describe('CatalogService.listEpisodes', () => {
       [3, 'unlocked', 0],
       [4, 'locked', 10],
     ]);
-    expect(result[0]?.subtitleLanguages).toEqual(['fr']);
-  });
-});
-
-describe('CatalogService.getHome', () => {
-  it('builds trending, new and genre rows from published series', async () => {
-    const { service, prisma } = makeService();
-    prisma.series.findMany.mockResolvedValue([fakeSeries()]);
-
-    const home = await service.getHome({});
-
-    expect(home.banners).toHaveLength(1);
-    expect(home.rows.map((r) => r.key)).toEqual([
-      'trending',
-      'new',
-      'genre:romance',
-      'genre:drame',
-    ]);
-    expect(home.rows[0]?.title).toBe('Tendances');
-    expect(prisma.watchProgress.findMany).not.toHaveBeenCalled();
   });
 });
 

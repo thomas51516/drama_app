@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CatalogCacheService } from '../../cache/catalog-cache.service.js';
 import { type AuthenticatedAdmin } from '../../common/request-context.js';
 import { type Prisma, type Series } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -49,6 +50,7 @@ export class AdminSeriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly cache: CatalogCacheService,
   ) {}
 
   async list(query: ListAdminSeriesQueryDto): Promise<AdminSeriesListDto> {
@@ -151,6 +153,7 @@ export class AdminSeriesService {
       }
       return series;
     });
+    await this.cache.invalidateSeries(id);
     return toAdminSeries(updated);
   }
 
@@ -206,6 +209,7 @@ export class AdminSeriesService {
       );
       return series;
     });
+    await this.cache.invalidateSeries(before.id);
     return toAdminSeries(updated);
   }
 

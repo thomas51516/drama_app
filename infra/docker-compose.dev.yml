@@ -51,8 +51,11 @@ services:
       MINIO_DEFAULT_BUCKETS: ${S3_BUCKET:-drama-media}:download
       MINIO_API_PORT_NUMBER: "9000"
       MINIO_CONSOLE_PORT_NUMBER: "9001"
-      # CORS de l'API S3 : le back-office (3100) fait des PUT directs sur les URLs pré-signées (S02-BE-04).
-      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGINS:-http://localhost:3100,http://localhost:3000}
+      # CORS de l'API S3 : le back-office (3100) fait des PUT directs sur les URLs pré-signées (S02-BE-04)
+      # et les lecteurs web lisent les sous-titres WebVTT `subtitles/{episodeId}/{lang}.vtt` (S03-BE-03).
+      # `*` = lecture depuis n'importe quelle origine (téléphone sur le Wi-Fi, aperçu du back-office) ;
+      # les PUT restent protégés par la signature des URLs. Restreindre via MINIO_CORS_ORIGINS si besoin.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGINS:-*}
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"

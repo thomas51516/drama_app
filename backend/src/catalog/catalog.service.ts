@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CatalogCacheService, SERIES_CACHE_TTL_SECONDS } from '../cache/catalog-cache.service.js';
+import { normalizeCountry, pickLanguage } from '../common/i18n/accept-language.js';
 import { AppConfig } from '../config/app-config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
@@ -6,37 +8,39 @@ import {
   toEpisodeSummary,
   toSeriesDetail,
   toSeriesSummary,
+  withAccess,
 } from './catalog.mapper.js';
 import {
   publishedSeriesWhere,
   seriesInclude,
+  subtitleSelect,
   type ViewerContext,
   visibleEpisodeWhere,
 } from './catalog.where.js';
-import { computeAccess, EntitlementService } from './entitlement.service.js';
+import { computeAccess, EntitlementService, NO_ENTITLEMENTS } from './entitlement.service.js';
 import {
   type EpisodeSummaryDto,
   type FeedQueryDto,
   type FeedResponseDto,
-  type HomeItemDto,
-  type HomeResponseDto,
-  type HomeRowDto,
   type ListSeriesQueryDto,
   type PaginatedSeriesDto,
   type SeriesDetailDto,
 } from './dto/catalog.dto.js';
 
-const HOME_ROW_SIZE = 12;
-const HOME_GENRE_ROWS = 4;
+/** En-têtes optionnels envoyés par l'application pour personnaliser le catalogue. */
+export interface ViewerHeaders {
+  /** `X-Country` : pays ISO 3166-1 alpha-2 (prioritaire sur le pays du compte). */
+  country?: string;
+  /** `Accept-Language`. */
+  acceptLanguage?: string;
+}
 
-// TODO S04-BE-01 : rangées paramétrées en back-office (B-05) et métriques réelles pour « Tendances ».
-// TODO S04-BE-04 : cache Redis du catalogue, invalidation à la publication.
-// TODO S05 : titres des rangées localisés selon Accept-Language (fr au MVP).
-const ROW_TITLES: Record<string, string> = {
-  trending: 'Tendances',
-  new: 'Nouveautés',
-  continue_watching: 'Continuer à regarder',
-};
+/** Épisodes d'une série, variante anonyme mise en cache ; l'accès est recalculé par spectateur. */
+interface CachedEpisodes {
+  freeEpisodeCount: number;
+  coinCostPerEpisode: number;
+  episodes: EpisodeSummaryDto[];
+}
 
 @Injectable()
 export class CatalogService {
@@ -44,90 +48,25 @@ export class CatalogService {
     private readonly prisma: PrismaService,
     private readonly entitlements: EntitlementService,
     private readonly config: AppConfig,
+    private readonly cache: CatalogCacheService,
   ) {}
 
-  /** Contexte spectateur : pays (filtre territorial) issu du compte si connecté. */
-  async viewerContext(userId?: string): Promise<ViewerContext> {
-    if (!userId) return {};
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { country: true },
-    });
-    return { userId, country: user?.country ?? null };
-  }
-
-  async getHome(viewer: ViewerContext): Promise<HomeResponseDto> {
-    const where = publishedSeriesWhere(viewer);
-    const include = seriesInclude();
-
-    const [banners, trending, latest] = await Promise.all([
-      this.prisma.series.findMany({ where, include, orderBy: { publishedAt: 'desc' }, take: 5 }),
-      this.prisma.series.findMany({
-        where,
-        include,
-        orderBy: { updatedAt: 'desc' },
-        take: HOME_ROW_SIZE,
-      }),
-      this.prisma.series.findMany({
-        where,
-        include,
-        orderBy: { publishedAt: 'desc' },
-        take: HOME_ROW_SIZE,
-      }),
-    ]);
-
-    const rows: HomeRowDto[] = [];
-    const toRow = (key: string, items: HomeItemDto[]): HomeRowDto => ({
-      key,
-      title: ROW_TITLES[key] ?? key,
-      items,
-    });
-
-    rows.push(
-      toRow(
-        'trending',
-        trending.map((s) => ({ series: toSeriesSummary(s) })),
-      ),
-    );
-
-    if (viewer.userId) {
-      const continueRow = await this.continueWatchingRow(viewer.userId, where);
-      if (continueRow.items.length > 0) rows.push(continueRow);
+  /**
+   * Contexte spectateur : pays = `X-Country`, sinon pays du compte, sinon aucun filtre ;
+   * langue = `Accept-Language` (repli fr).
+   */
+  async viewerContext(userId?: string, headers: ViewerHeaders = {}): Promise<ViewerContext> {
+    const lang = pickLanguage(headers.acceptLanguage);
+    let country = normalizeCountry(headers.country);
+    if (!userId) return { country, lang };
+    if (!country) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { country: true },
+      });
+      country = normalizeCountry(user?.country);
     }
-
-    rows.push(
-      toRow(
-        'new',
-        latest.map((s) => ({ series: toSeriesSummary(s) })),
-      ),
-    );
-
-    const genres = [...new Set([...trending, ...latest].flatMap((s) => s.genres))].slice(
-      0,
-      HOME_GENRE_ROWS,
-    );
-    const genreRows = await Promise.all(
-      genres.map((genre) =>
-        this.prisma.series.findMany({
-          where: { ...where, genres: { has: genre } },
-          include,
-          orderBy: { publishedAt: 'desc' },
-          take: HOME_ROW_SIZE,
-        }),
-      ),
-    );
-    genres.forEach((genre, i) => {
-      const list = genreRows[i] ?? [];
-      if (list.length > 0) {
-        rows.push({
-          key: `genre:${genre}`,
-          title: capitalize(genre),
-          items: list.map((s) => ({ series: toSeriesSummary(s) })),
-        });
-      }
-    });
-
-    return { banners: banners.map(toSeriesSummary), rows };
+    return { userId, country, lang };
   }
 
   async listSeries(query: ListSeriesQueryDto, viewer: ViewerContext): Promise<PaginatedSeriesDto> {
@@ -149,18 +88,46 @@ export class CatalogService {
     return { items: items.map(toSeriesSummary), page: query.page, pageSize: query.pageSize, total };
   }
 
-  async getSeries(id: string, viewer: ViewerContext): Promise<SeriesDetailDto> {
-    const series = await this.prisma.series.findFirst({
-      where: { id, ...publishedSeriesWhere(viewer) },
-      include: seriesInclude(),
-    });
-    if (!series) {
-      throw new NotFoundException({ code: 'SERIES_NOT_FOUND', message: 'Series not found' });
-    }
-    return toSeriesDetail(series);
+  /** Fiche série : non personnalisée, mise en cache 120 s par (série, pays). */
+  getSeries(id: string, viewer: ViewerContext): Promise<SeriesDetailDto> {
+    return this.cache.remember(
+      CatalogCacheService.seriesKey(id, 'detail', viewer.country),
+      SERIES_CACHE_TTL_SECONDS,
+      async () => {
+        const series = await this.prisma.series.findFirst({
+          where: { id, ...publishedSeriesWhere(viewer) },
+          include: seriesInclude(),
+        });
+        if (!series) {
+          throw new NotFoundException({ code: 'SERIES_NOT_FOUND', message: 'Series not found' });
+        }
+        return toSeriesDetail(series);
+      },
+    );
   }
 
+  /**
+   * Grille des épisodes : la liste anonyme (gratuit / verrouillé) est mise en cache 120 s par
+   * (série, pays) ; pour un spectateur connecté, l'accès est recalculé après lecture du cache.
+   */
   async listEpisodes(seriesId: string, viewer: ViewerContext): Promise<EpisodeSummaryDto[]> {
+    const cached = await this.cache.remember(
+      CatalogCacheService.seriesKey(seriesId, 'episodes', viewer.country),
+      SERIES_CACHE_TTL_SECONDS,
+      () => this.loadEpisodes(seriesId, viewer),
+    );
+    if (!viewer.userId) return cached.episodes;
+
+    const entitlements = await this.entitlements.forViewer(
+      viewer.userId,
+      cached.episodes.map((e) => e.id),
+    );
+    return cached.episodes.map((e) =>
+      withAccess(e, computeAccess(e, cached, entitlements), cached.coinCostPerEpisode),
+    );
+  }
+
+  private async loadEpisodes(seriesId: string, viewer: ViewerContext): Promise<CachedEpisodes> {
     const series = await this.prisma.series.findFirst({
       where: { id: seriesId, ...publishedSeriesWhere(viewer) },
       select: { id: true, freeEpisodeCount: true, coinCostPerEpisode: true },
@@ -168,20 +135,23 @@ export class CatalogService {
     if (!series) {
       throw new NotFoundException({ code: 'SERIES_NOT_FOUND', message: 'Series not found' });
     }
-
     const episodes = await this.prisma.episode.findMany({
       where: { seriesId, ...visibleEpisodeWhere() },
-      include: { subtitles: { select: { language: true } } },
+      include: { subtitles: subtitleSelect },
       orderBy: { number: 'asc' },
     });
-    const entitlements = await this.entitlements.forViewer(
-      viewer.userId,
-      episodes.map((e) => e.id),
-    );
-
-    return episodes.map((e) =>
-      toEpisodeSummary(e, computeAccess(e, series, entitlements), series.coinCostPerEpisode),
-    );
+    return {
+      freeEpisodeCount: series.freeEpisodeCount,
+      coinCostPerEpisode: series.coinCostPerEpisode,
+      episodes: episodes.map((e) =>
+        toEpisodeSummary(
+          e,
+          computeAccess(e, series, NO_ENTITLEMENTS),
+          series.coinCostPerEpisode,
+          this.config.cdnBaseUrl,
+        ),
+      ),
+    };
   }
 
   /** Flux vertical « Pour vous » (M-02) : premier épisode de chaque série publiée. TODO S04-BE-03 personnalisation. */
@@ -189,7 +159,7 @@ export class CatalogService {
     const offset = decodeCursor(query.cursor);
     const episodes = await this.prisma.episode.findMany({
       where: { number: 1, ...visibleEpisodeWhere(), series: publishedSeriesWhere(viewer) },
-      include: { series: { include: seriesInclude() }, subtitles: { select: { language: true } } },
+      include: { series: { include: seriesInclude() }, subtitles: subtitleSelect },
       orderBy: [{ series: { publishedAt: 'desc' } }, { id: 'desc' }],
       skip: offset,
       take: query.limit + 1,
@@ -209,49 +179,13 @@ export class CatalogService {
           e,
           computeAccess(e, e.series, entitlements),
           e.series.coinCostPerEpisode,
+          this.config.cdnBaseUrl,
         ),
         previewUrl: resolveMediaUrl(e.previewKey, this.config.cdnBaseUrl),
       })),
       nextCursor: hasMore ? encodeCursor(offset + query.limit) : null,
     };
   }
-
-  private async continueWatchingRow(
-    userId: string,
-    seriesWhere: ReturnType<typeof publishedSeriesWhere>,
-  ): Promise<HomeRowDto> {
-    const progress = await this.prisma.watchProgress.findMany({
-      where: {
-        userId,
-        completed: false,
-        episode: { ...visibleEpisodeWhere(), series: seriesWhere },
-      },
-      include: { episode: { include: { series: { include: seriesInclude() } } } },
-      orderBy: { updatedAt: 'desc' },
-      take: 10,
-    });
-    const entitlements = await this.entitlements.forViewer(
-      userId,
-      progress.map((p) => p.episodeId),
-    );
-    return {
-      key: 'continue_watching',
-      title: ROW_TITLES.continue_watching ?? 'continue_watching',
-      items: progress.map((p) => ({
-        series: toSeriesSummary(p.episode.series),
-        episode: toEpisodeSummary(
-          p.episode,
-          computeAccess(p.episode, p.episode.series, entitlements),
-          p.episode.series.coinCostPerEpisode,
-        ),
-        positionSeconds: p.positionSeconds,
-      })),
-    };
-  }
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function encodeCursor(offset: number): string {

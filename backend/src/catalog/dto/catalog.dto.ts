@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
-import { AgeRating, SeriesStatus } from '../../generated/prisma/client.js';
+import { AgeRating, HomeRowType, SeriesStatus } from '../../generated/prisma/client.js';
 
 export const EPISODE_ACCESS = ['free', 'unlocked', 'locked'] as const;
 export type EpisodeAccess = (typeof EPISODE_ACCESS)[number];
@@ -55,6 +55,17 @@ export class SeriesDetailDto extends SeriesSummaryDto {
   status: SeriesStatus;
 }
 
+export class SubtitleTrackDto {
+  @ApiProperty({ example: 'fr', description: 'Code ISO 639-1' })
+  language: string;
+
+  @ApiProperty({ example: 'Français', description: 'Nom de la langue, dans cette langue' })
+  label: string;
+
+  @ApiProperty({ description: 'URL publique du fichier WebVTT (CORS ouvert en lecture)' })
+  url: string;
+}
+
 export class EpisodeSummaryDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
@@ -84,11 +95,40 @@ export class EpisodeSummaryDto {
   @ApiProperty({ description: 'Coût en pièces pour débloquer (0 si gratuit ou déjà débloqué)' })
   coinCost: number;
 
-  @ApiProperty({ type: [String], example: ['fr', 'en'] })
+  @ApiProperty({ type: [String], example: ['fr', 'en'], deprecated: true })
   subtitleLanguages: string[];
+
+  @ApiProperty({ type: [SubtitleTrackDto], description: 'Pistes de sous-titres (B-03)' })
+  subtitles: SubtitleTrackDto[];
 
   @ApiProperty({ type: String, nullable: true, format: 'date-time' })
   publishedAt: string | null;
+}
+
+/**
+ * Bannière de l'accueil (B-05) : la série mise en avant (champs de `SeriesSummaryDto`, compatibles
+ * avec la v1.0) enrichie des champs de la bannière configurée en back-office.
+ */
+export class HomeBannerDto extends SeriesSummaryDto {
+  @ApiProperty({ format: 'uuid', description: 'Identifiant de la bannière' })
+  bannerId: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Visuel 16:9 de la bannière (repli : affiche horizontale de la série)',
+  })
+  imageUrl: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Accroche (repli : titre de la série)',
+  })
+  bannerTitle: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  bannerSubtitle: string | null;
 }
 
 export class HomeItemDto {
@@ -109,12 +149,19 @@ export class HomeItemDto {
 
 export class HomeRowDto {
   @ApiProperty({
-    description: 'Clé stable : trending, new, continue_watching, genre:<genre>',
+    description:
+      'Clé stable configurée en back-office (ex. trending, new, continue_watching, genre-romance)',
     example: 'trending',
   })
   key: string;
 
-  @ApiProperty({ description: 'Titre affichable (langue du spectateur)', example: 'Tendances' })
+  @ApiProperty({ enum: Object.values(HomeRowType), description: 'Type de rangée (B-05)' })
+  type: HomeRowType;
+
+  @ApiProperty({
+    description: 'Titre dans la langue de `Accept-Language` (fr, en, es, pt ; repli fr)',
+    example: 'Tendances',
+  })
   title: string;
 
   @ApiProperty({ type: [HomeItemDto] })
@@ -122,8 +169,11 @@ export class HomeRowDto {
 }
 
 export class HomeResponseDto {
-  @ApiProperty({ type: [SeriesSummaryDto], description: 'Bannières de mise en avant (M-01)' })
-  banners: SeriesSummaryDto[];
+  @ApiProperty({
+    type: [HomeBannerDto],
+    description: 'Bannières actives (M-01, B-05), filtrées par pays et fenêtre de diffusion',
+  })
+  banners: HomeBannerDto[];
 
   @ApiProperty({ type: [HomeRowDto] })
   rows: HomeRowDto[];

@@ -7,6 +7,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { CatalogCacheService } from '../../cache/catalog-cache.service.js';
 import { type AuthenticatedAdmin } from '../../common/request-context.js';
 import { AppConfig } from '../../config/app-config.js';
 import { type Episode } from '../../generated/prisma/client.js';
@@ -37,6 +38,7 @@ export class AdminEpisodesService {
     private readonly storage: StorageService,
     private readonly transcode: TranscodeService,
     private readonly config: AppConfig,
+    private readonly cache: CatalogCacheService,
   ) {}
 
   async list(seriesId: string): Promise<AdminEpisodeDto[]> {
@@ -118,6 +120,7 @@ export class AdminEpisodesService {
       }
       return episode;
     });
+    await this.cache.invalidateSeries(before.seriesId);
     return toAdminEpisode(updated);
   }
 
@@ -137,10 +140,12 @@ export class AdminEpisodesService {
         tx,
       );
     });
+    await this.cache.invalidateSeries(episode.seriesId);
     // Nettoyage du stockage en arrière-plan (best effort, journalisé).
     void Promise.all([
       this.storage.deletePrefix(`hls/${id}/`),
       this.storage.deletePrefix(`sources/${episode.seriesId}/${id}/`),
+      this.storage.deletePrefix(`subtitles/${id}/`),
     ]).catch((err: Error) =>
       this.logger.warn(`Storage cleanup failed for episode ${id}: ${err.message}`),
     );
@@ -191,6 +196,7 @@ export class AdminEpisodesService {
       );
       return tx.episode.findMany({ where: { seriesId }, orderBy: { number: 'asc' } });
     });
+    await this.cache.invalidateSeries(seriesId);
     return reordered.map(toAdminEpisode);
   }
 

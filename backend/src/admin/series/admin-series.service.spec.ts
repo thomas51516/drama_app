@@ -61,8 +61,9 @@ function makeService(existing: AdminSeriesRecord | null, readyCount = 0) {
     episode: { count: vi.fn(() => Promise.resolve(readyCount)) },
   };
   const audit = { record: vi.fn(() => Promise.resolve()) };
-  const service = new AdminSeriesService(prisma as never, audit as never);
-  return { service, prisma, tx, audit };
+  const cache = { invalidateSeries: vi.fn(() => Promise.resolve(0)) };
+  const service = new AdminSeriesService(prisma as never, audit as never, cache as never);
+  return { service, prisma, tx, audit, cache };
 }
 
 describe('AdminSeriesService.create', () => {

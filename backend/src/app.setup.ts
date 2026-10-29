@@ -21,7 +21,13 @@ export function configureApp(app: INestApplication, config: AppConfig): INestApp
   app.enableCors({
     origin: config.corsOrigins,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'Accept-Language', 'X-Request-Id'],
+    allowedHeaders: [
+      'Authorization',
+      'Content-Type',
+      'Accept-Language',
+      'X-Country',
+      'X-Request-Id',
+    ],
     exposedHeaders: ['X-Request-Id', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
     maxAge: 600,
   });

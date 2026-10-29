@@ -7,8 +7,10 @@ import { ApiErrorDto } from '../common/dto/api-error.dto.js';
  * v0.1 (S01-BE-03) : auth invité, catalogue, lecture. v1.0 (S02-BE-03) : tous les endpoints du
  * cahier des charges §8.2 (les modules des sprints suivants répondent 501 `NOT_IMPLEMENTED` mais
  * leurs DTO sont figés pour le mock Android) + back-office (contrat admin v1).
+ * v1.1 (sprint 3, addendum du contrat admin) : sous-titres (B-03), mise en avant (B-05) et `GET /home`
+ * paramétré (X-Country, Accept-Language, cache), comptes internes et journal d'audit (B-13).
  */
-export const OPENAPI_VERSION = '1.0.0';
+export const OPENAPI_VERSION = '1.1.0';
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
@@ -26,6 +28,8 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         '**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).',
         '',
         '**Limitation de débit** : `/auth/guest`, `/auth/refresh`, `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).',
+        '',
+        '**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office.',
       ].join('\n'),
     )
     .setVersion(OPENAPI_VERSION)
@@ -63,6 +67,9 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('admin-auth', 'Back-office : connexion 2FA (B-13)')
     .addTag('admin-series', 'Back-office : séries (B-01)')
     .addTag('admin-episodes', 'Back-office : épisodes, upload, transcodage (B-02)')
+    .addTag('admin-subtitles', 'Back-office : sous-titres SRT/VTT par langue (B-03)')
+    .addTag('admin-home', 'Back-office : bannières et rangées de l’accueil, par pays (B-05)')
+    .addTag('admin-accounts', 'Back-office : comptes internes, rôles et journal d’audit (B-13)')
     .build();
 
   return SwaggerModule.createDocument(app, config, {

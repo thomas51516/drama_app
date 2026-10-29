@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AuditService } from '../admin/audit/audit.service.js';
+import { CatalogCacheService } from '../cache/catalog-cache.service.js';
 import { type Episode } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { TranscodeMetrics } from './transcode.metrics.js';
@@ -28,6 +29,7 @@ export class TranscodeService {
     private readonly audit: AuditService,
     private readonly metrics: TranscodeMetrics,
     @Inject(TRANSCODE_PROVIDER) private readonly provider: TranscodeProvider,
+    private readonly cache: CatalogCacheService,
   ) {}
 
   get providerName(): TranscodeProvider['name'] {
@@ -87,6 +89,8 @@ export class TranscodeService {
     });
     this.metrics.jobsTotal.inc({ status: 'ready', provider: source });
     this.logger.log(`Episode ${episode.id} READY (${source})`);
+    // Un épisode devient visible : fiche série, grille et accueil (nombre d'épisodes) sont périmés.
+    await this.cache.invalidateSeries(episode.seriesId);
     return updated;
   }
 
