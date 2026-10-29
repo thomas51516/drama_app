@@ -44,11 +44,12 @@ En mode mock, se connecter avec `admin@drama.local` / `Admin1234!` puis le code 
 
 Lues à l'exécution par la configuration runtime de Nuxt (préfixe `NUXT_PUBLIC_`), voir `.env.example`.
 
-| Variable                   | Défaut                                 | Rôle                                                                                                                                         |
-| -------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NUXT_PUBLIC_API_BASE`     | `http://localhost:3000`                | URL de base de l'API NestJS                                                                                                                  |
-| `NUXT_PUBLIC_API_MOCK`     | `true` en `nuxt dev`, `false` en build | `true` : `useApi()` répond avec les fixtures de `layers/base/mocks/`, sans réseau                                                            |
-| `NUXT_PUBLIC_CDN_BASE_URL` | `http://localhost:9000/drama-media`    | Base publique des clés média (`hls/{episodeId}/master.m3u8`, vignettes) : bucket MinIO en dev, CDN en production ; utilisée par l'aperçu HLS |
+| Variable                   | Défaut                                 | Rôle                                                                                                                                                                                    |
+| -------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NUXT_PUBLIC_API_BASE`     | `http://localhost:3000`                | URL de base de l'API NestJS                                                                                                                                                             |
+| `NUXT_PUBLIC_API_MOCK`     | `true` en `nuxt dev`, `false` en build | `true` : `useApi()` répond avec les fixtures de `layers/base/mocks/`, sans réseau                                                                                                       |
+| `NUXT_PUBLIC_CDN_BASE_URL` | `http://localhost:9000/drama-media`    | Base publique des clés média (`hls/{episodeId}/master.m3u8`, vignettes) : bucket MinIO en dev, CDN en production ; utilisée par l'aperçu HLS                                            |
+| `NUXT_BUILD_DIR`           | `apps/admin/.nuxt`                     | Dossier de build Nuxt (option de build, pas de runtime). À pointer ailleurs pour lancer un `nuxt build` ou un second `nuxt dev` à côté d'un serveur de dev déjà lancé sur le même dépôt |
 
 Aucun secret n'est nécessaire côté web : le back-office ne possède que le JWT de l'utilisateur connecté.
 
@@ -63,34 +64,41 @@ web/
 │   ├── nuxt.config.ts       # modules, Tailwind, PrimeVue, i18n, runtimeConfig, alias #base
 │   ├── assets/css/main.css  # @import "tailwindcss" + plugin PrimeUI
 │   ├── composables/         # useApi, useCatalogueApi (B-01/B-02), useSubtitlesApi (B-03), useFeaturedApi (B-05),
-│   │                        # useAdministrationApi (B-13), useNotify (toasts), useMediaUrl (clés → URL CDN),
-│   │                        # useEpisodeUploads, usePosterUpload
+│   │                        # useScheduleApi (B-04), useStatsApi (B-11), useAdministrationApi (B-13),
+│   │                        # useNotify (toasts), useMediaUrl (clés → URL CDN), useEpisodeUploads, usePosterUpload
 │   ├── stores/auth.ts       # login(), verifyTotp(), fetchMe(), logout()
 │   ├── middleware/auth.global.ts
 │   ├── layouts/             # default (shell + Toast + ConfirmDialog), auth (page de connexion)
 │   ├── components/layout/   # AppSidebar, AppTopbar, PageHeader (fil d'Ariane), ComingSoon, Forbidden
 │   ├── components/catalogue/# SeriesForm, PosterUpload, TerritoriesInput, SeriesStatusTag
 │   ├── components/episodes/ # UploadDropZone, UploadQueuePanel, HlsPlayerDialog (+ pistes <track>),
-│   │                        # EpisodeStatusTag, SubtitlesPanel, SeriesPicker
+│   │                        # EpisodeStatusTag, SubtitlesPanel, SeriesPicker, PublicationTag,
+│   │                        # PublishDateDialog, DailyReleaseDialog (B-04)
+│   ├── components/schedule/ # MonthCalendar, AgendaList (B-04)
+│   ├── components/dashboard/# StatTile, TopSeriesChart (B-11, Chart.js via PrimeVue Chart)
 │   ├── components/featured/ # BannersPanel, RowsPanel, BannerDialog, RowDialog, SeriesPicker,
 │   │                        # SeriesListEditor, HomePreview
 │   ├── components/administration/ # AccountsPanel, AccountCreateDialog, AccountEditDialog,
 │   │                        # PasswordResetDialog, SecretRevealDialog, AuditLogPanel, AuditDiff
 │   ├── i18n/locales/        # fr.json (référence), en.json
-│   ├── mocks/               # index.ts (API simulée avec état), assets.ts, fixtures JSON
-│   ├── types/api.ts         # contrats de l'API admin (= docs/api/admin-contract-v1.md)
+│   ├── mocks/               # index.ts (API simulée avec état), assets.ts, fixtures JSON (dont stats.json)
+│   ├── types/api.ts         # contrats de l'API admin (= docs/api/admin-contract-v1.md + section back-office
+│   │                        # de public-contract-v1.2.md)
 │   ├── utils/               # ApiError, upload-queue, upload-transport, polling, series-form,
-│   │                        # subtitles, featured, accounts, audit-diff, countries, format,
-│   │                        # episode-files, registre des modules B-01…B-13
+│   │                        # subtitles, featured, accounts, audit-diff, schedule (fuseau, calendrier,
+│   │                        # sortie quotidienne), stats (tuiles, taux), markdown (aide), countries,
+│   │                        # format, episode-files, registre des modules B-01…B-13
 │   └── tests/
+├── docs/guide-back-office.md # guide v1 de l'équipe éditoriale (S06-WEB-02), rendu sur /help
 └── apps/
     ├── admin/
     │   ├── nuxt.config.ts   # extends: ['../../layers/base'], ssr: false
     │   ├── app.vue          # NuxtErrorBoundary autour des pages
     │   ├── error.vue        # erreurs fatales (404 de route…)
     │   ├── pages/           # login, index (→ /series), series/{index,new,[id]/index,[id]/episodes},
-    │   │                    # episodes/index et subtitles/index (choix de la série), featured (B-05),
-    │   │                    # administration (B-13), [module] (« Module à venir »)
+    │   │                    # episodes/index et subtitles/index (choix de la série), schedule (B-04),
+    │   │                    # featured (B-05), dashboard (B-11), administration (B-13), help (guide),
+    │   │                    # [module] (« Module à venir »)
     │   └── tests/
     └── recharge/README.md
 ```
@@ -177,6 +185,53 @@ Les contrats sont ceux de `docs/api/admin-contract-v1.md`, retranscrits dans `la
     bannière éditoriale avec sa série).
 - Rôles : EDITOR et ADMIN modifient ; les autres rôles voient la page en lecture seule (ou « Droits
   insuffisants » si l'API refuse la lecture).
+
+### Planification (B-04)
+
+Contrat : section « Back-office (B-04, B-11 v0) » de `docs/api/public-contract-v1.2.md`.
+
+- Toutes les dates sont **stockées en UTC** et **affichées / saisies en heure de Lomé**
+  (`SCHEDULE_TIME_ZONE = Africa/Lome`, UTC+0 toute l'année ; les conversions de `utils/schedule.ts`
+  sont génériques et testées, DST compris). Les DatePicker PrimeVue travaillent en heure locale du
+  navigateur : `toPickerDate()` / `fromPickerDate()` interprètent les champs choisis comme heure de
+  Lomé quel que soit le fuseau du poste.
+- **Fiche série** : bloc « Planification » → champ « Publication programmée » (`PATCH /admin/series/:id`
+  avec `publishedAt`, `null` pour effacer), étiquette « Programmée le … » / « Publiée le … ».
+- **Page Épisodes** : colonne Publication avec étiquette « Programmé le … » (date future) et icône
+  calendrier ouvrant la date de l'épisode (`PATCH /admin/episodes/:id`) ; bouton « Planifier une sortie
+  quotidienne » : premier jour, heure, N épisodes par jour, sélection des épisodes `PENDING`/`READY`,
+  aperçu J+0, J+1… puis un `PATCH` par épisode (`dailyReleasePlan()` est pur et testé).
+- `/schedule` (barre latérale « Planification ») : vue **Mois** (grille 6 semaines, lundi en premier,
+  puces série / épisode, passé barré, « + n autres » ouvrant le jour) et vue **Liste** (agenda des
+  90 prochains jours), alimentées par `GET /admin/schedule?from&to` (la réponse est normalisée :
+  `{ items }` ou tableau, `kind` ou `type`). Un clic ouvre la fiche série ou la page des épisodes.
+  Lecture ouverte à tous les rôles ; modification EDITOR / ADMIN.
+- Mock : `GET /admin/schedule` calcule les séries et épisodes datés dans l'intervalle ; les fixtures
+  reçoivent au chargement des dates futures (épisodes 2 à 5 de « Mariage sous contrat » à J+1…J+4
+  18 h, brouillon « La Revanche de l'héritière » à J+7).
+
+### Tableau de bord v0 (B-11)
+
+- `/dashboard` (barre latérale « Tableaux de bord ») : `GET /admin/stats/overview?days=7|30`.
+  Tuiles utilisateurs (actifs 24 h / 7 j / 30 j, nouveaux, inscrits et invités avec leur part),
+  tuiles visionnage (commencés, terminés, **taux de complétion** = terminés ÷ commencés, « — » sans
+  lecture), top séries en graphique (barres horizontales Chart.js via le composant `Chart` de
+  PrimeVue, deux couleurs validées par le skill dataviz : spectateurs `#2a78d6`, complétions
+  `#eb6834`) et en tableau (référence accessible, lien vers la fiche série). Sélecteur 7 / 30 jours
+  (dans l'URL), bouton Actualiser, **actualisation automatique toutes les 5 minutes**
+  (`createPoller`), états vide / chargement / erreur / droits insuffisants.
+- Dérivations pures dans `utils/stats.ts` (`deriveTiles`, `completionRate` avec gardes zéro,
+  `rankTopSeries`, `topSeriesChartData`, formats compacts FR).
+- Mock : `mocks/stats.json` (chiffres plausibles par période), `generatedAt` = maintenant.
+
+### Aide en ligne (S06-WEB-02)
+
+- `web/docs/guide-back-office.md` : guide v1 en français pour l'équipe éditoriale (connexion et
+  TOTP, séries, épisodes et upload, sous-titres, mise en avant, planification, tableau de bord,
+  comptes et audit, erreurs fréquentes).
+- Bouton **Aide** de la barre du haut → `/help` : le Markdown est importé au build (`?raw`) et
+  rendu par `utils/markdown.ts` (mini-rendu maison : titres avec ancres et sommaire, listes,
+  tableaux, citations, code ; la source est échappée, seules les balises générées sont injectées).
 
 ### Administration (S05-WEB-01, B-13)
 

@@ -1,0 +1,58 @@
+{
+  "7": {
+    "activeUsers": { "d1": 1284, "d7": 4830, "d30": 11260 },
+    "newUsers": 1930,
+    "registeredUsers": 3410,
+    "guestUsers": 9870,
+    "episodesStarted": 38420,
+    "episodesCompleted": 27180,
+    "topSeries": [
+      {
+        "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+        "title": "Le Prince oublié",
+        "viewers": 2860,
+        "completions": 2140
+      },
+      {
+        "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+        "title": "Mariage sous contrat",
+        "viewers": 1980,
+        "completions": 1210
+      },
+      {
+        "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K3",
+        "title": "Retour à Abidjan",
+        "viewers": 640,
+        "completions": 390
+      }
+    ]
+  },
+  "30": {
+    "activeUsers": { "d1": 1284, "d7": 4830, "d30": 11260 },
+    "newUsers": 7420,
+    "registeredUsers": 3410,
+    "guestUsers": 9870,
+    "episodesStarted": 142300,
+    "episodesCompleted": 96400,
+    "topSeries": [
+      {
+        "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+        "title": "Le Prince oublié",
+        "viewers": 9120,
+        "completions": 6830
+      },
+      {
+        "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+        "title": "Mariage sous contrat",
+        "viewers": 5460,
+        "completions": 3120
+      },
+      {
+        "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K3",
+        "title": "Retour à Abidjan",
+        "viewers": 2210,
+        "completions": 1480
+      }
+    ]
+  }
+}

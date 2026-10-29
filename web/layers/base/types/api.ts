@@ -114,6 +114,13 @@ export type AdminSeriesInput = Pick<
   | 'territories'
 >
 
+/**
+ * PATCH /admin/series/{id}: editable fields plus the scheduled publication date (B-04,
+ * public contract v1.2). `publishedAt` is an ISO date-time in UTC; a future value hides the
+ * series from the public catalogue until the date; `null` clears the schedule.
+ */
+export type AdminSeriesUpdateInput = Partial<AdminSeriesInput> & { publishedAt?: string | null }
+
 /** Fields only MONETIZATION and ADMIN may change. */
 export const MONETIZATION_FIELDS = ['freeEpisodeCount', 'coinCostPerEpisode'] as const
 
@@ -409,6 +416,89 @@ export interface AuditLogQuery {
   /** ISO date-time bounds (inclusive). */
   from?: string
   to?: string
+}
+
+// ---------------------------------------------------------------------------
+// Scheduling (B-04) — public contract v1.2, back-office section
+// ---------------------------------------------------------------------------
+
+/** IANA time zone used to display and enter publication dates (dates are stored in UTC). */
+export const SCHEDULE_TIME_ZONE = 'Africa/Lome'
+
+export type ScheduleItemKind = 'SERIES' | 'EPISODE'
+
+/**
+ * Wire shape of one item of `GET /admin/schedule?from&to` as the backend sends it (sprint 4):
+ * a series (its `publishedAt`) or an episode, always with its series for context.
+ */
+export interface ScheduleApiItem {
+  kind: 'series' | 'episode'
+  /** Series id for a series item, episode id for an episode item. */
+  id: string
+  seriesId: string
+  seriesTitle: string
+  seriesStatus: SeriesStatus
+  episodeNumber: number | null
+  episodeTitle: string | null
+  transcodeStatus: TranscodeStatus | null
+  publishedAt: string
+  /** False when the date will pass without effect (draft series, episode not READY). */
+  willBeVisible: boolean
+}
+
+export interface ScheduleApiResponse {
+  items: ScheduleApiItem[]
+  from: string
+  to: string
+}
+
+/** Normalised item used by the pages (see `normalizeScheduleResponse()`); `publishedAt` is ISO UTC. */
+export interface ScheduleItem {
+  kind: ScheduleItemKind
+  id: string
+  seriesId: string
+  seriesTitle: string
+  /** Series title or episode title. */
+  title: string
+  /** Only for episodes. */
+  episodeNumber: number | null
+  publishedAt: string
+  /** `SeriesStatus` for a series, `TranscodeStatus` for an episode. */
+  status: string
+  /** `null` when the API does not say. */
+  willBeVisible: boolean | null
+}
+
+/** Query of GET /admin/schedule (ISO date-time bounds, inclusive). */
+export interface ScheduleQuery {
+  from: string
+  to: string
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard v0 (B-11) — public contract v1.2, back-office section
+// ---------------------------------------------------------------------------
+
+export const STATS_PERIODS = [7, 30] as const
+export type StatsPeriod = (typeof STATS_PERIODS)[number]
+
+export interface StatsTopSeries {
+  seriesId: string
+  title: string
+  viewers: number
+  completions: number
+}
+
+/** GET /admin/stats/overview?days=7|30 (computed from `users` and `watch_progress`, cached 5 min). */
+export interface StatsOverview {
+  activeUsers: { d1: number; d7: number; d30: number }
+  newUsers: number
+  registeredUsers: number
+  guestUsers: number
+  episodesStarted: number
+  episodesCompleted: number
+  topSeries: StatsTopSeries[]
+  generatedAt: string
 }
 
 // ---------------------------------------------------------------------------

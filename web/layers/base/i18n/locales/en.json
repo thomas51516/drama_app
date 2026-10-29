@@ -4,7 +4,8 @@
     "backoffice": "Back office",
     "skipToContent": "Skip to content",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "help": "Help"
   },
   "auth": {
     "title": "Back-office sign in",
@@ -101,7 +102,8 @@
     "passwordLength": "The password must be at least {min} characters long.",
     "passwordCase": "The password must contain upper and lower case letters.",
     "passwordDigit": "The password must contain at least one digit.",
-    "rowKey": "Invalid key: lowercase letters, digits, “-” or “_”, 2 to 80 characters."
+    "rowKey": "Invalid key: lowercase letters, digits, “-” or “_”, 2 to 80 characters.",
+    "invalidDate": "Invalid date."
   },
   "series": {
     "title": "Catalogue — series",
@@ -166,7 +168,8 @@
         "classification": "Classification",
         "monetization": "Monetization",
         "distribution": "Distribution",
-        "posters": "Posters"
+        "posters": "Posters",
+        "scheduling": "Scheduling"
       },
       "title": "Title",
       "synopsis": "Synopsis",
@@ -185,7 +188,11 @@
       "territories": "Allowed territories",
       "territoriesHint": "ISO 3166-1 alpha-2 country codes. Empty list: available everywhere.",
       "posterVertical": "Vertical poster (2:3)",
-      "posterHorizontal": "Horizontal poster (16:9)"
+      "posterHorizontal": "Horizontal poster (16:9)",
+      "publishedAt": "Scheduled publication",
+      "publishedAtHint": "Optional. A future date hides the series in the app until then; empty = manual publication. Lomé time (Africa/Lome, UTC+0), stored in UTC.",
+      "publishedAtScheduled": "Scheduled on {date} (Lomé time)",
+      "publishedAtPast": "Published on {date} (Lomé time)"
     },
     "actions": {
       "create": "Create series",
@@ -286,7 +293,9 @@
       "retranscode": "Retry transcoding",
       "preview": "Preview",
       "reorder": "Reorder",
-      "reorderHint": "Drag rows to reorder"
+      "reorderHint": "Drag rows to reorder",
+      "schedule": "Publication date",
+      "plan": "Plan a daily release"
     },
     "toasts": {
       "queued": "{count} file added to the queue. | {count} files added to the queue.",
@@ -302,6 +311,42 @@
       "noSubtitles": "No subtitles",
       "subtitles": "Subtitles",
       "noTracks": "No subtitles for this episode."
+    },
+    "publication": {
+      "scheduled": "Scheduled on {date}",
+      "published": "Published on {date}",
+      "unscheduled": "Not scheduled",
+      "dialogTitle": "Publication date — episode {number}",
+      "field": "Publication (Lomé time)",
+      "hint": "Before this date the episode is hidden in the app. Lomé time (Africa/Lome, UTC+0), stored in UTC.",
+      "clear": "Remove the date",
+      "saved": "Publication date saved.",
+      "cleared": "Publication date removed.",
+      "saveFailed": "Could not save the date"
+    },
+    "plan": {
+      "title": "Plan a daily release",
+      "intro": "The selected episodes get a publication date: {perDay} per day from the first day, at the chosen time (Lomé time).",
+      "startDate": "First day",
+      "time": "Release time",
+      "perDay": "Episodes per day",
+      "episodes": "Episodes to schedule",
+      "eligibleHint": "Only pending or ready episodes can be scheduled; episodes being transcoded or failed are excluded.",
+      "noEligible": "No schedulable episode in this series.",
+      "selectAll": "Select all",
+      "selectNone": "Select none",
+      "preview": "Calendar preview",
+      "summary": "{count} episode over {days} day, from {first} to {last}. | {count} episodes over {days} days, from {first} to {last}.",
+      "none": "Select at least one episode.",
+      "confirm": "Schedule {count} episode | Schedule {count} episodes",
+      "done": "{count} episode scheduled. | {count} episodes scheduled.",
+      "partial": "{done} scheduled, {failed} failed: retry for the remaining episodes.",
+      "overwriteWarning": "{count} selected episode already has a date: it will be replaced. | {count} selected episodes already have a date: it will be replaced.",
+      "columns": {
+        "day": "Day",
+        "episode": "Episode",
+        "publishedAt": "Publication"
+      }
     }
   },
   "module": {
@@ -591,5 +636,102 @@
         "hideRaw": "Hide raw JSON"
       }
     }
+  },
+  "schedule": {
+    "title": "Scheduling",
+    "subtitle": "Scheduled releases of series and episodes (B-04). Times shown in Lomé time (Africa/Lome, UTC+0).",
+    "views": {
+      "month": "Month",
+      "list": "List"
+    },
+    "today": "Today",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "loadError": "Could not load the schedule.",
+    "count": "{count} publication | {count} publications",
+    "listRange": "Next {days} days",
+    "empty": {
+      "title": "Nothing scheduled",
+      "hint": "Give a publication date to a series (series form) or to episodes (Episodes page → “Plan a daily release”)."
+    },
+    "emptyMonth": "Nothing scheduled this month.",
+    "kinds": {
+      "SERIES": "Series",
+      "EPISODE": "Episode"
+    },
+    "episodeLabel": "Ep. {number}",
+    "more": "+ {count} more | + {count} more",
+    "past": "already published",
+    "openSeries": "Open the series",
+    "openEpisodes": "Open the episodes",
+    "legend": {
+      "series": "Series",
+      "episode": "Episode",
+      "past": "Past"
+    },
+    "dayDialog": "Publications of {date}",
+    "notVisible": "No effect on that date: draft series or episode not ready."
+  },
+  "dashboard": {
+    "title": "Dashboards",
+    "subtitle": "Users, viewing and top series (B-11 v0). Figures computed by the server.",
+    "period": {
+      "label": "Period",
+      "7": "Last 7 days",
+      "30": "Last 30 days"
+    },
+    "refresh": "Refresh",
+    "generatedAt": "Computed on {date}",
+    "autoRefresh": "Refreshes automatically every 5 minutes.",
+    "loadError": "Could not load the statistics.",
+    "empty": {
+      "title": "No data yet",
+      "hint": "Indicators appear with the first plays in the app."
+    },
+    "sections": {
+      "users": "Users",
+      "viewing": "Viewing",
+      "topSeries": "Top series"
+    },
+    "tiles": {
+      "activeD1": "Active in 24 h",
+      "activeD7": "Active in 7 days",
+      "activeD30": "Active in 30 days",
+      "newUsers": "New users",
+      "registeredUsers": "Registered accounts",
+      "guestUsers": "Guests",
+      "episodesStarted": "Episodes started",
+      "episodesCompleted": "Episodes completed",
+      "completionRate": "Completion rate"
+    },
+    "hints": {
+      "shareOfUsers": "{percent} of users",
+      "shareOfStarted": "{percent} of started episodes",
+      "periodNote": "New users, episodes and top series cover the selected period; active 24 h / 7 d / 30 d are rolling windows.",
+      "noStarts": "No episode started: rate undefined."
+    },
+    "topSeries": {
+      "subtitle": "Viewers and completed episodes per series over the period.",
+      "chartAria": "Horizontal bar chart: viewers and completed episodes for each top series.",
+      "legend": {
+        "viewers": "Viewers",
+        "completions": "Completed episodes"
+      },
+      "columns": {
+        "rank": "#",
+        "title": "Series",
+        "viewers": "Viewers",
+        "completions": "Completed episodes",
+        "rate": "Completion"
+      },
+      "empty": "No plays over the period."
+    }
+  },
+  "help": {
+    "title": "Help — back-office guide",
+    "subtitle": "Guide v1 for the editorial team (S06-WEB-02). Also in the repository: web/docs/guide-back-office.md.",
+    "toc": "Contents",
+    "backToTop": "Back to top",
+    "open": "Open the guide"
   }
 }

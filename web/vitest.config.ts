@@ -10,6 +10,9 @@ export default defineVitestConfig({
     environment: 'nuxt',
     include: ['layers/**/tests/**/*.spec.ts', 'apps/**/tests/**/*.spec.ts'],
     exclude: ['**/node_modules/**', '**/.nuxt/**', '**/.output/**'],
+    // The Nuxt environment is built once per run; a cold start (fresh install, new dependency)
+    // can exceed the default 10 s hook timeout.
+    hookTimeout: 60_000,
     environmentOptions: {
       nuxt: {
         rootDir: fileURLToPath(new URL('./apps/admin', import.meta.url)),

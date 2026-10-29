@@ -6,8 +6,9 @@ import { subtitleTracks, type SubtitleTrack } from '#base/utils/subtitles'
 import { formatDuration } from '#base/utils/format'
 import { createPoller, EPISODES_POLL_INTERVAL_MS, hasTranscodeInFlight } from '#base/utils/polling'
 import { canEditCatalogue } from '#base/utils/series-form'
+import { isPlannable } from '#base/utils/schedule'
 
-const { t, d, locale } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const api = useCatalogueApi()
 const subtitlesApi = useSubtitlesApi()
@@ -180,6 +181,22 @@ function onSubtitlesChanged(episodeId: string, subtitles: Subtitle[]): void {
   subtitlesByEpisode.value = { ...subtitlesByEpisode.value, [episodeId]: subtitles }
 }
 
+// --- scheduling (B-04) ---------------------------------------------------------------------
+const publishDateVisible = ref(false)
+const publishDateEpisode = ref<AdminEpisode | null>(null)
+const planVisible = ref(false)
+const plannableCount = computed(() => episodes.value.filter(isPlannable).length)
+
+function openPublishDate(episode: AdminEpisode): void {
+  publishDateEpisode.value = episode
+  publishDateVisible.value = true
+}
+
+function onPlanDone(updated: AdminEpisode[]): void {
+  for (const episode of updated) replaceEpisode(episode)
+  void refreshEpisodes()
+}
+
 // --- preview -------------------------------------------------------------------------------
 const previewVisible = ref(false)
 const previewSrc = ref<string | null>(null)
@@ -232,6 +249,16 @@ const readyCount = computed(
       ]"
     >
       <template #actions>
+        <Button
+          v-if="canEdit"
+          icon="pi pi-calendar-plus"
+          :label="t('episodes.actions.plan')"
+          severity="secondary"
+          outlined
+          :disabled="plannableCount === 0"
+          data-testid="plan-release"
+          @click="planVisible = true"
+        />
         <NuxtLink :to="`/series/${seriesId}`">
           <Button icon="pi pi-pencil" :label="t('series.edit')" severity="secondary" outlined />
         </NuxtLink>
@@ -386,12 +413,23 @@ const readyCount = computed(
           </template>
         </Column>
 
-        <Column :header="t('episodes.columns.publishedAt')" class="w-44">
+        <Column :header="t('episodes.columns.publishedAt')" class="w-52">
           <template #body="{ data: row }: { data: AdminEpisode }">
-            <time v-if="row.publishedAt" :datetime="row.publishedAt">
-              {{ d(new Date(row.publishedAt), 'long') }}
-            </time>
-            <span v-else class="text-muted-color">—</span>
+            <div class="group flex items-center gap-1">
+              <EpisodesPublicationTag :published-at="row.publishedAt" />
+              <Button
+                v-if="canEdit"
+                icon="pi pi-calendar"
+                size="small"
+                text
+                severity="secondary"
+                class="opacity-0 group-hover:opacity-100 focus:opacity-100"
+                :aria-label="t('episodes.actions.schedule')"
+                :title="t('episodes.actions.schedule')"
+                data-testid="schedule-button"
+                @click="openPublishDate(row)"
+              />
+            </div>
           </template>
         </Column>
 
@@ -455,6 +493,18 @@ const readyCount = computed(
       :episode="subtitlesEpisode"
       :can-edit="canEdit"
       @changed="onSubtitlesChanged"
+    />
+
+    <EpisodesPublishDateDialog
+      v-model:visible="publishDateVisible"
+      :episode="publishDateEpisode"
+      @saved="replaceEpisode"
+    />
+
+    <EpisodesDailyReleaseDialog
+      v-model:visible="planVisible"
+      :episodes="episodes"
+      @done="onPlanDone"
     />
   </div>
 </template>

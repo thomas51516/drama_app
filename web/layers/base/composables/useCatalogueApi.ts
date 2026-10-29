@@ -5,6 +5,7 @@ import type {
   AdminSeries,
   AdminSeriesInput,
   AdminSeriesListQuery,
+  AdminSeriesUpdateInput,
   EpisodeUploadUrlRequest,
   EpisodeUploadUrlResponse,
   Paginated,
@@ -38,7 +39,8 @@ export function useCatalogueApi() {
     getSeries: (id: string) => api.get<AdminSeries>(`/admin/series/${encode(id)}`),
     createSeries: (input: Partial<AdminSeriesInput>) =>
       api.post<AdminSeries>('/admin/series', input),
-    updateSeries: (id: string, input: Partial<AdminSeriesInput>) =>
+    /** Editable fields and, for B-04, `publishedAt` (future = scheduled, `null` = unscheduled). */
+    updateSeries: (id: string, input: AdminSeriesUpdateInput) =>
       api.patch<AdminSeries>(`/admin/series/${encode(id)}`, input),
     publishSeries: (id: string) => api.post<AdminSeries>(`/admin/series/${encode(id)}/publish`),
     archiveSeries: (id: string) => api.post<AdminSeries>(`/admin/series/${encode(id)}/archive`),

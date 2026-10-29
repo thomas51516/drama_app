@@ -6,6 +6,7 @@ import {
   type AdminRole,
   type AdminSeries,
   type AdminSeriesInput,
+  type AdminSeriesUpdateInput,
   type AgeRating,
 } from '../types/api'
 import { isIsoCountryCode, normalizeCountryCode } from './countries'
@@ -27,6 +28,8 @@ export interface SeriesFormValues {
   freeEpisodeCount: number | null
   coinCostPerEpisode: number | null
   territories: string[]
+  /** Scheduled publication (ISO, UTC) — B-04. `null` = publish manually. */
+  publishedAt: string | null
 }
 
 export type SeriesFormField = keyof SeriesFormValues
@@ -61,6 +64,7 @@ export function emptySeriesForm(): SeriesFormValues {
     freeEpisodeCount: 0,
     coinCostPerEpisode: 0,
     territories: [],
+    publishedAt: null,
   }
 }
 
@@ -77,6 +81,7 @@ export function seriesToForm(series: AdminSeries): SeriesFormValues {
     freeEpisodeCount: series.freeEpisodeCount,
     coinCostPerEpisode: series.coinCostPerEpisode,
     territories: [...series.territories],
+    publishedAt: series.publishedAt,
   }
 }
 
@@ -150,6 +155,10 @@ export function validateSeriesForm(values: SeriesFormValues): SeriesFormErrors {
     }
   }
 
+  if (values.publishedAt !== null && Number.isNaN(new Date(values.publishedAt).getTime())) {
+    errors.publishedAt = { key: 'validation.invalidDate' }
+  }
+
   const invalidTerritory = values.territories.find((code) => !isIsoCountryCode(code))
   if (invalidTerritory !== undefined) {
     errors.territories = { key: 'validation.isoCountry', params: { value: invalidTerritory } }
@@ -190,14 +199,17 @@ export function seriesFormToInput(
   return input
 }
 
-/** Only the fields that differ from the loaded series (PATCH stays minimal). */
+/**
+ * Only the fields that differ from the loaded series (PATCH stays minimal). The scheduled
+ * `publishedAt` (B-04) is compared as an instant so a re-serialised equal date is not a change.
+ */
 export function seriesFormDiff(
   values: SeriesFormValues,
   original: AdminSeries,
   options: { includeMonetization: boolean },
-): Partial<AdminSeriesInput> {
+): AdminSeriesUpdateInput {
   const full = seriesFormToInput(values, options)
-  const diff: Partial<AdminSeriesInput> = {}
+  const diff: AdminSeriesUpdateInput = {}
   for (const key of Object.keys(full) as (keyof AdminSeriesInput)[]) {
     const next = full[key]
     const previous = original[key]
@@ -206,7 +218,15 @@ export function seriesFormDiff(
       : next !== previous
     if (changed) (diff as Record<string, unknown>)[key] = next
   }
+  if (!sameInstant(values.publishedAt, original.publishedAt)) {
+    diff.publishedAt = values.publishedAt ? new Date(values.publishedAt).toISOString() : null
+  }
   return diff
+}
+
+function sameInstant(a: string | null, b: string | null): boolean {
+  if (a === null || b === null) return a === b
+  return new Date(a).getTime() === new Date(b).getTime()
 }
 
 export function isMonetizationField(field: string): boolean {

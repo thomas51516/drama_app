@@ -34,7 +34,7 @@
     "coinCostPerEpisode": 25,
     "status": "PUBLISHED",
     "territories": ["FR", "CI", "SN", "TG"],
-    "episodeCount": 2,
+    "episodeCount": 5,
     "publishedAt": "2026-10-10T08:00:00.000Z",
     "createdAt": "2026-09-28T10:00:00.000Z",
     "updatedAt": "2026-10-24T09:05:00.000Z"

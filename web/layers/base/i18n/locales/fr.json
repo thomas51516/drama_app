@@ -4,7 +4,8 @@
     "backoffice": "Back-office",
     "skipToContent": "Aller au contenu",
     "openMenu": "Ouvrir le menu",
-    "closeMenu": "Fermer le menu"
+    "closeMenu": "Fermer le menu",
+    "help": "Aide"
   },
   "auth": {
     "title": "Connexion au back-office",
@@ -101,7 +102,8 @@
     "passwordLength": "Le mot de passe doit faire au moins {min} caractères.",
     "passwordCase": "Le mot de passe doit contenir des majuscules et des minuscules.",
     "passwordDigit": "Le mot de passe doit contenir au moins un chiffre.",
-    "rowKey": "Clé invalide : minuscules, chiffres, « - » ou « _ », de 2 à 80 caractères."
+    "rowKey": "Clé invalide : minuscules, chiffres, « - » ou « _ », de 2 à 80 caractères.",
+    "invalidDate": "Date invalide."
   },
   "series": {
     "title": "Catalogue — séries",
@@ -166,7 +168,8 @@
         "classification": "Classification",
         "monetization": "Monétisation",
         "distribution": "Distribution",
-        "posters": "Affiches"
+        "posters": "Affiches",
+        "scheduling": "Planification"
       },
       "title": "Titre",
       "synopsis": "Synopsis",
@@ -185,7 +188,11 @@
       "territories": "Territoires autorisés",
       "territoriesHint": "Codes pays ISO 3166-1 alpha-2. Liste vide : disponible partout.",
       "posterVertical": "Affiche verticale (2:3)",
-      "posterHorizontal": "Affiche horizontale (16:9)"
+      "posterHorizontal": "Affiche horizontale (16:9)",
+      "publishedAt": "Publication programmée",
+      "publishedAtHint": "Facultatif. Une date future masque la série dans l'application jusqu'à cette date ; vide = publication manuelle. Heure de Lomé (Africa/Lome, UTC+0), stockée en UTC.",
+      "publishedAtScheduled": "Programmée le {date} (heure de Lomé)",
+      "publishedAtPast": "Publiée le {date} (heure de Lomé)"
     },
     "actions": {
       "create": "Créer la série",
@@ -286,7 +293,9 @@
       "retranscode": "Relancer le transcodage",
       "preview": "Aperçu",
       "reorder": "Réordonner",
-      "reorderHint": "Glissez les lignes pour réordonner"
+      "reorderHint": "Glissez les lignes pour réordonner",
+      "schedule": "Date de publication",
+      "plan": "Planifier une sortie quotidienne"
     },
     "toasts": {
       "queued": "{count} fichier ajouté à la file. | {count} fichiers ajoutés à la file.",
@@ -302,6 +311,42 @@
       "noSubtitles": "Sans sous-titres",
       "subtitles": "Sous-titres",
       "noTracks": "Aucun sous-titre pour cet épisode."
+    },
+    "publication": {
+      "scheduled": "Programmé le {date}",
+      "published": "Publié le {date}",
+      "unscheduled": "Non programmé",
+      "dialogTitle": "Date de publication — épisode {number}",
+      "field": "Publication (heure de Lomé)",
+      "hint": "Avant cette date, l'épisode n'apparaît pas dans l'application. Heure de Lomé (Africa/Lome, UTC+0), stockée en UTC.",
+      "clear": "Retirer la date",
+      "saved": "Date de publication enregistrée.",
+      "cleared": "Date de publication retirée.",
+      "saveFailed": "Enregistrement de la date impossible"
+    },
+    "plan": {
+      "title": "Planifier une sortie quotidienne",
+      "intro": "Les épisodes sélectionnés reçoivent une date de publication : {perDay} par jour à partir du premier jour, à l'heure choisie (heure de Lomé).",
+      "startDate": "Premier jour",
+      "time": "Heure de sortie",
+      "perDay": "Épisodes par jour",
+      "episodes": "Épisodes à planifier",
+      "eligibleHint": "Seuls les épisodes en attente ou prêts sont planifiables ; les épisodes en transcodage ou en échec sont exclus.",
+      "noEligible": "Aucun épisode planifiable dans cette série.",
+      "selectAll": "Tout sélectionner",
+      "selectNone": "Tout désélectionner",
+      "preview": "Aperçu du calendrier",
+      "summary": "{count} épisode sur {days} jour, du {first} au {last}. | {count} épisodes sur {days} jours, du {first} au {last}.",
+      "none": "Sélectionnez au moins un épisode.",
+      "confirm": "Planifier {count} épisode | Planifier {count} épisodes",
+      "done": "{count} épisode planifié. | {count} épisodes planifiés.",
+      "partial": "{done} planifié(s), {failed} en échec : réessayez pour les épisodes restants.",
+      "overwriteWarning": "{count} épisode sélectionné a déjà une date : elle sera remplacée. | {count} épisodes sélectionnés ont déjà une date : elle sera remplacée.",
+      "columns": {
+        "day": "Jour",
+        "episode": "Épisode",
+        "publishedAt": "Publication"
+      }
     }
   },
   "module": {
@@ -591,5 +636,102 @@
         "hideRaw": "Masquer le JSON brut"
       }
     }
+  },
+  "schedule": {
+    "title": "Planification",
+    "subtitle": "Sorties programmées des séries et des épisodes (B-04). Heures affichées en heure de Lomé (Africa/Lome, UTC+0).",
+    "views": {
+      "month": "Mois",
+      "list": "Liste"
+    },
+    "today": "Aujourd'hui",
+    "previousMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "loadError": "Impossible de charger le planning.",
+    "count": "{count} publication | {count} publications",
+    "listRange": "Les {days} prochains jours",
+    "empty": {
+      "title": "Aucune publication programmée",
+      "hint": "Donnez une date de publication à une série (fiche série) ou à des épisodes (page Épisodes → « Planifier une sortie quotidienne »)."
+    },
+    "emptyMonth": "Rien de programmé sur ce mois.",
+    "kinds": {
+      "SERIES": "Série",
+      "EPISODE": "Épisode"
+    },
+    "episodeLabel": "Ép. {number}",
+    "more": "+ {count} autre | + {count} autres",
+    "past": "déjà publié",
+    "openSeries": "Ouvrir la fiche série",
+    "openEpisodes": "Ouvrir les épisodes",
+    "legend": {
+      "series": "Série",
+      "episode": "Épisode",
+      "past": "Passé"
+    },
+    "dayDialog": "Publications du {date}",
+    "notVisible": "Sans effet à cette date : série en brouillon ou épisode non prêt."
+  },
+  "dashboard": {
+    "title": "Tableaux de bord",
+    "subtitle": "Utilisateurs, visionnage et top séries (B-11 v0). Chiffres calculés par le serveur.",
+    "period": {
+      "label": "Période",
+      "7": "7 derniers jours",
+      "30": "30 derniers jours"
+    },
+    "refresh": "Actualiser",
+    "generatedAt": "Calculé le {date}",
+    "autoRefresh": "Actualisation automatique toutes les 5 minutes.",
+    "loadError": "Impossible de charger les statistiques.",
+    "empty": {
+      "title": "Pas encore de données",
+      "hint": "Les indicateurs apparaissent dès les premières lectures dans l'application."
+    },
+    "sections": {
+      "users": "Utilisateurs",
+      "viewing": "Visionnage",
+      "topSeries": "Top séries"
+    },
+    "tiles": {
+      "activeD1": "Actifs sur 24 h",
+      "activeD7": "Actifs sur 7 jours",
+      "activeD30": "Actifs sur 30 jours",
+      "newUsers": "Nouveaux utilisateurs",
+      "registeredUsers": "Comptes inscrits",
+      "guestUsers": "Invités",
+      "episodesStarted": "Épisodes commencés",
+      "episodesCompleted": "Épisodes terminés",
+      "completionRate": "Taux de complétion"
+    },
+    "hints": {
+      "shareOfUsers": "{percent} des utilisateurs",
+      "shareOfStarted": "{percent} des épisodes commencés",
+      "periodNote": "Nouveaux utilisateurs, épisodes et top séries portent sur la période choisie ; les actifs 24 h / 7 j / 30 j sont des fenêtres glissantes.",
+      "noStarts": "Aucun épisode commencé : taux non défini."
+    },
+    "topSeries": {
+      "subtitle": "Spectateurs et épisodes terminés par série sur la période.",
+      "chartAria": "Graphique en barres horizontales : spectateurs et épisodes terminés pour chaque série du top.",
+      "legend": {
+        "viewers": "Spectateurs",
+        "completions": "Épisodes terminés"
+      },
+      "columns": {
+        "rank": "#",
+        "title": "Série",
+        "viewers": "Spectateurs",
+        "completions": "Épisodes terminés",
+        "rate": "Complétion"
+      },
+      "empty": "Aucune lecture sur la période."
+    }
+  },
+  "help": {
+    "title": "Aide — guide du back-office",
+    "subtitle": "Guide v1 pour l'équipe éditoriale (S06-WEB-02). Également disponible dans le dépôt : web/docs/guide-back-office.md.",
+    "toc": "Sommaire",
+    "backToTop": "Haut de page",
+    "open": "Ouvrir le guide"
   }
 }

@@ -18,4 +18,9 @@ describe('back-office modules registry', () => {
     expect(findModuleByPath('/featured')?.ticket).toBe('B-05')
     expect(findModuleByPath('/administration')?.ticket).toBe('B-13')
   })
+
+  it('points the sprint 4 modules to their real pages', () => {
+    expect(findModuleByPath('/schedule')?.ticket).toBe('B-04')
+    expect(findModuleByPath('/dashboard')?.ticket).toBe('B-11')
+  })
 })

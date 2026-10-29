@@ -5,8 +5,9 @@ import {
   SERIES_GENRES,
   SERIES_LANGUAGES,
   type AdminSeries,
-  type AdminSeriesInput,
+  type AdminSeriesUpdateInput,
 } from '../../types/api'
+import { formatZoned, fromPickerDate, publicationState, toPickerDate } from '../../utils/schedule'
 import {
   canEditCatalogue,
   canEditMonetization,
@@ -30,9 +31,9 @@ const props = defineProps<{
   series?: AdminSeries | null
   saving?: boolean
 }>()
-const emit = defineEmits<{ submit: [input: Partial<AdminSeriesInput>] }>()
+const emit = defineEmits<{ submit: [input: AdminSeriesUpdateInput] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const auth = useAuthStore()
 
 const values = reactive<SeriesFormValues>(
@@ -109,6 +110,22 @@ function onTagsUpdate(next: string[]): void {
   touch('tags')
 }
 
+// --- scheduled publication (B-04): the picker shows Lomé wall time, the model keeps UTC ----
+const publishedAtPicker = computed<Date | null>({
+  get: () => toPickerDate(values.publishedAt),
+  set: (date) => {
+    values.publishedAt = fromPickerDate(date)
+    touch('publishedAt')
+  },
+})
+const publicationInfo = computed(() => {
+  if (!values.publishedAt) return null
+  const date = formatZoned(values.publishedAt, locale.value)
+  return publicationState(values.publishedAt) === 'scheduled'
+    ? t('series.form.publishedAtScheduled', { date })
+    : t('series.form.publishedAtPast', { date })
+})
+
 function submit(): void {
   submitted.value = true
   revalidate()
@@ -123,8 +140,8 @@ function submit(): void {
   }
 }
 
-function pickMonetization(input: Partial<AdminSeriesInput>): Partial<AdminSeriesInput> {
-  const picked: Partial<AdminSeriesInput> = {}
+function pickMonetization(input: AdminSeriesUpdateInput): AdminSeriesUpdateInput {
+  const picked: AdminSeriesUpdateInput = {}
   if (input.freeEpisodeCount !== undefined) picked.freeEpisodeCount = input.freeEpisodeCount
   if (input.coinCostPerEpisode !== undefined) picked.coinCostPerEpisode = input.coinCostPerEpisode
   return picked
@@ -357,6 +374,53 @@ defineExpose({ isDirty, submit })
         </small>
         <small v-else class="text-xs text-muted-color">{{
           t('series.form.territoriesHint')
+        }}</small>
+      </div>
+    </fieldset>
+
+    <!-- Scheduling (B-04) — only on an existing series: the contract accepts publishedAt on PATCH -->
+    <fieldset
+      v-if="series"
+      class="grid gap-5 rounded-lg border border-surface-200 bg-surface-0 p-5"
+    >
+      <legend class="px-1 text-sm font-semibold uppercase tracking-wide text-muted-color">
+        {{ t('series.form.sections.scheduling') }}
+      </legend>
+      <div class="flex flex-col gap-1.5">
+        <label for="series-published-at" class="text-sm font-medium">
+          {{ t('series.form.publishedAt') }}
+        </label>
+        <div class="grid gap-3 sm:grid-cols-[minmax(0,20rem)_auto] sm:items-center">
+          <DatePicker
+            v-model="publishedAtPicker"
+            input-id="series-published-at"
+            show-time
+            hour-format="24"
+            show-icon
+            show-button-bar
+            date-format="dd/mm/yy"
+            :step-minute="5"
+            :invalid="Boolean(errorMessage('publishedAt'))"
+            :disabled="catalogueDisabled"
+            fluid
+          />
+          <Tag
+            v-if="publicationInfo"
+            :value="publicationInfo"
+            :severity="publicationState(values.publishedAt) === 'scheduled' ? 'info' : 'success'"
+            :icon="
+              publicationState(values.publishedAt) === 'scheduled'
+                ? 'pi pi-calendar-clock'
+                : 'pi pi-check'
+            "
+            class="justify-self-start"
+          />
+        </div>
+        <small v-if="errorMessage('publishedAt')" class="text-red-600">
+          {{ errorMessage('publishedAt') }}
+        </small>
+        <small v-else class="text-xs text-muted-color">{{
+          t('series.form.publishedAtHint')
         }}</small>
       </div>
     </fieldset>

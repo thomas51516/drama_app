@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { AdminSeries, AdminSeriesInput } from '#base/types/api'
+import type { AdminSeries, AdminSeriesUpdateInput } from '#base/types/api'
 import { ApiError } from '#base/utils/api-error'
 import { canEditCatalogue } from '#base/utils/series-form'
 
@@ -29,7 +29,7 @@ const acting = ref<'publish' | 'archive' | null>(null)
 const canAct = computed(() => canEditCatalogue(auth.user?.role))
 const notFound = computed(() => ApiError.is(error.value) && error.value.status === 404)
 
-async function onSubmit(input: Partial<AdminSeriesInput>): Promise<void> {
+async function onSubmit(input: AdminSeriesUpdateInput): Promise<void> {
   if (Object.keys(input).length === 0) {
     notify.info(t('series.toasts.nothingToSave'))
     return

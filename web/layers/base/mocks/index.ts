@@ -11,6 +11,7 @@ import type {
   AdminRole,
   AdminSeries,
   AdminSeriesInput,
+  AdminSeriesUpdateInput,
   AdminUser,
   AuditLog,
   EpisodeUploadUrlRequest,
@@ -28,7 +29,11 @@ import type {
   PresignResponse,
   PublicHomeResponse,
   PublicSeriesSummary,
+  ScheduleApiItem,
+  ScheduleApiResponse,
   SeriesStatus,
+  StatsOverview,
+  StatsPeriod,
   Subtitle,
   TotpVerifyRequest,
   TotpVerifyResponse,
@@ -59,6 +64,8 @@ import episodesFixture from './episodes.json'
 import subtitlesFixture from './subtitles.json'
 import homeFixture from './home.json'
 import auditLogsFixture from './audit-logs.json'
+import statsFixture from './stats.json'
+import { isStatsPeriod } from '../utils/stats'
 import { mockAssetUrlFor, mockUploadUrlFor, registerMockAsset } from './assets'
 
 /**
@@ -150,12 +157,37 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
+/**
+ * Fixtures are static JSON, but the planning demo needs dates in the future: the episodes 2 to 5
+ * of « Mariage sous contrat » are released one per day from tomorrow at 18:00 (Lomé), and the
+ * draft « La Revanche de l'héritière » is scheduled next week.
+ */
+function seedSchedule(series: AdminSeries[], episodes: AdminEpisode[]): void {
+  const base = new Date()
+  base.setUTCHours(18, 0, 0, 0)
+  const inDays = (days: number, hour = 18): string => {
+    const date = new Date(base.getTime() + days * 86_400_000)
+    date.setUTCHours(hour, 0, 0, 0)
+    return date.toISOString()
+  }
+  const daily = ['12', '13', '14', '15']
+  daily.forEach((suffix, index) => {
+    const episode = episodes.find((item) => item.id === `ep_01HZX0E00000000000000000${suffix}`)
+    if (episode) episode.publishedAt = inDays(index + 1)
+  })
+  const draft = series.find((item) => item.id === 'ser_01HZX0A1B2C3D4E5F6G7H8J9K2')
+  if (draft) draft.publishedAt = inDays(7, 10)
+}
+
 function initialState(): MockState {
   const subtitles = clone(subtitlesFixture) as Subtitle[]
   seedSubtitleAssets(subtitles)
+  const series = clone(seriesFixture) as AdminSeries[]
+  const episodes = clone(episodesFixture) as AdminEpisode[]
+  seedSchedule(series, episodes)
   return {
-    series: clone(seriesFixture) as AdminSeries[],
-    episodes: clone(episodesFixture) as AdminEpisode[],
+    series,
+    episodes,
     subtitles,
     banners: clone(homeFixture.banners) as HomeBanner[],
     rows: clone(homeFixture.rows) as HomeRow[],
@@ -349,6 +381,15 @@ function applySeriesInput(
   }
 }
 
+/** `publishedAt` of a PATCH: `null` clears, otherwise a valid ISO date-time (stored as UTC). */
+function readPublishedAt(context: MockContext, value: unknown): string | null {
+  if (value === null) return null
+  if (typeof value !== 'string' || Number.isNaN(new Date(value).getTime())) {
+    fail(400, 'VALIDATION_ERROR', 'publishedAt must be an ISO date-time or null', context.path)
+  }
+  return new Date(value).toISOString()
+}
+
 /** Simulated transcode pipeline: UPLOADED → PROCESSING → READY | FAILED. */
 function scheduleTranscode(episodeId: string): void {
   later(mockTiming.uploadedToProcessingMs, () => {
@@ -516,10 +557,15 @@ route('GET', '/admin/series/:id', (context): AdminSeries => {
 route('PATCH', '/admin/series/:id', (context): AdminSeries => {
   const series = findSeries(context, context.params.id as string)
   const before = clone(series)
-  const input = (context.body ?? {}) as Partial<AdminSeriesInput>
+  const { publishedAt, ...input } = (context.body ?? {}) as AdminSeriesUpdateInput
   applySeriesInput(context, series, input)
+  if (publishedAt !== undefined) {
+    // B-04: scheduling is a catalogue change (EDITOR / ADMIN).
+    requireRole(context, ['EDITOR', 'ADMIN'])
+    series.publishedAt = readPublishedAt(context, publishedAt)
+  }
   series.updatedAt = now()
-  const changedKeys = Object.keys(input) as (keyof AdminSeriesInput)[]
+  const changedKeys = Object.keys(context.body ?? {}) as (keyof AdminSeries)[]
   audit(
     context,
     'series.update',
@@ -618,7 +664,18 @@ route('PATCH', '/admin/episodes/:id', (context): AdminEpisode => {
     if (!input.title.trim()) fail(400, 'VALIDATION_ERROR', 'title cannot be empty', context.path)
     episode.title = input.title.trim()
   }
-  if (input.publishedAt !== undefined) episode.publishedAt = input.publishedAt
+  if (input.publishedAt !== undefined) {
+    const before = episode.publishedAt
+    episode.publishedAt = readPublishedAt(context, input.publishedAt)
+    audit(
+      context,
+      'episode.update',
+      'episode',
+      episode.id,
+      { publishedAt: before },
+      { publishedAt: episode.publishedAt },
+    )
+  }
   return clone(touch(episode, {}))
 })
 
@@ -1330,6 +1387,87 @@ route('GET', '/admin/audit-logs', (context): Paginated<AuditLog> => {
     page,
     pageSize,
   }
+})
+
+// ---------------------------------------------------------------------------
+// Scheduling (B-04) and dashboard v0 (B-11) — public contract v1.2
+// ---------------------------------------------------------------------------
+
+function readIsoBound(context: MockContext, name: string, fallback: string): string {
+  const raw = context.query.get(name)
+  if (raw === null || raw === '') return fallback
+  const time = new Date(raw).getTime()
+  if (Number.isNaN(time)) {
+    fail(400, 'VALIDATION_ERROR', `${name} must be an ISO date-time`, context.path)
+  }
+  return new Date(time).toISOString()
+}
+
+/** Series and episodes dated inside [from, to] (default: the next 30 days), soonest first. */
+route('GET', '/admin/schedule', (context): ScheduleApiResponse => {
+  requireAuth(context)
+  const nowIso = now()
+  const from = readIsoBound(context, 'from', nowIso)
+  const to = readIsoBound(
+    context,
+    'to',
+    new Date(new Date(from).getTime() + 30 * 86_400_000).toISOString(),
+  )
+  if (to < from) fail(400, 'VALIDATION_ERROR', 'to must be after from', context.path)
+  const inRange = (value: string | null): value is string =>
+    value !== null && value >= from && value <= to
+  const items: ScheduleApiItem[] = []
+  for (const series of state.series) {
+    if (series.status === 'ARCHIVED' || !inRange(series.publishedAt)) continue
+    items.push({
+      kind: 'series',
+      id: series.id,
+      seriesId: series.id,
+      seriesTitle: series.title,
+      seriesStatus: series.status,
+      episodeNumber: null,
+      episodeTitle: null,
+      transcodeStatus: null,
+      publishedAt: series.publishedAt,
+      willBeVisible: series.status === 'PUBLISHED',
+    })
+  }
+  for (const episode of state.episodes) {
+    if (!inRange(episode.publishedAt)) continue
+    const series = state.series.find((item) => item.id === episode.seriesId)
+    if (!series || series.status === 'ARCHIVED') continue
+    items.push({
+      kind: 'episode',
+      id: episode.id,
+      seriesId: series.id,
+      seriesTitle: series.title,
+      seriesStatus: series.status,
+      episodeNumber: episode.number,
+      episodeTitle: episode.title,
+      transcodeStatus: episode.transcodeStatus,
+      publishedAt: episode.publishedAt,
+      willBeVisible: series.status === 'PUBLISHED' && episode.transcodeStatus === 'READY',
+    })
+  }
+  items.sort((a, b) => a.publishedAt.localeCompare(b.publishedAt) || a.id.localeCompare(b.id))
+  return { items: clone(items), from, to }
+})
+
+/** Fixture numbers per period; `generatedAt` is "now" so the page shows a fresh timestamp. */
+route('GET', '/admin/stats/overview', (context): StatsOverview => {
+  requireAuth(context)
+  const raw = context.query.get('days') ?? '7'
+  if (!isStatsPeriod(raw)) {
+    fail(400, 'VALIDATION_ERROR', 'days must be 7 or 30', context.path)
+  }
+  const period = String(Number(raw) as StatsPeriod) as keyof typeof statsFixture
+  const overview = clone(statsFixture[period]) as Omit<StatsOverview, 'generatedAt'>
+  // Keep the titles in sync with the (editable) mock catalogue.
+  for (const row of overview.topSeries) {
+    const series = state.series.find((item) => item.id === row.seriesId)
+    if (series) row.title = series.title
+  }
+  return { ...overview, generatedAt: now() }
 })
 
 // ---------------------------------------------------------------------------

@@ -36,7 +36,7 @@ export const backofficeModules: readonly BackofficeModule[] = [
     key: 'scheduling',
     ticket: 'B-04',
     labelKey: 'nav.scheduling',
-    path: '/scheduling',
+    path: '/schedule',
     icon: 'pi pi-calendar',
   },
   {
@@ -67,7 +67,7 @@ export const backofficeModules: readonly BackofficeModule[] = [
     key: 'dashboards',
     ticket: 'B-11',
     labelKey: 'nav.dashboards',
-    path: '/dashboards',
+    path: '/dashboard',
     icon: 'pi pi-chart-bar',
   },
   {

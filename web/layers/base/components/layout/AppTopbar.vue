@@ -62,6 +62,18 @@ async function onLogout(): Promise<void> {
       </div>
     </div>
 
+    <NuxtLink to="/help" class="shrink-0">
+      <Button
+        icon="pi pi-question-circle"
+        :label="t('app.help')"
+        severity="secondary"
+        text
+        size="small"
+        :aria-label="t('help.open')"
+        :title="t('help.open')"
+      />
+    </NuxtLink>
+
     <Button
       icon="pi pi-sign-out"
       :label="t('auth.logout')"

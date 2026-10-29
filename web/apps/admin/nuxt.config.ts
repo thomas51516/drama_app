@@ -3,6 +3,10 @@ export default defineNuxtConfig({
 
   ssr: false,
 
+  // Lets a second `nuxt build` / `nuxt dev` (CI, agents, checks) run next to the developer's dev
+  // server without fighting over `.nuxt/`: NUXT_BUILD_DIR=/tmp/x npm run build:admin.
+  ...(process.env.NUXT_BUILD_DIR ? { buildDir: process.env.NUXT_BUILD_DIR } : {}),
+
   app: {
     head: {
       title: 'DRAMA — Back-office',
