@@ -1,6 +1,15 @@
 @import 'tailwindcss';
 @plugin 'tailwindcss-primeui';
 
+/*
+ * Tailwind 4 ne scanne par défaut que la racine Vite (l'application). La couche partagée
+ * `layers/base` est en dehors : on déclare les deux sources explicitement, sinon les classes
+ * utilisées seulement dans la couche (mise en page, barre latérale) ne sont pas générées.
+ * Chemins relatifs à ce fichier.
+ */
+@source '../..';
+@source '../../../../apps';
+
 @layer base {
   html,
   body {
