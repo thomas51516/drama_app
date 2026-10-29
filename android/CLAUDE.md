@@ -21,10 +21,23 @@ core:common                     (pure Kotlin/JVM)
 - `:feature:*` = one user-facing area: `navigation/` (type-safe `@Serializable` route + `NavGraphBuilder.xxxScreen()`),
   a `@HiltViewModel`, a stateful `XxxScreen` wrapper and a stateless `XxxContent`. Features expose only their
   navigation functions to `:app`.
-- `:core:ui` = theme, tokens, shared composables. `:core:network` = Retrofit/OkHttp/kotlinx.serialization,
-  `BuildConfig.API_BASE_URL`, auth interceptor. `:core:database` = Room entities/DAOs + DataStore.
+- `:core:ui` = theme, tokens, shared composables. `:core:network` = Retrofit services (`AuthApi`, `CatalogApi`,
+  `PlaybackApi`), DTOs mirroring `docs/api/openapi.v0.1.json`, `ApiErrorMapper` (ApiErrorDto -> `AppError`),
+  `SessionManager` + `AuthInterceptor` + `TokenAuthenticator` (guest session, single-flight refresh),
+  `RetryInterceptor` (GET only), `BuildConfig.API_BASE_URL/MEDIA_BASE_URL/USE_FAKE_CATALOG`.
+  `:core:database` = Room (`DramaDatabase` v2, exported schemas in `core/database/schemas/`), DataStore
+  (`user_preferences`, `session` with tokens encrypted by `AndroidKeystoreTokenCipher`).
+- `:core:network` never depends on `:core:database`: it declares `SessionStore`/`DeviceIdProvider` and `:data`
+  implements them over DataStore. Session tokens never leave `:core:network`/`:data`; the UI only sees `SessionState`.
+- Analytics: `AnalyticsTracker`/`AnalyticsEvent` live in `:core:common`; `:app` binds Firebase when
+  `app/google-services.json` was present at build time (`BuildConfig.FIREBASE_CONFIGURED`), Logcat (`tag Analytics`)
+  otherwise. Add new events to `AnalyticsEvent` (spec §13 names), never call Firebase from a feature.
+- Catalogue reads go through `CatalogRepository.observe*` (stale-while-revalidate over Room, `Resource<T>`) or the
+  `get*` one-shots (fresh cache or network, stale fallback). Streams come only from `PlaybackRepository.startPlayback`
+  (`POST /episodes/{id}/play`); `Episode` carries no manifest URL.
 - `:feature:player/engine` is the only module that touches Media3 ExoPlayer; the view model talks to the
-  `PlaybackEngine` interface so it stays JVM-testable.
+  `PlaybackEngine` interface so it stays JVM-testable. Playlist slots are declared first (`setPlaylist(count)`) and
+  streams attached per page (`setSource`) when `/play` answers; the engine preloads whatever is already attached.
 
 ## Build conventions
 
@@ -34,6 +47,12 @@ core:common                     (pure Kotlin/JVM)
 - AGP 9 built-in Kotlin: never apply `org.jetbrains.kotlin.android`; Kotlin jvmTarget follows `compileOptions`.
 - Annotation processing is KSP only (no kapt). Hilt modules live next to what they provide (`di/` package).
 - ktlint (`ktlint_official` + Composable naming exception) runs on `./gradlew ktlintCheck`; fix with `ktlintFormat`.
-- Unit tests sit in `src/test` (JUnit4, coroutines-test, Turbine, MockK). Instrumented tests in `src/androidTest`.
+- Unit tests sit in `src/test` (JUnit4, coroutines-test, Turbine, MockK, MockWebServer 3 for the network).
+  Instrumented tests in `src/androidTest` (Room migration test: `:core:database:connectedDebugAndroidTest`).
+- Kotlin nests block comments: never write `/*` inside a KDoc (e.g. `/auth/*`), it silently breaks the whole module.
+- Room schema changes: bump `DramaDatabase.version`, add an `AutoMigration` (or a `Migration` for destructive
+  changes), build once so the new `schemas/.../N.json` is exported, commit it with the code.
+- Firebase: `app/google-services.json` is gitignored; the Google services and Crashlytics plugins are applied only
+  when the file exists, so CI builds green without it. Never commit the file.
 - Strings shown to users are French; code, identifiers, log tags and comments are English.
 - The server is the source of truth for balances, prices and entitlements: no monetisation logic on the client.

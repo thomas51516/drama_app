@@ -11,4 +11,7 @@ plugins {
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.room) apply false
     alias(libs.plugins.ktlint) apply false
+    // Applied by :app only when app/google-services.json is present (S02-A1-04).
+    alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.firebase.crashlytics) apply false
 }

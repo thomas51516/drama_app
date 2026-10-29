@@ -21,4 +21,7 @@ dependencies {
 
     api(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
+
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

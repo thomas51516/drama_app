@@ -16,11 +16,11 @@ import com.drama.feature.series.navigation.seriesScreen
 fun DramaNavHost(navController: NavHostController) {
     NavHost(navController = navController, startDestination = HomeRoute) {
         homeScreen(
-            onPlayTestSeries = navController::navigateToPlayer,
+            onPlaySeries = { seriesId -> navController.navigateToPlayer(seriesId) },
             onOpenSeries = navController::navigateToSeries,
             onOpenAccount = navController::navigateToAccount,
         )
-        seriesScreen(onPlay = navController::navigateToPlayer)
+        seriesScreen(onPlay = { seriesId -> navController.navigateToPlayer(seriesId) })
         playerScreen(onBack = navController::popBackStack)
         accountScreen()
     }

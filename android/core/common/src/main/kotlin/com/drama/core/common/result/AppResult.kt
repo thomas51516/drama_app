@@ -11,18 +11,45 @@ sealed interface AppResult<out T> {
     ) : AppResult<Nothing>
 }
 
+/**
+ * Typed failures. HTTP errors are mapped from the backend `ApiErrorDto` (`code` is the stable server code,
+ * e.g. `EPISODE_LOCKED`, `SERIES_NOT_FOUND`), so the UI never sees raw status codes or exceptions.
+ */
 sealed interface AppError {
+    /** No connectivity, DNS failure, timeout: the request never got a usable answer. */
     data class Network(
         val cause: Throwable? = null,
     ) : AppError
 
-    data class Http(
+    /** 401 / invalid or expired session; the session layer has already tried to refresh. */
+    data class Unauthenticated(
+        val code: String? = null,
+    ) : AppError
+
+    /** 403 `EPISODE_LOCKED`: the viewer must unlock the episode (paywall, Sprint 7). */
+    data class Locked(
+        val episodeId: String?,
+        val seriesId: String?,
+        val coinCost: Int?,
+    ) : AppError
+
+    /** 404: [what] is the server code (`SERIES_NOT_FOUND`) or a local description. */
+    data class NotFound(
+        val what: String,
+    ) : AppError
+
+    /** 5xx: the backend failed; retry later. */
+    data class Server(
         val code: Int,
+        val serverCode: String? = null,
         val message: String? = null,
     ) : AppError
 
-    data class NotFound(
-        val what: String,
+    /** Any other HTTP status (400 validation, 409 conflict, 429 rate limit, ...). */
+    data class Http(
+        val code: Int,
+        val serverCode: String? = null,
+        val message: String? = null,
     ) : AppError
 
     data class Unknown(
@@ -47,6 +74,8 @@ inline fun <T> AppResult<T>.onFailure(block: (AppError) -> Unit): AppResult<T> {
 }
 
 fun <T> AppResult<T>.getOrNull(): T? = (this as? AppResult.Success)?.value
+
+fun <T> AppResult<T>.errorOrNull(): AppError? = (this as? AppResult.Failure)?.error
 
 /** Runs [block] and wraps any non-cancellation exception into [AppError.Unknown]. */
 inline fun <T> runCatchingResult(block: () -> T): AppResult<T> =

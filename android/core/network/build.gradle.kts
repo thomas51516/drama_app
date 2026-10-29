@@ -20,12 +20,16 @@ android {
         val mediaBaseUrl =
             (project.findProperty("dramaMediaBaseUrl") as String?) ?: "http://10.0.2.2:9000/drama-media"
         buildConfigField("String", "MEDIA_BASE_URL", "\"${mediaBaseUrl.trimEnd('/')}\"")
+        // Debug toggle: -PdramaUseFakeCatalog=true serves the Sprint 1 fake catalogue instead of the API.
+        val useFakeCatalog = (project.findProperty("dramaUseFakeCatalog") as String?)?.toBoolean() ?: false
+        buildConfigField("boolean", "USE_FAKE_CATALOG", "$useFakeCatalog")
     }
 
     buildTypes {
         release {
             buildConfigField("String", "API_BASE_URL", "\"https://api.drama.example/\"")
             buildConfigField("String", "MEDIA_BASE_URL", "\"https://cdn.drama.example\"")
+            buildConfigField("boolean", "USE_FAKE_CATALOG", "false")
         }
     }
 }
@@ -39,4 +43,7 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.turbine)
 }

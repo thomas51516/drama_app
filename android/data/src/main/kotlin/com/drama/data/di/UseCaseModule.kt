@@ -1,13 +1,18 @@
 package com.drama.data.di
 
 import com.drama.domain.repository.CatalogRepository
+import com.drama.domain.repository.PlaybackRepository
 import com.drama.domain.repository.WatchProgressRepository
 import com.drama.domain.usecase.DefaultGetSeriesEpisodesUseCase
 import com.drama.domain.usecase.DefaultGetSeriesUseCase
-import com.drama.domain.usecase.DefaultSaveWatchProgressUseCase
+import com.drama.domain.usecase.DefaultObserveHomeUseCase
+import com.drama.domain.usecase.DefaultReportProgressUseCase
+import com.drama.domain.usecase.DefaultStartPlaybackUseCase
 import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.GetSeriesUseCase
-import com.drama.domain.usecase.SaveWatchProgressUseCase
+import com.drama.domain.usecase.ObserveHomeUseCase
+import com.drama.domain.usecase.ReportProgressUseCase
+import com.drama.domain.usecase.StartPlaybackUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,6 +30,15 @@ object UseCaseModule {
     fun provideGetSeries(repository: CatalogRepository): GetSeriesUseCase = DefaultGetSeriesUseCase(repository)
 
     @Provides
-    fun provideSaveWatchProgress(repository: WatchProgressRepository): SaveWatchProgressUseCase =
-        DefaultSaveWatchProgressUseCase(repository)
+    fun provideObserveHome(repository: CatalogRepository): ObserveHomeUseCase = DefaultObserveHomeUseCase(repository)
+
+    @Provides
+    fun provideStartPlayback(
+        playback: PlaybackRepository,
+        progress: WatchProgressRepository,
+    ): StartPlaybackUseCase = DefaultStartPlaybackUseCase(playback, progress)
+
+    @Provides
+    fun provideReportProgress(playback: PlaybackRepository): ReportProgressUseCase =
+        DefaultReportProgressUseCase(playback)
 }

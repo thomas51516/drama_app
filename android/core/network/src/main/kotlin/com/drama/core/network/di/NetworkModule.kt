@@ -1,10 +1,13 @@
 package com.drama.core.network.di
 
+import com.drama.core.common.logging.Logger
 import com.drama.core.network.BuildConfig
-import com.drama.core.network.api.DramaApi
+import com.drama.core.network.api.AuthApi
+import com.drama.core.network.api.CatalogApi
+import com.drama.core.network.api.PlaybackApi
 import com.drama.core.network.auth.AuthInterceptor
-import com.drama.core.network.auth.NoTokenProvider
-import com.drama.core.network.auth.TokenProvider
+import com.drama.core.network.auth.TokenAuthenticator
+import com.drama.core.network.retry.RetryInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,11 +19,23 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+/** Client without bearer/authenticator: used for the `/auth` endpoints so a refresh can never trigger another refresh. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class BareClient
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+    private const val CONNECT_TIMEOUT_S = 10L
+    private const val READ_TIMEOUT_S = 20L
+    private const val WRITE_TIMEOUT_S = 20L
+    private const val CALL_TIMEOUT_S = 45L
+    private const val HTTP_LOG_TAG = "Http"
+
     @Provides
     @Singleton
     fun provideJson(): Json =
@@ -28,36 +43,76 @@ object NetworkModule {
             ignoreUnknownKeys = true
             explicitNulls = false
             coerceInputValues = true
+            isLenient = true
         }
 
+    /** Debug builds log request lines and status codes under the `Http` tag (`adb logcat -s Http`). */
     @Provides
     @Singleton
-    fun provideTokenProvider(): TokenProvider = NoTokenProvider
-
-    @Provides
-    @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+    @BareClient
+    fun provideBareOkHttpClient(logger: Logger): OkHttpClient {
         val logging =
-            HttpLoggingInterceptor().apply {
-                level =
-                    if (BuildConfig.DEBUG) {
-                        HttpLoggingInterceptor.Level.BASIC
-                    } else {
-                        HttpLoggingInterceptor.Level.NONE
-                    }
+            HttpLoggingInterceptor { message -> logger.i(HTTP_LOG_TAG, message) }.apply {
+                level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+                redactHeader("Authorization")
             }
         return OkHttpClient
             .Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .addInterceptor(authInterceptor)
+            .connectTimeout(CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
+            .readTimeout(READ_TIMEOUT_S, TimeUnit.SECONDS)
+            .writeTimeout(WRITE_TIMEOUT_S, TimeUnit.SECONDS)
+            .callTimeout(CALL_TIMEOUT_S, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .addInterceptor(logging)
             .build()
     }
 
     @Provides
     @Singleton
+    fun provideOkHttpClient(
+        @BareClient bare: OkHttpClient,
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator,
+        logger: Logger,
+    ): OkHttpClient =
+        bare
+            .newBuilder()
+            // Interceptors run in order: retry wraps auth so a retried GET gets a fresh bearer.
+            .addInterceptor(RetryInterceptor(logger))
+            .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator)
+            .build()
+
+    @Provides
+    @Singleton
+    @BareClient
+    fun provideBareRetrofit(
+        @BareClient client: OkHttpClient,
+        json: Json,
+    ): Retrofit = retrofit(client, json)
+
+    @Provides
+    @Singleton
     fun provideRetrofit(
+        client: OkHttpClient,
+        json: Json,
+    ): Retrofit = retrofit(client, json)
+
+    @Provides
+    @Singleton
+    fun provideAuthApi(
+        @BareClient retrofit: Retrofit,
+    ): AuthApi = retrofit.create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCatalogApi(retrofit: Retrofit): CatalogApi = retrofit.create(CatalogApi::class.java)
+
+    @Provides
+    @Singleton
+    fun providePlaybackApi(retrofit: Retrofit): PlaybackApi = retrofit.create(PlaybackApi::class.java)
+
+    private fun retrofit(
         client: OkHttpClient,
         json: Json,
     ): Retrofit =
@@ -67,8 +122,4 @@ object NetworkModule {
             .client(client)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
-
-    @Provides
-    @Singleton
-    fun provideDramaApi(retrofit: Retrofit): DramaApi = retrofit.create(DramaApi::class.java)
 }

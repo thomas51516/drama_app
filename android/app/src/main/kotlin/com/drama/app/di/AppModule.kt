@@ -1,12 +1,20 @@
 package com.drama.app.di
 
+import android.content.Context
+import com.drama.app.BuildConfig
+import com.drama.app.analytics.FirebaseAnalyticsTracker
+import com.drama.app.analytics.LogcatAnalyticsTracker
 import com.drama.app.logging.AndroidLogger
+import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.coroutines.DefaultDispatcherProvider
 import com.drama.core.common.coroutines.DispatcherProvider
 import com.drama.core.common.logging.Logger
+import com.drama.core.common.time.Clock
+import com.drama.core.common.time.SystemClock
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -21,4 +29,27 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDispatcherProvider(): DispatcherProvider = DefaultDispatcherProvider()
+
+    @Provides
+    @Singleton
+    fun provideClock(): Clock = SystemClock
+
+    /** Firebase when google-services.json was present at build time and the SDK initialised; Logcat otherwise. */
+    @Provides
+    @Singleton
+    fun provideAnalyticsTracker(
+        @ApplicationContext context: Context,
+        logger: Logger,
+    ): AnalyticsTracker {
+        val firebase =
+            if (BuildConfig.FIREBASE_CONFIGURED) {
+                FirebaseAnalyticsTracker.createIfAvailable(
+                    context,
+                    logger,
+                )
+            } else {
+                null
+            }
+        return firebase ?: LogcatAnalyticsTracker(logger)
+    }
 }

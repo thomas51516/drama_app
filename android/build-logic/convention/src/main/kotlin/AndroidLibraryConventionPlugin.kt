@@ -26,6 +26,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 add("testImplementation", libs.findLibrary("junit").get())
                 add("testImplementation", libs.findLibrary("kotlinx-coroutines-test").get())
                 add("androidTestImplementation", libs.findLibrary("androidx-test-ext-junit").get())
+                add("androidTestImplementation", libs.findLibrary("androidx-test-runner").get())
             }
         }
     }

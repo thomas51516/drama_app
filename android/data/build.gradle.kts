@@ -14,4 +14,9 @@ dependencies {
     api(project(":domain"))
 
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.turbine)
+    testImplementation(libs.retrofit.converter.kotlinx.serialization)
 }

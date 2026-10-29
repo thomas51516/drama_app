@@ -2,12 +2,14 @@ package com.drama.domain.usecase
 
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.common.result.Resource
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
-import com.drama.domain.model.PlaybackSource
+import com.drama.domain.model.HomeContent
 import com.drama.domain.model.Series
-import com.drama.domain.model.StreamFormat
 import com.drama.domain.repository.CatalogRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -20,12 +22,19 @@ class GetSeriesEpisodesUseCaseTest {
             index = index,
             title = "Episode $index",
             durationMs = null,
+            thumbnailUrl = null,
             access = EpisodeAccess.FREE,
-            playback = PlaybackSource("https://example.com/$index.m3u8", StreamFormat.HLS),
+            coinCost = 0,
         )
 
     private val repository =
         object : CatalogRepository {
+            override fun observeHome(): Flow<Resource<HomeContent>> = emptyFlow()
+
+            override fun observeSeries(seriesId: String): Flow<Resource<Series>> = emptyFlow()
+
+            override fun observeEpisodes(seriesId: String): Flow<Resource<List<Episode>>> = emptyFlow()
+
             override suspend fun getSeries(seriesId: String): AppResult<Series> =
                 AppResult.Failure(AppError.NotFound(seriesId))
 

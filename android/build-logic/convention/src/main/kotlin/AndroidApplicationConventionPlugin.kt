@@ -24,6 +24,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("androidx-core-ktx").get())
                 add("testImplementation", libs.findLibrary("junit").get())
                 add("androidTestImplementation", libs.findLibrary("androidx-test-ext-junit").get())
+                add("androidTestImplementation", libs.findLibrary("androidx-test-runner").get())
                 add("androidTestImplementation", libs.findLibrary("androidx-test-espresso-core").get())
             }
         }

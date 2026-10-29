@@ -1,9 +1,10 @@
 package com.drama.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/** Local playback position per episode (M-15: resume to the second; synced to the server later). */
+/** Local playback position per episode (M-15: resume to the second; mirrored to `PUT /progress`). */
 @Entity(tableName = "watch_progress")
 data class WatchProgressEntity(
     @PrimaryKey val episodeId: String,
@@ -11,4 +12,5 @@ data class WatchProgressEntity(
     val positionMs: Long,
     val durationMs: Long,
     val updatedAtEpochMs: Long,
+    @ColumnInfo(defaultValue = "0") val completed: Boolean = false,
 )

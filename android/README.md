@@ -1,7 +1,9 @@
 # DRAMA — application Android
 
 Application de micro-séries verticales (Kotlin, Jetpack Compose, Media3, Hilt). Ce dossier contient le socle
-multi-module du Sprint 1 (S01-A1-01, S01-A1-02) et le spike lecteur HLS (S01-A2-01, S01-A2-02).
+multi-module du Sprint 1 (S01-A1-01, S01-A1-02), le spike lecteur HLS (S01-A2-01, S01-A2-02) et les fondations du
+Sprint 2 : couche réseau sur l'API réelle (S02-A1-01), compte invité (S02-A1-02), Room progression/historique/cache
+(S02-A1-03), Firebase conditionnel (S02-A1-04) et contrôles du lecteur (S02-A2-03).
 
 ## Prérequis
 
@@ -58,12 +60,12 @@ La CI (`.github/workflows/android-ci.yml`) exécute `ktlintCheck`, `lintDebug`, 
 | `:app` | application | `@HiltAndroidApp`, activité unique, `NavHost`, thème M3, edge-to-edge, liaisons Hilt des abstractions `core:common`. |
 | `:core:common` | Kotlin/JVM pur | `AppResult`/`AppError`, `DispatcherProvider`, façade `Logger`. |
 | `:core:ui` | bibliothèque Compose | `DramaTheme` (Material 3), jetons (`DramaColors`, `DramaSpacing`), composants partagés. |
-| `:core:network` | bibliothèque | Retrofit + OkHttp + kotlinx.serialization, `BuildConfig.API_BASE_URL`, `AuthInterceptor` (placeholder). |
-| `:core:database` | bibliothèque | Room (`watch_progress`), DataStore (`UserPreferencesDataSource`). |
-| `:domain` | Kotlin/JVM pur | Modèles `Series`, `Episode`, `PlaybackSource`, `WatchProgress`, interfaces de dépôts et cas d'usage. |
-| `:data` | bibliothèque | Implémentations des dépôts. Sprint 1 : `FakeCatalogRepository` (3 épisodes HLS publics), `RoomWatchProgressRepository`. |
-| `:feature:home` | feature | Écran d'accueil provisoire avec le bouton « Lire la série de test ». |
-| `:feature:player` | feature | Lecteur vertical plein écran (spike), moteur Media3, overlay de mesure. |
+| `:core:network` | bibliothèque | Retrofit (`AuthApi`, `CatalogApi`, `PlaybackApi`) + OkHttp + kotlinx.serialization, DTO de l'OpenAPI v0.1, `ApiErrorMapper`, `SessionManager`, `AuthInterceptor`, `TokenAuthenticator`, `RetryInterceptor`. |
+| `:core:database` | bibliothèque | Room v2 (`watch_progress`, `watch_history`, cache catalogue), DataStore `user_preferences` et `session` (jetons chiffrés par le Keystore). |
+| `:domain` | Kotlin/JVM pur | Modèles `Series`, `Episode`, `PlaySession`, `HomeContent`, `WatchProgress`, `SessionState`, interfaces de dépôts et cas d'usage. |
+| `:data` | bibliothèque | `RemoteCatalogRepository` (API + cache Room, stale-while-revalidate), `RemotePlaybackRepository`, `DefaultSessionRepository`, dépôts Room, `FakeCatalogRepository` (tests et bascule debug). |
+| `:feature:home` | feature | Accueil alimenté par `GET /home` : bannière, rangées de cartes, hors-ligne depuis le cache. |
+| `:feature:player` | feature | Lecteur vertical plein écran, résolution `POST /episodes/{id}/play` par page, progression toutes les 5 s, contrôles (M-13), page « verrouillé », overlay de mesure. |
 | `:feature:series` | feature | Coquille « Fiche série » (route + écran vide). |
 | `:feature:account` | feature | Coquille « Mon compte » (route + écran vide). |
 | `build-logic/` | plugins de convention | `drama.android.application|library|compose|feature`, `drama.hilt`, `drama.jvm.library`. |
@@ -82,7 +84,92 @@ kotlinx.serialization 1.12.0 · Coil 3.5.0. `compileSdk`/`targetSdk` 36, `minSdk
 > exigent `compileSdk 37`. Le socle reste volontairement sur 36 (SDK installé, cible du Sprint 1). Pour les adopter :
 > installer `platforms;android-37.2`, passer `compileSdk = "37"` dans `gradle/libs.versions.toml` et remonter ces versions.
 
-## Spike lecteur (S01-A2-01 / S01-A2-02)
+## Backend local et configuration réseau
+
+L'app consomme directement le backend NestJS (`cd backend && npm run dev`, port 3000). Les adresses sont des
+`BuildConfig` du module `:core:network`, surchargeables par propriétés Gradle :
+
+| Propriété | Défaut (debug) | Rôle |
+| --- | --- | --- |
+| `dramaApiBaseUrl` | `http://10.0.2.2:3000/` | Base de l'API (émulateur → machine hôte). |
+| `dramaMediaBaseUrl` | `http://10.0.2.2:9000/drama-media` | Base des médias MinIO. En debug, les URL `localhost`/`127.0.0.1` renvoyées par le backend (`CDN_BASE_URL`) sont réécrites vers cette origine (`MediaUrlResolver`). Jamais en release. |
+| `dramaUseFakeCatalog` | `false` | `true` : catalogue factice du Sprint 1 (`FakeCatalogRepository` + `FakePlaybackRepository`), aucun backend requis. |
+
+Téléphone sur le même Wi-Fi :
+
+```bash
+./gradlew :app:assembleDebug -PdramaApiBaseUrl=http://<IP-du-PC>:3000/ -PdramaMediaBaseUrl=http://<IP-du-PC>:9000/drama-media
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Session invitée (S02-A1-02)
+
+- Au premier lancement, `AppStartup` appelle `POST /auth/guest` avec un **UUID d'installation** généré par l'app et
+  conservé dans DataStore (`session`), jamais un identifiant matériel.
+- Les jetons sont chiffrés avant écriture (`AndroidKeystoreTokenCipher`, AES-256-GCM, clé dans l'Android Keystore).
+  Choix retenu plutôt que `security-crypto` (déprécié) ou Tink (dépendance lourde) : ~60 lignes, aucune dépendance.
+  Si la clé est invalidée par le système, les jetons deviennent illisibles et l'app recrée silencieusement un invité.
+- `AuthInterceptor` ajoute `Authorization: Bearer` (et crée l'invité si besoin) ; `TokenAuthenticator` rafraîchit sur
+  401 en **vol unique** (`SessionManager.recoverFrom401`, mutex) et rejoue la requête une seule fois. Un refresh
+  rejeté (`INVALID_REFRESH_TOKEN`, `REFRESH_TOKEN_REUSED`, `REFRESH_TOKEN_EXPIRED`) efface la session et recrée un
+  invité : sans rattachement de compte (M-50, sprint 5) il n'existe pas d'autre chemin de retour.
+- `SessionRepository.state` expose `SessionState` (`Unknown`, `Connecting`, `Authenticated`, `SignedOut`) ;
+  `logout()` efface jetons, progression, historique et cache catalogue.
+- Logcat : `adb logcat -s Session AppStartup` (`guest session created user=…`, `tokens rotated`).
+
+### Couche réseau (S02-A1-01)
+
+- Délais OkHttp : connexion 10 s, lecture/écriture 20 s, appel 45 s. `RetryInterceptor` rejoue les **GET** en échec
+  réseau (`IOException`) deux fois avec repli exponentiel (500 ms, 1 s) ; jamais les POST/PUT.
+- Journal HTTP (`HttpLoggingInterceptor`, niveau BASIC, en-tête `Authorization` masqué, tag Logcat `Http`) en debug
+  uniquement.
+- Erreurs : le corps `ApiErrorDto` est converti en `AppError` typé — `Unauthenticated` (401), `Locked` (403
+  `EPISODE_LOCKED`, avec `coinCost`), `NotFound` (404), `Server` (5xx), `Http` (autres), `Network`.
+
+### Room (S02-A1-03)
+
+Schéma v2 (export dans `core/database/schemas/`, migration automatique 1 → 2) :
+`watch_progress` (+ `completed`), `watch_history` (dernier épisode vu par série), cache catalogue (`series`,
+`episodes`, `home_rows`, `home_row_items`, `cache_meta`). Politique **stale-while-revalidate** : cache servi
+immédiatement s'il existe, rafraîchi en arrière-plan quand il a plus de 5 min (accueil) ou 10 min (série,
+épisodes), valeur périmée conservée en cas d'échec réseau (`Resource.Error(data = cache)`).
+Test de migration instrumenté : `./gradlew :core:database:connectedDebugAndroidTest`.
+
+### Firebase Crashlytics et Analytics (S02-A1-04)
+
+Le build n'exige pas Firebase. Pour l'activer :
+
+1. Dans la console Firebase, créer une app Android `com.drama.app` **et** une app `com.drama.app.debug`
+   (suffixe du build debug) dans le même projet.
+2. Télécharger `google-services.json` et le déposer dans `android/app/` (fichier ignoré par git, ne jamais le
+   committer). Aucune autre modification : `app/build.gradle.kts` applique les plugins Google services et Crashlytics
+   uniquement si le fichier existe et positionne `BuildConfig.FIREBASE_CONFIGURED`.
+3. Rebuild : au démarrage, Logcat affiche `Analytics: Firebase ready (project=…), Crashlytics enabled` ; sans le
+   fichier, les événements sont tracés dans Logcat (`adb logcat -s Analytics`).
+
+Événements émis (spec §13) : `app_open`, `series_view` (`series_id`, `source`), `episode_start` (`series_id`,
+`episode_id`, `episode_number`, `resumed`), `episode_complete`, `paywall_view` (épisode verrouillé).
+L'identifiant utilisateur Firebase est l'id serveur du compte invité.
+
+### Vérification de bout en bout
+
+```bash
+adb logcat -s AppStartup Session Http Catalog Player PlayerSpike Analytics
+# AppStartup: guest session ready user=…            ← POST /auth/guest
+# Http: --> GET …/home  /  <-- 200 …/home            ← accueil chargé
+# PlayerSpike: source set index=0 uri=…master.m3u8  ← POST /episodes/{id}/play
+# Player: progress sent episode=… position_ms=…     ← PUT /progress toutes les 5 s, en pause, à la sortie
+# PlayerSpike: start index=0 … start_ms=12000       ← reprise à la position serveur après relance de l'app
+```
+
+## Lecteur (S01-A2-01 / S01-A2-02 / S02-A2-03)
+
+### Contrôles (S02-A2-03)
+
+Appui = pause/reprise · double appui gauche/droite = −10 s / +10 s · glisser la barre de progression = recherche
+(libellés `m:ss / m:ss`, position cible pendant le glissement) · bouton « Son/Muet » · fin d'épisode : overlay
+« Épisode suivant ▶ » avec compte à rebours de 3 s (ou « Revoir » sur le dernier épisode). Un épisode `locked`
+(403 `EPISODE_LOCKED`) affiche la page « Épisode verrouillé — paywall au sprint 7 » au lieu de lire.
 
 ### Stratégie
 
@@ -144,22 +231,11 @@ démarrage (une passe a échoué en `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`). 
 S01-A2-01 (« démarrage mesuré en 4G réelle ») se relève sur un téléphone d'entrée de gamme en données mobiles,
 avec la procédure ci-dessus.
 
-### Flux de test
+### Vidéos de test verticales
 
-`FakeCatalogRepository` (module `:data`) expose trois flux HLS publics : Big Buck Bunny (Mux, ABR),
-Apple BipBop avancé (HEVC/fMP4 : vérifie le décodage matériel), Mux `test_001`. Ils sont remplacés par le catalogue
-réel au Sprint 3.
-
-## Vidéos de test verticales
-
-Les flux HLS publics sont en 16:9. Le dépôt de test (`FakeCatalogRepository`) pointe donc sur les trois
-épisodes 9:16 (1080x1920, HLS multi-débits) produits par `infra/media-samples/generate.sh` et servis par
-le MinIO de dev (voir `infra/README.md`). L'adresse de base vient de `BuildConfig.MEDIA_BASE_URL` :
-
-| Cible | Valeur | Comment |
-| --- | --- | --- |
-| Émulateur | `http://10.0.2.2:9000/drama-media` | valeur par défaut en debug |
-| Téléphone sur le même Wi-Fi | `http://<IP-du-PC>:9000/drama-media` | `./gradlew :app:assembleDebug -PdramaMediaBaseUrl=http://<IP-du-PC>:9000/drama-media` |
+Le catalogue de dev (seed du backend) et le catalogue factice (`-PdramaUseFakeCatalog=true`) pointent sur les trois
+épisodes 9:16 (1080x1920, HLS multi-débits) produits par `infra/media-samples/generate.sh` et servis par le MinIO
+de dev (voir `infra/README.md`), à l'adresse `BuildConfig.MEDIA_BASE_URL` (voir la table ci-dessus).
 
 Le build debug autorise le HTTP en clair (`app/src/debug/res/xml/network_security_config.xml`) ; le build
 release ne l'autorise pas. Le lecteur remplit l'écran (`ContentScale.Crop`) : un écran 20:9 rogne
@@ -168,6 +244,9 @@ légèrement les bords d'un contenu 9:16, un contenu 16:9 serait fortement rogn�
 ## Qualité
 
 - `ktlint` (`ktlint_official`, exception de nommage pour les `@Composable`) via `./gradlew ktlintCheck` / `ktlintFormat`.
-- Tests unitaires : `:core:common` (AppResult), `:domain` (navigation d'épisodes, cas d'usage), `:data`
-  (dépôt factice), `:feature:player` (`PlayerViewModelTest` avec moteur de lecture factice).
+- Tests unitaires : `:core:common` (AppResult), `:domain` (navigation d'épisodes, cas d'usage, politique de reprise),
+  `:core:network` (`TokenAuthenticatorTest` avec MockWebServer : refresh en vol unique, rotation, repli invité ;
+  `ApiErrorMapperTest` ; `RetryInterceptorTest`), `:data` (`RemoteCatalogRepositoryTest` : politique de cache ;
+  `MediaUrlResolverTest`), `:feature:player` (`PlayerViewModelTest` : /play, verrouillé, seek, ±10 s, muet,
+  fin d'épisode, progression 5 s).
 - Android Lint : `./gradlew lintDebug` (bloquant sur les erreurs).

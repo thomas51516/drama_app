@@ -1,26 +1,29 @@
 package com.drama.core.network.auth
 
+import com.drama.core.common.result.AppResult
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
 
-/** Supplies the current access token. Replaced by the real session store in Sprint 2 (guest auth). */
-fun interface TokenProvider {
-    fun accessToken(): String?
-}
-
-object NoTokenProvider : TokenProvider {
-    override fun accessToken(): String? = null
-}
-
-/** Adds `Authorization: Bearer <token>` when a token is available. Placeholder for S02 auth. */
+/**
+ * Adds `Authorization: Bearer <token>`, creating the guest session first when none exists.
+ * When the bootstrap fails (offline, rate limited) the request goes out without a bearer: public
+ * endpoints still work and protected ones return 401, mapped to `AppError.Unauthenticated`.
+ */
 class AuthInterceptor
     @Inject
     constructor(
-        private val tokenProvider: TokenProvider,
+        private val sessionManager: SessionManager,
     ) : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
-            val token = tokenProvider.accessToken()
+            val token =
+                runBlocking {
+                    when (val session = sessionManager.ensureSession()) {
+                        is AppResult.Success -> session.value.tokens.accessToken
+                        is AppResult.Failure -> sessionManager.currentAccessToken()
+                    }
+                }
             val request =
                 if (token.isNullOrBlank()) {
                     chain.request()
@@ -28,9 +31,14 @@ class AuthInterceptor
                     chain
                         .request()
                         .newBuilder()
-                        .header("Authorization", "Bearer $token")
+                        .header(HEADER, "$SCHEME $token")
                         .build()
                 }
             return chain.proceed(request)
+        }
+
+        companion object {
+            const val HEADER = "Authorization"
+            const val SCHEME = "Bearer"
         }
     }

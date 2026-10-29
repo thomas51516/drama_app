@@ -9,14 +9,20 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PlayerRoute(
     val seriesId: String,
+    /** Episode to open first; the first episode when null. */
+    val episodeId: String? = null,
 ) {
     companion object {
-        /** Key under which Navigation stores [seriesId] in the SavedStateHandle. */
+        /** Keys under which Navigation stores the arguments in the SavedStateHandle. */
         const val ARG_SERIES_ID = "seriesId"
+        const val ARG_EPISODE_ID = "episodeId"
     }
 }
 
-fun NavController.navigateToPlayer(seriesId: String) = navigate(PlayerRoute(seriesId))
+fun NavController.navigateToPlayer(
+    seriesId: String,
+    episodeId: String? = null,
+) = navigate(PlayerRoute(seriesId, episodeId))
 
 fun NavGraphBuilder.playerScreen(onBack: () -> Unit) {
     composable<PlayerRoute> {
