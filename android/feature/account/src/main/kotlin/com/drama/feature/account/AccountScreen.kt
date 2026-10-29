@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.drama.core.ui.theme.DramaSpacing
 
-/** Empty shell for account & settings (M-40..). Guest auth arrives in Sprint 2, login in Sprint 5. */
+/** Empty shell for account & settings (M-40..). Login, profile and settings arrive in sprint 5 (M-50..M-52), wallet and VIP in sprint 7. */
 @Composable
 fun AccountScreen(modifier: Modifier = Modifier) {
     Column(
@@ -25,6 +25,6 @@ fun AccountScreen(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Mon compte", style = MaterialTheme.typography.headlineMedium)
-        Text("Connexion, portefeuille et paramètres : à partir du Sprint 2.")
+        Text("Connexion, profil et paramètres arrivent au sprint 5 ; portefeuille et VIP au sprint 7.")
     }
 }

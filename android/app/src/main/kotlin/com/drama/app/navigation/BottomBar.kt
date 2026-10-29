@@ -36,7 +36,7 @@ data object ForYouRoute
 @Serializable
 data object MyListRoute
 
-/** Bottom navigation tabs. "Pour vous" (M-02) and "Ma liste" (M-16) are placeholders until sprint 4. */
+/** Bottom navigation tabs. "Pour vous" (M-02) and "Ma liste" (M-16) are placeholders until sprints 4 and 5. */
 enum class TopLevelTab(
     val route: Any,
     val label: String,
@@ -93,7 +93,7 @@ fun NavGraphBuilder.forYouPlaceholderScreen() {
 
 fun NavGraphBuilder.myListPlaceholderScreen() {
     composable<MyListRoute> {
-        PlaceholderScreen(title = "Ma liste", body = "Vos séries favorites apparaîtront ici (M-16, sprint 4).")
+        PlaceholderScreen(title = "Ma liste", body = "Vos séries favorites apparaîtront ici au sprint 5 (M-16).")
     }
 }
 
