@@ -18,13 +18,13 @@ Contrat partagé : `docs/api/admin-contract-v1.md`.
 | S03-BE-01 | BE | Admin séries (avancé) | Terminé, vérifié, commité |
 | S03-BE-02 | BE | Admin épisodes et upload (avancé) | Terminé, vérifié, commité |
 | S03-BE-04 | BE | Auth admin + TOTP (avancé) | Terminé, vérifié, commité |
-| S02-A1-01 | A1 | Couche réseau branchée sur l'API réelle, erreurs et retry | En cours |
-| S02-A1-02 | A1 | Compte invité au premier lancement, session DataStore | En cours |
-| S02-A1-03 | A1 | Room : progression, historique, cache catalogue | En cours |
-| S02-A1-04 | A1 | Firebase Crashlytics et Analytics (conditionnel au fichier google-services.json) | En cours |
+| S02-A1-01 | A1 | Couche réseau branchée sur l'API réelle, erreurs et retry | Terminé, vérifié, commité |
+| S02-A1-02 | A1 | Compte invité au premier lancement, session DataStore | Terminé, vérifié, commité |
+| S02-A1-03 | A1 | Room : progression, historique, cache catalogue | Terminé, vérifié, commité |
+| S02-A1-04 | A1 | Firebase Crashlytics et Analytics (conditionnel au fichier google-services.json) | Terminé, vérifié, commité |
 | S02-A2-01 | A2 | VerticalPager | Terminé au sprint 1 |
 | S02-A2-02 | A2 | Préchargement et SimpleCache | Terminé au sprint 1 |
-| S02-A2-03 | A2 | Contrôles : pause, avance/retour, barre de progression | En cours |
+| S02-A2-03 | A2 | Contrôles : pause, avance/retour, barre de progression | Terminé, vérifié, commité |
 | S03-WEB-03 | WEB | Catalogue : création et édition de série (avancé) | Terminé, vérifié, commité |
 | S04-WEB-01 | WEB | Upload direct des épisodes avec progression (avancé) | Terminé, vérifié, commité |
 
@@ -36,7 +36,7 @@ Contrat partagé : `docs/api/admin-contract-v1.md`.
 | S02-PM-03 | CGU, CGV, confidentialité | Brief au juriste |
 | S02-UX-01 | Maquettes haute fidélité | Designer |
 | S02-OPS-01 | CI/CD vers staging | Bloqué : hébergeur et domaine |
-| S02-A1-04 | Firebase | Déposer `google-services.json` dans `android/app/` |
+| S02-A1-04 | Firebase | Terminé, vérifié, commité |
 | S02-EXT-01 | Fournisseur vidéo | En attendant, épisodes de test locaux et worker ffmpeg |
 
 ## Décisions prises par le développeur en chef
@@ -52,6 +52,16 @@ upload direct d'un fichier 1080x1920 vers MinIO par URL pré-signée, transcodag
 statut READY après 4 s, manifeste HLS en 4 qualités servi par MinIO. Pas de fournisseur vidéo nécessaire pour
 développer les sprints 3 à 6.
 
-## Compte rendu de fin de sprint
+## Compte rendu de fin de sprint (29 octobre 2026)
 
-À compléter.
+Tous les tickets techniques du sprint 2 sont livrés, vérifiés et poussés, plus cinq tickets avancés des sprints 3 et 4.
+
+| Lot | Livré | Tests |
+| --- | --- | --- |
+| Backend | Auth admin TOTP, limitation de débit, catalogue admin, upload pré-signé, transcodage ffmpeg, OpenAPI v1 à 44 routes, métriques | 65 unitaires, 12 e2e, ingestion réelle jusqu'à READY |
+| Web | Fiche série complète, page épisodes avec upload en masse, suivi du transcodage, aperçu HLS | 55 Vitest, parcours réel validé jusqu'à l'upload |
+| Android | Session invité chiffrée, API réelle, cache Room, accueil et lecteur branchés au backend, contrôles complets, Firebase | 50 unitaires, migration instrumentée, parcours réel sur TECNO CM6 |
+
+Mesures lecteur sur téléphone contre le backend local : 938 ms à froid, 516 ms préchargé, reprise à la position serveur après fermeture forcée.
+
+Points reportés : upload reprenable (multipart) au sprint 4, Loki au staging, mapping d'un fournisseur de transcodage géré après S02-PM-01.
