@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_placeholder">Título, género, palabra clave…</string>
+    <string name="search_hint_empty">Busca una serie por título, género o palabra clave.</string>
+    <string name="search_recent_heading">Búsquedas recientes</string>
+    <string name="search_clear_all">Borrar todo</string>
+    <string name="search_remove_recent_cd">Eliminar la búsqueda %1$s</string>
+    <string name="search_suggestion_cd">Buscar %1$s</string>
+    <string name="search_no_results">No hay series para «%1$s».</string>
+    <string name="search_no_results_genre">No hay series para «%1$s» en %2$s.</string>
+    <string name="search_try">Prueba con:</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%1$d resultado</item>
+        <item quantity="many">%1$d resultados</item>
+        <item quantity="other">%1$d resultados</item>
+    </plurals>
+    <string name="search_error_coming_soon">La búsqueda llegará pronto.</string>
+    <string name="search_error_failed">No se pudo buscar.</string>
+</resources>

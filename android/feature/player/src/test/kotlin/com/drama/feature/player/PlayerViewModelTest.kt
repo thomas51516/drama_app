@@ -15,6 +15,7 @@ import com.drama.core.player.engine.PlaybackEngine
 import com.drama.core.player.engine.PlaybackEngineFactory
 import com.drama.core.player.engine.PlaybackEvent
 import com.drama.core.player.engine.PlaybackPosition
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.PlaySession
@@ -52,6 +53,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.drama.core.ui.R as CoreR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayerViewModelTest {
@@ -73,7 +75,7 @@ class PlayerViewModelTest {
             )
         }
 
-    private val getEpisodes = GetSeriesEpisodesUseCase { AppResult.Success(episodes) }
+    private var getEpisodes = GetSeriesEpisodesUseCase { AppResult.Success(episodes) }
     private val reported = mutableListOf<WatchProgress>()
     private val reportProgress =
         ReportProgressUseCase {
@@ -83,6 +85,7 @@ class PlayerViewModelTest {
     private var resumePositions = mutableMapOf<String, Long>()
     private val expiresAtByEpisode = mutableMapOf<String, Long>()
     private val subtitlesByEpisode = mutableMapOf<String, List<Subtitle>>()
+    private val playFailures = mutableMapOf<String, AppError>()
     private val settingsRepository = FakePlayerSettingsRepository()
     private var deviceLanguage = "fr"
     private val playCalls = mutableListOf<String>()
@@ -90,7 +93,10 @@ class PlayerViewModelTest {
         StartPlaybackUseCase { episodeId ->
             playCalls += episodeId
             val episode = episodes.first { it.id == episodeId }
-            if (episode.access == EpisodeAccess.LOCKED) {
+            val failure = playFailures[episodeId]
+            if (failure != null) {
+                AppResult.Failure(failure)
+            } else if (episode.access == EpisodeAccess.LOCKED) {
                 AppResult.Failure(AppError.Locked(episodeId, "s1", 10))
             } else {
                 val resume = resumePositions[episodeId] ?: 0L
@@ -191,9 +197,9 @@ class PlayerViewModelTest {
             advanceUntilIdle()
             assertEquals(3, playCalls.size)
             assertEquals(1, engine.restarted.size)
-            assertTrue(
-                viewModel.uiState.value.errorMessage!!
-                    .contains("ERROR_CODE_IO_BAD_HTTP_STATUS"),
+            assertEquals(
+                UiText.of(R.string.player_error_engine, "ERROR_CODE_IO_BAD_HTTP_STATUS"),
+                viewModel.uiState.value.errorMessage,
             )
         }
 
@@ -206,10 +212,42 @@ class PlayerViewModelTest {
             advanceUntilIdle()
             assertEquals(2, playCalls.size)
             assertTrue(engine.restarted.isEmpty())
-            assertTrue(
-                viewModel.uiState.value.errorMessage!!
-                    .contains("ERROR_CODE_IO_NETWORK_CONNECTION_FAILED"),
+            assertEquals(
+                UiText.of(R.string.player_error_engine, "ERROR_CODE_IO_NETWORK_CONNECTION_FAILED"),
+                viewModel.uiState.value.errorMessage,
             )
+        }
+
+    @Test
+    fun `series load failure surfaces a localised message`() =
+        runTest(dispatcher) {
+            getEpisodes = GetSeriesEpisodesUseCase { AppResult.Failure(AppError.Network()) }
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.isLoading)
+            assertTrue(state.episodes.isEmpty())
+            assertEquals(UiText.Res(CoreR.string.error_network_short), state.errorMessage)
+        }
+
+    @Test
+    fun `play resolution failures map to localised page messages`() =
+        runTest(dispatcher) {
+            playFailures["ep1"] = AppError.Server(503)
+            playFailures["ep2"] = AppError.Http(400)
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            assertEquals(
+                PageState.Failed(UiText.of(CoreR.string.error_server_short, 503)),
+                viewModel.uiState.value.pageState(0),
+            )
+            assertEquals(
+                PageState.Failed(UiText.Res(R.string.player_error_playback)),
+                viewModel.uiState.value.pageState(1),
+            )
+            assertTrue(engine.played.isEmpty())
         }
 
     @Test
@@ -485,7 +523,7 @@ class PlayerViewModelTest {
             assertEquals(2f, settingsRepository.state.value.speed)
             assertEquals(VideoQuality.P540, settingsRepository.state.value.quality)
             assertEquals("2x", viewModel.uiState.value.speedLabel)
-            assertEquals("540p", viewModel.uiState.value.qualityLabel)
+            assertEquals("540p", viewModel.uiState.value.manualQualityLabel)
             // unknown speeds are ignored
             viewModel.onSpeedSelected(3f)
             assertEquals(2f, engine.speed)
@@ -540,13 +578,13 @@ class PlayerViewModelTest {
             advanceUntilIdle()
             assertEquals("en", engine.activeSubtitle)
             assertEquals(SubtitleMode.Language("en"), settingsRepository.state.value.subtitles)
-            assertEquals("CC EN".removePrefix("CC "), viewModel.uiState.value.subtitleLabel)
+            assertEquals("EN", viewModel.uiState.value.subtitleCode)
 
             viewModel.onSubtitleSelected(SubtitleMode.Off)
             advanceUntilIdle()
             assertNull(engine.activeSubtitle)
             assertEquals(SubtitleMode.Off, settingsRepository.state.value.subtitles)
-            assertEquals("Off", viewModel.uiState.value.subtitleLabel)
+            assertNull(viewModel.uiState.value.subtitleCode)
         }
 
     @Test
@@ -564,7 +602,9 @@ class PlayerViewModelTest {
                 listOf(VideoQuality.AUTO, VideoQuality.P720, VideoQuality.P360),
                 viewModel.uiState.value.qualityOptions,
             )
-            assertEquals("Auto · 360p", viewModel.uiState.value.qualityLabel)
+            // Auto mode: the UI renders the localised "Auto · 360p" from these two fields.
+            assertNull(viewModel.uiState.value.manualQualityLabel)
+            assertEquals(360, viewModel.uiState.value.playingShortSide)
         }
 
     private class FakePlayerSettingsRepository : PlayerSettingsRepository {

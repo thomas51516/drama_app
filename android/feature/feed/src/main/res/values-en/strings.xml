@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_title">For you</string>
+    <string name="feed_empty">No previews yet.</string>
+    <string name="feed_tap_to_unmute">Tap to unmute</string>
+    <string name="feed_add_to_list">Add</string>
+    <string name="feed_likes_cd">%1$s likes</string>
+    <string name="feed_episode_title">Episode %1$d · %2$s</string>
+    <string name="feed_watch_series">Watch the series</string>
+    <string name="feed_paused">Paused</string>
+    <string name="feed_count_thousands">%1$sK</string>
+    <string name="feed_count_millions">%1$sM</string>
+
+    <string name="feed_error_load">Unable to load the feed.</string>
+    <string name="feed_playback_failed">Playback failed</string>
+    <string name="feed_playback_failed_reason">Playback failed (%1$s)</string>
+    <string name="feed_preview_unavailable">Preview unavailable</string>
+</resources>

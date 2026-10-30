@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -34,6 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,8 +48,12 @@ import com.drama.core.common.result.AppError
 import com.drama.core.ui.component.LoadingIndicator
 import com.drama.core.ui.component.OfflineBanner
 import com.drama.core.ui.component.PosterCard
+import com.drama.core.ui.text.UiText
+import com.drama.core.ui.text.asString
+import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Series
+import com.drama.core.ui.R as CoreR
 
 @Composable
 fun MyListScreen(
@@ -54,10 +63,12 @@ fun MyListScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
     LaunchedEffect(state.error) {
         val error = state.error ?: return@LaunchedEffect
+        val message = state.errorMessage ?: return@LaunchedEffect
         if (state.items.isNotEmpty() || error !is AppError.Http) {
-            snackbar.showSnackbar(error.toMessage())
+            snackbar.showSnackbar(message.asString(context))
             viewModel.onErrorShown()
         }
     }
@@ -89,10 +100,13 @@ fun MyListContent(
                 .statusBarsPadding(),
     ) {
         Text(
-            text = "Ma liste",
+            text = stringResource(CoreR.string.my_list),
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
+            modifier =
+                Modifier
+                    .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm)
+                    .semantics { heading() },
         )
         if (state.isLoading) {
             LoadingIndicator()
@@ -107,56 +121,67 @@ fun MyListContent(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 if (state.error != null && state.items.isNotEmpty()) {
-                    item(key = "offline", span = {
-                        androidx.compose.foundation.lazy.grid
-                            .GridItemSpan(maxLineSpan)
-                    }) {
-                        OfflineBanner(message = "Hors ligne : liste en cache", onRetry = onRefresh)
+                    item(key = "offline", span = { GridItemSpan(maxLineSpan) }) {
+                        OfflineBanner(message = stringResource(R.string.mylist_offline_cached), onRetry = onRefresh)
                     }
                 }
                 if (state.showEmpty) {
-                    item(key = "empty", span = {
-                        androidx.compose.foundation.lazy.grid
-                            .GridItemSpan(maxLineSpan)
-                    }) {
-                        EmptyList(error = state.error)
+                    item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
+                        EmptyList(message = state.errorMessage)
                     }
                 }
                 items(state.items, key = { it.id }) { series ->
-                    Box {
-                        PosterCard(
-                            title = series.title,
-                            imageUrl = series.posterVerticalUrl,
-                            subtitle = "${series.episodeCount} ép.",
-                            onClick = { onOpenSeries(series.id) },
-                            width = CELL_MIN,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        IconButton(
-                            onClick = { onRemove(series) },
-                            modifier =
-                                Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(DramaSpacing.xs)
-                                    .size(32.dp)
-                                    .background(Color.Black.copy(alpha = 0.55f), MaterialTheme.shapes.extraSmall),
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Retirer de Ma liste",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
+                    MyListCell(series = series, onOpenSeries = onOpenSeries, onRemove = onRemove)
                 }
             }
         }
     }
 }
 
+/** Poster card with a remove button: 48 dp touch target drawn as a 32 dp translucent square. */
 @Composable
-private fun EmptyList(error: AppError?) {
+private fun MyListCell(
+    series: Series,
+    onOpenSeries: (String) -> Unit,
+    onRemove: (Series) -> Unit,
+) {
+    val episodeCount = series.episodeCount
+    Box {
+        PosterCard(
+            title = series.title,
+            imageUrl = series.posterVerticalUrl,
+            subtitle = pluralStringResource(CoreR.plurals.episode_count_short, episodeCount, episodeCount),
+            onClick = { onOpenSeries(series.id) },
+            width = CELL_MIN,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        IconButton(
+            onClick = { onRemove(series) },
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(DramaSizes.touchTarget),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(REMOVE_VISUAL_SIZE)
+                        .background(Color.Black.copy(alpha = 0.55f), MaterialTheme.shapes.extraSmall),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.mylist_remove_cd, series.title),
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyList(message: UiText?) {
     Column(
         modifier =
             Modifier
@@ -168,44 +193,26 @@ private fun EmptyList(error: AppError?) {
             Icons.Default.FavoriteBorder,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(DramaSizes.touchTarget),
         )
         Spacer(Modifier.height(DramaSpacing.md))
         Text(
-            text = "Votre liste est vide",
+            text = stringResource(R.string.mylist_empty_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.semantics { heading() },
         )
         Spacer(Modifier.height(DramaSpacing.xs))
         Text(
-            text =
-                if (error != null) {
-                    error.toMessage()
-                } else {
-                    "Appuyez sur le cœur d'une série pour la retrouver ici."
-                },
+            text = message?.asString() ?: stringResource(R.string.mylist_empty_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        Row { Spacer(Modifier.height(DramaSpacing.lg)) }
+        Spacer(Modifier.height(DramaSpacing.lg))
     }
 }
 
-private fun AppError.toMessage(): String =
-    when (this) {
-        is AppError.Network -> "Pas de connexion. Votre liste sera synchronisée au retour du réseau."
-        is AppError.Server -> "Le service est indisponible ($code)."
-        is AppError.Http ->
-            if (code ==
-                HTTP_NOT_IMPLEMENTED
-            ) {
-                "La synchronisation arrive bientôt."
-            } else {
-                "Synchronisation impossible."
-            }
-        else -> "Synchronisation impossible."
-    }
-
-private const val HTTP_NOT_IMPLEMENTED = 501
 private val CELL_MIN = 108.dp
+private val REMOVE_VISUAL_SIZE = 32.dp

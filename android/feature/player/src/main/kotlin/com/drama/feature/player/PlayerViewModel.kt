@@ -1,5 +1,6 @@
 package com.drama.feature.player
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,6 +18,7 @@ import com.drama.core.player.engine.PlaybackEngine
 import com.drama.core.player.engine.PlaybackEngineFactory
 import com.drama.core.player.engine.PlaybackEvent
 import com.drama.core.player.engine.TrackSelectionMapper
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeNavigation
 import com.drama.domain.model.PlaySession
@@ -40,6 +42,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.drama.core.ui.R as CoreR
 
 /**
  * Vertical player (S02-A2-01..03 + real playback flow).
@@ -57,6 +60,7 @@ import javax.inject.Inject
  *   it becomes current; a neighbour is re-requested when its URL is within [SignedUrlPolicy.REFRESH_MARGIN_MS]
  *   of expiry; a timer re-requests the playing episode just before expiry so the attached source is fresh; and
  *   an HTTP 403 from the media host triggers one transparent re-resolve + restart at the same position.
+ * - Texts are [UiText] so the view model stays free of Android resources (S05-A2-03); the composables resolve them.
  */
 @HiltViewModel
 class PlayerViewModel
@@ -191,7 +195,7 @@ class PlayerViewModel
                         uiStateFlow.update {
                             it.copy(
                                 isLoading = false,
-                                errorMessage = result.error.toUserMessage("Impossible de charger la série"),
+                                errorMessage = result.error.toUserMessage(R.string.player_error_load_series),
                             )
                         }
                     }
@@ -396,7 +400,7 @@ class PlayerViewModel
                     }
                 return
             }
-            uiStateFlow.update { it.copy(errorMessage = "Erreur de lecture : ${event.message}") }
+            uiStateFlow.update { it.copy(errorMessage = UiText.of(R.string.player_error_engine, event.message)) }
         }
 
         private fun onResolveFailed(
@@ -408,7 +412,7 @@ class PlayerViewModel
             val page =
                 when (error) {
                     is AppError.Locked -> PageState.Locked(error.coinCost ?: episode.coinCost.takeIf { it > 0 })
-                    else -> PageState.Failed(error.toUserMessage("Lecture impossible"))
+                    else -> PageState.Failed(error.toUserMessage(R.string.player_error_playback))
                 }
             uiStateFlow.update { it.copy(pages = it.pages + (index to page)) }
             if (error is AppError.Locked && playWhenReady) {
@@ -528,13 +532,15 @@ class PlayerViewModel
             engine.release()
         }
 
-        private fun AppError.toUserMessage(fallback: String): String =
+        private fun AppError.toUserMessage(
+            @StringRes fallback: Int,
+        ): UiText =
             when (this) {
-                is AppError.Network -> "Pas de connexion"
-                is AppError.Unauthenticated -> "Session expirée, réessayez"
-                is AppError.NotFound -> "Contenu introuvable"
-                is AppError.Server -> "Service indisponible ($code)"
-                else -> fallback
+                is AppError.Network -> UiText.Res(CoreR.string.error_network_short)
+                is AppError.Unauthenticated -> UiText.Res(CoreR.string.error_session_expired)
+                is AppError.NotFound -> UiText.Res(CoreR.string.error_not_found)
+                is AppError.Server -> UiText.of(CoreR.string.error_server_short, code)
+                else -> UiText.Res(fallback)
             }
 
         companion object {

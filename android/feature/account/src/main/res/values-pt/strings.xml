@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_title">Perfil</string>
+    <string name="account_title_phone">Telefone</string>
+    <string name="account_title_otp">Código de verificação</string>
+    <string name="account_title_register">Criar uma conta</string>
+    <string name="account_title_login">Entrar</string>
+    <string name="account_title_edit_profile">Editar perfil</string>
+    <string name="account_title_settings">Configurações</string>
+
+    <string name="account_guest_headline">Criar uma conta ou entrar</string>
+    <string name="account_guest_body">Você está assistindo como convidado. Vincule uma conta para manter seu histórico, seus favoritos e suas moedas em todos os seus aparelhos.</string>
+    <string name="account_google">Continuar com o Google</string>
+    <string name="account_google_unconfigured">Não configurado</string>
+    <string name="account_phone">Continuar com meu número de telefone</string>
+    <string name="account_phone_subtitle">Código de 6 dígitos por SMS</string>
+    <string name="account_email">Continuar com meu e-mail</string>
+    <string name="account_email_subtitle">Cadastro ou acesso com senha</string>
+    <string name="account_guest_id">Identificador de convidado: %1$s…</string>
+    <string name="account_avatar_guest">Avatar de convidado</string>
+    <string name="account_avatar">Avatar de %1$s</string>
+
+    <string name="account_phone_intro">Enviaremos um código de 6 dígitos por SMS.</string>
+    <string name="account_country_picker">Escolher o código do país</string>
+    <string name="account_phone_label">Número de telefone</string>
+    <string name="account_phone_placeholder">90 00 00 00</string>
+    <string name="account_phone_invalid">Número inválido</string>
+    <string name="account_request_code">Receber o código</string>
+    <string name="account_code_sent_to">Código enviado para %1$s</string>
+    <string name="account_code_label">Código de 6 dígitos</string>
+    <string name="account_validate">Confirmar</string>
+    <string name="account_resend_code">Reenviar o código</string>
+    <string name="account_resend_code_in">Reenviar o código em %1$d s</string>
+    <string name="account_otp_send_failed">Não foi possível enviar o código</string>
+
+    <string name="account_have_account">Já tenho uma conta</string>
+    <string name="account_email_label">Endereço de e-mail</string>
+    <string name="account_password_label">Senha (mínimo de %1$d caracteres)</string>
+    <string name="account_create_my_account">Criar minha conta</string>
+    <string name="account_email_invalid">Endereço de e-mail inválido</string>
+    <string name="account_password_too_short">Senha: mínimo de %1$d caracteres</string>
+
+    <string name="account_profile_loading">Carregando…</string>
+    <string name="account_default_label">Minha conta</string>
+    <string name="account_provider_google">Google</string>
+    <string name="account_provider_phone">Telefone</string>
+    <string name="account_provider_email">E-mail</string>
+    <string name="account_provider_none">Conta</string>
+    <string name="account_row_email">E-mail</string>
+    <string name="account_row_phone">Telefone</string>
+    <string name="account_row_country">País</string>
+    <string name="account_row_language">Idioma</string>
+    <string name="account_row_status">Status</string>
+    <string name="account_status_vip">VIP</string>
+    <string name="account_status_standard">Padrão</string>
+    <string name="account_value_missing">—</string>
+    <string name="account_edit_profile">Editar o nome</string>
+    <string name="account_logout">Sair</string>
+    <string name="account_delete">Excluir minha conta</string>
+    <string name="account_display_name">Nome exibido</string>
+
+    <string name="account_delete_title">Excluir minha conta?</string>
+    <string name="account_delete_body">Sua conta será desativada imediatamente e seus dados apagados em 30 dias. Seu histórico, seus favoritos e suas moedas serão perdidos.</string>
+
+    <string name="account_msg_google_failed">Não foi possível entrar com o Google</string>
+    <string name="account_msg_profile_updated">Perfil atualizado</string>
+    <string name="account_msg_update_failed">Não foi possível atualizar</string>
+    <string name="account_msg_logged_out">Você saiu. Continua como convidado.</string>
+    <string name="account_msg_logout_incomplete">Saída incompleta</string>
+    <string name="account_msg_deleted">Conta excluída: seus dados serão apagados em 30 dias.</string>
+    <string name="account_msg_delete_failed">Não foi possível excluir</string>
+    <string name="account_msg_sign_in_failed">Não foi possível entrar</string>
+    <string name="account_msg_linked">Conta vinculada, seu histórico foi mantido</string>
+    <string name="account_msg_signed_in">Conectado</string>
+    <string name="account_err_invalid_credentials">Credenciais incorretas</string>
+    <string name="account_err_email_taken">Este e-mail já está em uso</string>
+    <string name="account_err_otp_invalid">Código incorreto ou expirado</string>
+    <string name="account_err_otp_attempts">Muitas tentativas, peça um novo código</string>
+    <string name="account_err_google_disabled">O acesso com o Google não está configurado</string>
+
+    <string name="settings_section">Configurações</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_hint">Aplicado imediatamente a todo o aplicativo.</string>
+    <string name="settings_notifications">Notificações</string>
+    <string name="settings_notifications_hint">Escolha o que o DRAMA pode enviar para você.</string>
+    <string name="settings_notif_new_episodes">Novos episódios</string>
+    <string name="settings_notif_new_episodes_hint">Quando uma série da Minha lista publica um episódio.</string>
+    <string name="settings_notif_offers">Ofertas</string>
+    <string name="settings_notif_offers_hint">Promoções de moedas e VIP.</string>
+    <string name="settings_notif_checkin">Lembrete diário</string>
+    <string name="settings_notif_checkin_hint">Um lembrete do seu bônus diário.</string>
+    <string name="settings_notif_permission_off">As notificações do DRAMA estão desativadas neste telefone.</string>
+    <string name="settings_notif_permission_allow">Permitir notificações</string>
+    <string name="settings_notif_permission_system">Abrir as configurações do telefone</string>
+    <string name="settings_data_saver">Economia de dados</string>
+    <string name="settings_help">Ajuda</string>
+    <string name="settings_help_hint">Perguntas frequentes e contato</string>
+    <string name="settings_my_notifications">Minhas notificações</string>
+    <string name="settings_my_notifications_hint">Histórico de mensagens recebidas</string>
+    <string name="settings_msg_language_saved">Idioma salvo</string>
+    <string name="settings_msg_language_local_only">Idioma aplicado neste aparelho (sem conexão)</string>
+    <string name="settings_msg_prefs_saved">Preferências salvas</string>
+    <string name="settings_msg_prefs_failed">Preferências não salvas, tente novamente</string>
+    <string name="settings_open">Abrir as configurações</string>
+    <string name="settings_language_value">Idioma: %1$s</string>
+</resources>

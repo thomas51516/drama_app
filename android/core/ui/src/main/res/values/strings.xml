@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared actions -->
+    <string name="action_retry">Réessayer</string>
+    <string name="action_back">Retour</string>
+    <string name="action_close">Fermer</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="action_save">Enregistrer</string>
+    <string name="action_send">Envoyer</string>
+    <string name="action_share">Partager</string>
+    <string name="action_watch">Regarder</string>
+    <string name="action_clear">Effacer</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_see_all">Tout voir</string>
+
+    <!-- Shared states -->
+    <string name="state_loading">Chargement…</string>
+    <string name="state_offline_cached">Hors ligne : contenu en cache</string>
+    <string name="state_offline">Vous êtes hors ligne. Vérifiez votre connexion puis réessayez.</string>
+    <string name="state_coming_soon">Bientôt disponible</string>
+
+    <!-- Shared errors (AppError) -->
+    <string name="error_network">Pas de connexion. Vérifiez le réseau puis réessayez.</string>
+    <string name="error_network_short">Pas de connexion</string>
+    <string name="error_server">Le service est indisponible (%1$d). Réessayez dans un instant.</string>
+    <string name="error_server_short">Service indisponible (%1$d)</string>
+    <string name="error_session_expired">Session expirée, réessayez.</string>
+    <string name="error_not_found">Contenu introuvable</string>
+    <string name="error_rate_limited">Trop de demandes, réessayez dans quelques minutes</string>
+    <string name="error_generic">Une erreur est survenue. Réessayez.</string>
+
+    <!-- Shared vocabulary -->
+    <string name="my_list">Ma liste</string>
+    <string name="my_list_add">Ajouter à Ma liste</string>
+    <string name="my_list_remove">Retirer de Ma liste</string>
+    <string name="like">J\'aime</string>
+    <string name="unlike">Je n\'aime plus</string>
+    <string name="episode_number">Épisode %1$d</string>
+    <string name="episode_short">Ép. %1$d</string>
+    <plurals name="episode_count">
+        <item quantity="one">%1$d épisode</item>
+        <item quantity="other">%1$d épisodes</item>
+    </plurals>
+    <plurals name="episode_count_short">
+        <item quantity="one">%1$d ép.</item>
+        <item quantity="other">%1$d ép.</item>
+    </plurals>
+    <plurals name="coin_count">
+        <item quantity="one">%1$d pièce</item>
+        <item quantity="other">%1$d pièces</item>
+    </plurals>
+    <string name="selected">Sélectionné</string>
+    <string name="search">Rechercher</string>
+    <string name="progress_percent">Progression : %1$d %%</string>
+</resources>

@@ -2,6 +2,7 @@ package com.drama.feature.home
 
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.Resource
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.ContinueWatchingItem
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
@@ -29,6 +30,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.drama.core.ui.R as CoreR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -65,8 +67,13 @@ class HomeViewModelTest {
             )
         assertEquals(listOf("trending", "genre:romance"), rows.map { it.key })
         assertEquals(listOf(HomeRowType.TRENDING, HomeRowType.GENRE), rows.map { it.type })
-        assertEquals("s1", rows[0].cards.single().seriesId)
-        assertNull(rows[0].cards.single().resumeEpisodeId)
+        assertEquals(UiText.Raw("Tendances"), rows[0].title)
+        val card = rows[0].cards.single()
+        assertEquals("s1", card.seriesId)
+        assertNull(card.resumeEpisodeId)
+        assertNull(card.badge)
+        // "12 ép. · Romance": the short episode count plural with the first genre capitalised.
+        assertEquals(UiText.Plural(R.plurals.home_card_meta, 12, listOf(12, "Romance")), card.subtitle)
     }
 
     @Test
@@ -90,11 +97,13 @@ class HomeViewModelTest {
                     ),
             )
         assertEquals(HomeRowType.CONTINUE_WATCHING, rows.first().type)
-        assertEquals("Continuer à regarder", rows.first().title)
+        assertEquals(UiText.Res(R.string.home_continue_watching), rows.first().title)
         // newest first, completed entries excluded
         assertEquals(listOf("s3", "s2"), rows.first().cards.map { it.seriesId })
         assertEquals(0.5f, rows.first().cards[0].progress)
         assertEquals("ep3-1", rows.first().cards[0].resumeEpisodeId)
+        assertEquals(UiText.of(CoreR.string.episode_number, 1), rows.first().cards[0].subtitle)
+        assertEquals(UiText.of(CoreR.string.episode_short, 1), rows.first().cards[0].badge)
         assertEquals(0.25f, rows.first().cards[1].progress)
         assertEquals("trending", rows[1].key)
     }
@@ -123,12 +132,13 @@ class HomeViewModelTest {
             )
         assertEquals(listOf("trending", "continue_watching"), rows.map { it.key })
         val cw = rows[1]
-        assertEquals("Reprendre", cw.title)
+        assertEquals(UiText.Raw("Reprendre"), cw.title)
         // local s2 wins over the server's s2; server-only s9 follows
         assertEquals(listOf("s2", "s9"), cw.cards.map { it.seriesId })
         assertEquals("ep2-3", cw.cards[0].resumeEpisodeId)
         assertEquals("ep9-2", cw.cards[1].resumeEpisodeId)
         assertEquals(0.25f, cw.cards[1].progress)
+        assertEquals(UiText.of(CoreR.string.episode_number, 2), cw.cards[1].subtitle)
     }
 
     @Test

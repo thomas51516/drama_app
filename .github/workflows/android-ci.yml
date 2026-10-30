@@ -159,6 +159,17 @@ jobs:
           -PdramaVersionCode=${{ steps.config.outputs.version_code }}
           -PdramaAppLinksHost=${DRAMA_APP_LINKS_HOST:-links.drama.example}
 
+      # S06-A2-03: download size estimate (spec §7: < 30 MB). bundletool `get-size total` on the universal
+      # device-targeted split set; the job fails when the largest configuration exceeds the budget.
+      - name: Check AAB download size (bundletool)
+        run: |
+          curl -sL -o "$RUNNER_TEMP/bundletool.jar" https://github.com/google/bundletool/releases/download/1.18.1/bundletool-all-1.18.1.jar
+          java -jar "$RUNNER_TEMP/bundletool.jar" build-apks --bundle=app/build/outputs/bundle/release/app-release.aab --output="$RUNNER_TEMP/app.apks" --overwrite ${{ steps.config.outputs.signed == 'true' && format('--ks={0} --ks-pass=pass:{1} --ks-key-alias={2} --key-pass=pass:{3}', env.DRAMA_KEYSTORE_PATH, env.DRAMA_KEYSTORE_PASSWORD, env.DRAMA_KEY_ALIAS, env.DRAMA_KEY_PASSWORD) || '' }}
+          java -jar "$RUNNER_TEMP/bundletool.jar" get-size total --apks="$RUNNER_TEMP/app.apks" --dimensions=ABI,SCREEN_DENSITY | tee "$RUNNER_TEMP/size.csv"
+          max=$(tail -n +2 "$RUNNER_TEMP/size.csv" | awk -F, '{print $NF}' | sort -n | tail -1)
+          echo "Largest download size: $max bytes"
+          test "$max" -le 31457280 || { echo "::error::AAB download size exceeds 30 MB"; exit 1; }
+
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:

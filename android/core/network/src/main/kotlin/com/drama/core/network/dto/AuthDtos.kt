@@ -114,6 +114,8 @@ data class AuthUserDto(
     val phone: String? = null,
     val providers: List<String> = emptyList(),
     val deletionScheduledAt: String? = null,
+    /** v1.3: push preferences (absent on servers before the sprint 5 contract = all true). */
+    val notificationPreferences: NotificationPreferencesDto? = null,
 )
 
 @Serializable

@@ -64,7 +64,7 @@ chaque push, et le job `bundle` (AAB release, signature, Firebase App Distributi
 | --- | --- | --- |
 | `:app` | application | `@HiltAndroidApp`, activité unique, `NavHost` + barre de navigation (Accueil, Pour vous, Ma liste, Profil), thème M3, edge-to-edge, liaisons Hilt des abstractions `core:common` (`AndroidDeviceLocale` pour `Accept-Language` / `X-Country`). |
 | `:core:common` | Kotlin/JVM pur | `AppResult`/`AppError`, `DispatcherProvider`, façade `Logger`, `AnalyticsEvent`, `ShareLinkProvider` (liens de partage), `AuthConfig` (identifiant Google). |
-| `:core:ui` | bibliothèque Compose | `DramaTheme` (Material 3, thème sombre provisoire), jetons (`DramaColors`, `DramaSpacing`, `DramaSizes`), composants partagés (`PosterCard`, `PosterImage` Coil, `SkeletonBox`, `OfflineBanner`, `ErrorState`). |
+| `:core:ui` | bibliothèque Compose | `DramaTheme` (Material 3, thème sombre provisoire), jetons (`DramaColors`, `DramaSpacing`, `DramaSizes`), composants partagés (`PosterCard`, `PosterImage` Coil, `SkeletonBox`, `OfflineBanner`, `ErrorState`), `UiText` et les chaînes partagées en FR/EN/ES/PT. |
 | `:core:network` | bibliothèque | Retrofit (`AuthApi`, `AccountAuthApi`, `UserApi`, `CatalogApi`, `PlaybackApi`) + OkHttp + kotlinx.serialization, DTO de l'OpenAPI v1.2 (contrat `docs/api/public-contract-v1.2.md`), `ApiErrorMapper`, `SessionManager` (+ `adopt` pour le rattachement), `AuthInterceptor`, `TokenAuthenticator`, `RetryInterceptor`, `LocaleHeadersInterceptor`, client `@LinkClient` (porteur sans authenticator pour `/auth/*`). |
 | `:core:database` | bibliothèque | Room v4 (`watch_progress`, `watch_history`, cache catalogue, `home_banners`, `favorites`, `series.likes/liked`), DataStore `user_preferences` (vitesse, qualité, sous-titres, recherches récentes) et `session` (jetons chiffrés par le Keystore). |
 | `:core:player` | bibliothèque | Moteur Media3 partagé par le lecteur et le flux : `PlaybackEngine` / `ExoPlaybackEngine` (pool de lecteurs, préchargement, cache), `TrackSelectionMapper`. Seul module qui touche ExoPlayer. |
@@ -76,7 +76,10 @@ chaque push, et le job `bundle` (AAB release, signature, Firebase App Distributi
 | `:feature:feed` | feature | Flux « Pour vous » M-02 : `VerticalPager` plein écran sur `GET /feed`, extraits signés en lecture automatique (muet, un appui pour le son), cœur, « Regarder la série », pagination par curseur. |
 | `:feature:search` | feature | Recherche M-03 : suggestions (`GET /search/suggest`, anti-rebond 300 ms), résultats (`GET /search`), puces de genre, recherches récentes (10 max, effaçables). |
 | `:feature:mylist` | feature | Ma liste M-16 : `GET /me/favorites`, pull-to-refresh, retrait d'une série. |
-| `:feature:account` | feature | Profil M-50/M-51/M-52 : connexion Google (Credential Manager), téléphone + OTP, e-mail ; rattachement du compte invité ; carte de profil, modification du nom et de la langue, déconnexion, suppression. |
+| `:feature:account` | feature | Profil M-50/M-51/M-52 : connexion Google (Credential Manager), téléphone + OTP, e-mail ; rattachement du compte invité ; carte de profil, modification du nom, déconnexion, suppression ; **Paramètres** (`SettingsViewModel`) : langue appliquée immédiatement, préférences de notification, entrées Aide et Mes notifications. |
+| `:feature:help` | feature | Centre d'aide M-53 : FAQ (`GET /help/faq?lang`) par catégorie avec recherche, formulaire « Nous contacter » (`POST /help/contact`), « Mes demandes » (`GET /help/tickets`), état hors ligne. |
+| `:feature:notifications` | feature | Historique in-app M-54 (`GET /me/notifications`), marquage lu, routage vers la série / l'épisode / l'aide. |
+| `:benchmark` | test (macrobenchmark) | `BaselineProfileGenerator` et `StartupBenchmark` contre le type de build `benchmark` de `:app` (S06-A2-02). |
 | `build-logic/` | plugins de convention | `drama.android.application|library|compose|feature`, `drama.hilt`, `drama.jvm.library`. |
 
 Sens des dépendances : `app → feature:* → core:ui / core:common / domain` ; `app → data → domain / core:*`.
@@ -390,6 +393,117 @@ progression et favoris locaux sont conservés, et `linked=true` affiche « Compt
 conservé ». Un compte connecté voit sa carte de profil, peut modifier nom et langue (`PATCH /me`), se déconnecter
 (`POST /auth/logout` puis nouvelle session invitée) ou supprimer son compte (`DELETE /me`, confirmation, suppression
 différée de 30 jours). Événements `login{provider, linked}` / `signup{provider, linked}`.
+
+## Sprint 5 : paramètres, langues, aide, notifications push, accessibilité et performance
+
+### Paramètres et langue (S05-A1-03, M-52)
+
+Profil → « Langue · Notifications » ouvre l'écran Paramètres (invité ou compte) :
+
+- **Langue** (Français, English, Español, Português) : appliquée immédiatement à toute l'application par les
+  locales par application (`AppCompatDelegate.setApplicationLocales`, `MainActivity` est une `AppCompatActivity`,
+  `android:localeConfig` + `autoStoreLocales` : le choix survit au redémarrage et apparaît aussi dans
+  Réglages Android → Langues de l'application sur Android 13+), puis envoyée au serveur (`PATCH /me {language}`).
+  `Accept-Language` suit la langue choisie (`AndroidDeviceLocale` lit d'abord la locale de l'app) et le cache
+  catalogue est vidé pour recharger les rangées traduites. Hors ligne, la langue reste appliquée localement.
+- **Notifications** : trois interrupteurs (Nouveaux épisodes, Offres, Rappel quotidien) → `PATCH /me
+  {notificationPreferences}`, optimistes avec retour arrière. Quand les notifications sont coupées côté système,
+  l'écran le dit et propose « Autoriser les notifications » (demande `POST_NOTIFICATIONS` sur Android 13+) ou
+  l'ouverture des réglages du téléphone.
+- Économiseur de données (M-17) : interrupteur prévu, masqué (`SettingsUiState.showDataSaver = false`).
+
+### Internationalisation (S05-A2-03)
+
+- Chaque module de fonctionnalité et `:core:ui` portent leurs chaînes dans `res/values/strings.xml` (français,
+  source) et `values-en`, `values-es`, `values-pt` (mêmes clés ; Lint `MissingTranslation` est bloquant).
+  Clés préfixées par module (`home_`, `series_`, `player_`, `account_`, `settings_`, `help_`, `notifications_`),
+  vocabulaire commun dans `core/ui` (`action_*`, `state_*`, `error_*`, pluriels `episode_count`, `coin_count`).
+- Les view models n'émettent jamais de texte brut : `UiText` (`Res`, `Plural`, `Raw` pour un message serveur),
+  résolu dans les composables (`asString()`), ce qui garde les tests JVM lisibles (`UiText.Res(R.string.x)`).
+- Dates relatives via `DateUtils.getRelativeTimeSpanString`, nombres via `String.format(Locale.getDefault())`,
+  noms de pays via `java.util.Locale` : tout suit la langue de l'app.
+- Le bundle n'a plus de split par langue (les quatre tables tiennent en quelques dizaines de Ko) pour que le
+  sélecteur in-app fonctionne sans téléchargement différé.
+
+### Centre d'aide (S06-A1-01, M-53)
+
+Profil → « Aide » : trois onglets. **FAQ** (`GET /help/faq?lang=<langue de l'app>`, repli fr côté serveur) groupée
+par catégorie, réponses dépliables, recherche locale insensible aux accents ; **Nous contacter** (catégorie parmi
+compte / pièces / VIP / paiement / lecture / contenu / autre, sujet, message, e-mail facultatif →
+`POST /help/contact`, confirmation avec le numéro de demande, limite serveur de 5 par jour affichée comme
+« trop de demandes ») ; **Mes demandes** (`GET /help/tickets`, statut ouvert / répondu / fermé, fil des messages).
+Hors ligne : état avec « Réessayer » ; backend sans l'endpoint (404/501) : état vide « bientôt disponible ».
+
+### Notifications push (S06-A1-02, M-54)
+
+- **Jeton FCM** : `PUT /me/devices/push {token, platform, locale, appVersion}` à chaque changement d'utilisateur
+  (démarrage invité, connexion, déconnexion → nouvel invité) et à chaque `onNewToken`, une seule fois par couple
+  (jeton, utilisateur) (`DefaultPushRepository`, mémorisé dans DataStore) ; `DELETE /me/devices/push/{token}` juste
+  avant la déconnexion ou la suppression du compte, tant que le porteur de l'utilisateur sortant est valide.
+  Logcat : `adb logcat -s Push AppStartup` → `push token registered user=… token=…`.
+- **Canaux** : Nouveaux épisodes, Offres, Rappels, Support (créés au démarrage, noms localisés).
+- **Permission** `POST_NOTIFICATIONS` (Android 13+) : demandée après le premier ajout à Ma liste (fiche série) ou
+  depuis l'écran Paramètres, jamais au lancement ; un seul rappel (`PushRepository.permissionPromptShown`).
+- **Réception** : `DramaMessagingService`. App visible → snackbar avec action « Voir » ; sinon notification sur le
+  canal du `type` (`new_episode`, `offer`/`campaign`, `checkin_reminder`, `support_reply`). Les notifications
+  affichées par FCM lui-même (bloc `notification` + app en arrière-plan) sont aussi routées au tap grâce aux
+  extras `type` / `notificationId` / `seriesId` / `episodeId`.
+- **Routage** (`NotificationRouting`, :domain) : `deepLink` explicite, sinon `seriesId`+`episodeId` → lecteur
+  (`drama://player/{seriesId}/{episodeId}`), `seriesId` → fiche (`drama://series/{id}`), `support_reply` → aide
+  (`drama://help`), offres / rappels → `drama://notifications`. Au tap : `push_open` (Firebase + `POST /events`) et
+  `POST /me/notifications/{id}/read`.
+- **Mes notifications** : Profil → « Mes notifications » (`GET /me/notifications`, pagination, non lues en gras,
+  rafraîchi à chaque push reçu).
+- Test manuel avec le fournisseur `log` du backend : déclencher une campagne ou publier un épisode d'une série en
+  favori, puis ouvrir Profil → Mes notifications (l'historique in-app est alimenté même sans FCM) ; avec
+  `PUSH_PROVIDER=fcm` la notification arrive sur l'appareil.
+
+### Accessibilité (S06-A1-03) — audit
+
+| Critère | État |
+| --- | --- |
+| Libellés lecteur d'écran | Toutes les icônes et boutons ont un `contentDescription` (null uniquement pour les icônes décoratives à côté d'un texte) ; les lignes cliquables fusionnent leurs descendants (`mergeDescendants`) avec un `Role` ; cartes d'affiche annoncées « titre, sous-titre, progression » ; cellules d'épisode « Épisode N, gratuit / débloqué / verrouillé, N pièces ». |
+| Ordre TalkBack | Accueil : titre (heading) → recherche → bandeau hors ligne → bannières → rangées. Fiche série : retour / partager / Ma liste → titre → métadonnées → bouton principal → J'aime → synopsis → grille. Lecteur : barre du haut (retour, épisode, vitesse, qualité, sous-titres, partager, réglages) → surface vidéo (état lecture/pause, actions personnalisées lecture/pause, +10 s, −10 s) → titre → son → barre de progression (`progressBarRangeInfo`, `setProgress`). |
+| Cibles tactiles ≥ 48 dp | `DramaSizes.touchTarget` sur boutons, puces, lignes de réglage, cœur, retrait de Ma liste, puces du lecteur. |
+| Taille de police 200 % | Conteneurs de texte en `heightIn(min)` et `FlowRow`, pas de hauteur fixe ; vérifié sur accueil, fiche série et compte (Réglages → Taille de police au maximum, `adb shell settings put system font_scale 2.0`). |
+| Contrastes | Texte principal `#F7F7FA` sur `#09090C` ≈ 18:1 ; secondaire `#9A9AA8` ≈ 7,3:1 ; accent `#FF3B6B` sur noir ≈ 5,1:1 (≥ 4,5:1, utilisé pour les libellés d'action) ; or `#F2B33D` ≈ 10:1 ; vert `#3DD68C` ≈ 10:1. Aucun ajustement nécessaire. |
+| Interrupteurs et radios | Lignes entières `toggleable` / `selectable` avec `Role.Switch` / `Role.RadioButton` (un seul nœud, état annoncé). |
+| Lecteur annoncé | Chips « Vitesse de lecture : 1,5x », « Qualité : Auto », « Sous-titres : désactivés » ; fin d'épisode en `liveRegion`. |
+
+### Performance (S06-A2-01/02/03)
+
+Type de build `benchmark` sur `:app` (bytecode release + R8, clé de debug, URLs de dev, HTTP en clair autorisé,
+`profileable`) ; `:benchmark` (macrobenchmark) exécute `BaselineProfileGenerator` (profil de démarrage + baseline,
+copié dans `app/src/main/baseline-prof.txt` et compilé par `profileinstaller`) et `StartupBenchmark`.
+
+```bash
+# profil : généré sur l'émulateur API 36 (user build ≥ 33 accepté), copié dans app/src/main/baseline-prof.txt
+./gradlew :app:assembleBenchmark
+./gradlew :benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.drama.benchmark.BaselineProfileGenerator
+cp benchmark/build/outputs/connected_android_test_additional_output/benchmark/connected/*/BaselineProfileGenerator_generate-baseline-prof.txt app/src/main/baseline-prof.txt
+# démarrage à froid (émulateur entrée de gamme API 29, 2 Go, 2 cœurs, 320 dpi, GPU logiciel)
+adb shell am force-stop com.drama.app && adb shell am start -W -n com.drama.app/com.drama.app.MainActivity
+# taille de téléchargement
+java -jar bundletool.jar build-apks --bundle=app/build/outputs/bundle/release/app-release.aab --output=app.apks
+java -jar bundletool.jar get-size total --apks=app.apks --dimensions=ABI,SCREEN_DENSITY
+```
+
+Première image vidéo : le moteur force la rendition la plus basse jusqu'à la première image rendue
+(`setForceLowestBitrate(true)` sur le lecteur et sur le gestionnaire de préchargement), puis rend la main à l'ABR
+(Logcat `PlayerSpike` : `settings applied … startup_lowest=true` puis `startup_lowest=false` après `first_frame`).
+
+#### Relevé du 30/10/2026 (AVD `LowEnd_API29` : Android 10, 2 Go de RAM, 2 cœurs, 320 dpi, GPU logiciel SwiftShader, machine chargée par la compilation ; `am start -W`, médiane de 5 démarrages à froid)
+
+| Mesure | Cible | Avant | Après | Commentaire |
+| --- | --- | --- | --- | --- |
+| Démarrage à froid, build `benchmark` (R8) | < 2 500 ms | 606 ms (568–656) | 569 ms (552–616) | « Après » = APK avec `baseline-prof.txt` (1 125 règles `com.drama`, 16 k au total) compilé `speed-profile` par `profileinstaller` |
+| Démarrage à froid, build `debug` | — | 699 ms (630–730) | — | Indicatif : le debug n'a pas de profil |
+| Première image vidéo (`PlayerSpike first_frame`, cache vide, backend local) | < 1 500 ms | 1 180 ms (sprint 1, émulateur API 36, ABR libre) | 231 ms (rendition 360p forcée, puis 540p à 0,6 s et 720p à 12 s) | `startup_lowest=true` jusqu'à la première image, puis ABR normal |
+| Taille de téléchargement AAB (bundletool `get-size total`, par ABI × densité) | < 30 Mo | 3,88 Mo max (sprint 4) | **3,88 Mo max, 3,83 Mo min** | AAB release R8 + shrink : 10,5 Mo ; les quatre tables de chaînes ajoutent ~40 Ko |
+
+Les chiffres émulateur sont indicatifs (x86_64 virtualisé, décodage logiciel) ; la recette S06-A2 se relève sur le
+TECNO CM6 et un appareil 2 Go réel avec la même procédure (`scratchpad/android-s5/coldstart.sh` dans le compte rendu).
+
 
 ## Release : signature, R8 et distribution interne (S03-OPS-01)
 

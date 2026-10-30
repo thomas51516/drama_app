@@ -9,6 +9,8 @@ data class UpdateMeRequestDto(
     val displayName: String? = null,
     val language: String? = null,
     val country: String? = null,
+    /** v1.3 (M-52/M-54): push preferences, all three sent together. */
+    val notificationPreferences: NotificationPreferencesDto? = null,
 )
 
 /** `DELETE /me`: v1.2 answers `202 {scheduledFor}`, v1 answered `{status, purgeAt}`. */

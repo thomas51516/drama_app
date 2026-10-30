@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window-level theme only; the real theming is Compose Material 3 (core:ui DramaTheme). -->
-    <style name="Theme.Drama" parent="android:Theme.Material.NoActionBar">
+    <!-- Window-level theme only; the real theming is Compose Material 3 (core:ui DramaTheme). AppCompat parent
+         because MainActivity is an AppCompatActivity (per-app locales below Android 13, S05-A1-03). -->
+    <style name="Theme.Drama" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@color/ic_launcher_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

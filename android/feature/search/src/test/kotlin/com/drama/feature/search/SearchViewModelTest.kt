@@ -4,6 +4,7 @@ import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.SearchResult
 import com.drama.domain.model.Series
 import com.drama.domain.repository.SearchRepository
@@ -24,6 +25,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.drama.core.ui.R as CoreR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
@@ -124,11 +126,26 @@ class SearchViewModelTest {
             viewModel.onSubmit("lagon")
             advanceUntilIdle()
             assertTrue(viewModel.uiState.value.error is AppError.Network)
+            assertEquals(UiText.Res(CoreR.string.error_network), viewModel.uiState.value.errorMessage)
             assertTrue(
                 viewModel.uiState.value.results
                     .isEmpty(),
             )
         }
+
+    @Test
+    fun `a 501 answer is announced as coming soon, other failures as a plain error`() {
+        assertEquals(
+            UiText.Res(R.string.search_error_coming_soon),
+            SearchUiState(error = AppError.Http(501)).errorMessage,
+        )
+        assertEquals(UiText.Res(R.string.search_error_failed), SearchUiState(error = AppError.Http(400)).errorMessage)
+        assertEquals(
+            UiText.of(CoreR.string.error_server, 503),
+            SearchUiState(error = AppError.Server(503)).errorMessage,
+        )
+        assertEquals(null, SearchUiState().errorMessage)
+    }
 
     @Test
     fun `recent searches are capped at ten most recent and clearable`() =

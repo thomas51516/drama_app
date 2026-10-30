@@ -29,6 +29,8 @@ data class UserProfile(
     val createdAtEpochMs: Long?,
     /** Set when the account is in its 30-day deletion window. */
     val deletionScheduledAtEpochMs: Long? = null,
+    /** Push preferences (M-52/M-54); the server default is all on. */
+    val notificationPreferences: NotificationPreferences = NotificationPreferences(),
 ) {
     /** What the profile card shows as a name: display name, else e-mail, else phone, else a generic label. */
     val label: String get() = displayName?.takeIf { it.isNotBlank() } ?: email ?: phone ?: "Mon compte"

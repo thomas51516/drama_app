@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Screen states -->
+    <string name="player_no_episodes">Aucun épisode</string>
+    <string name="player_error_load_series">Impossible de charger la série</string>
+    <string name="player_error_playback">Lecture impossible</string>
+    <string name="player_error_engine">Erreur de lecture : %1$s</string>
+
+    <!-- Top bar -->
+    <string name="player_share_series">Partager la série</string>
+    <string name="player_settings_title">Paramètres de lecture</string>
+    <string name="player_speed_chip_description">Vitesse de lecture : %1$s</string>
+    <string name="player_quality_chip_description">Qualité : %1$s</string>
+    <string name="player_subtitles_chip_description">Sous-titres : %1$s</string>
+    <string name="player_subtitles_chip">CC %1$s</string>
+    <string name="player_subtitles_off_short">Non</string>
+
+    <!-- Video surface (TalkBack) -->
+    <string name="player_surface_description">Lecteur vidéo, épisode %1$d</string>
+    <string name="player_state_playing">en lecture</string>
+    <string name="player_state_paused">en pause</string>
+    <string name="player_action_play">Lire</string>
+    <string name="player_action_pause">Mettre en pause</string>
+    <plurals name="player_action_forward">
+        <item quantity="one">Avancer de %1$d seconde</item>
+        <item quantity="other">Avancer de %1$d secondes</item>
+    </plurals>
+    <plurals name="player_action_rewind">
+        <item quantity="one">Reculer de %1$d seconde</item>
+        <item quantity="other">Reculer de %1$d secondes</item>
+    </plurals>
+
+    <!-- Bottom block -->
+    <string name="player_episode_title">Épisode %1$d — %2$s</string>
+    <string name="player_muted">Muet</string>
+    <string name="player_sound">Son</string>
+    <string name="player_mute">Couper le son</string>
+    <string name="player_unmute">Activer le son</string>
+    <string name="player_seek_position">Position %1$s sur %2$s</string>
+
+    <!-- End of episode -->
+    <plurals name="player_next_in">
+        <item quantity="one">Épisode suivant dans %1$d seconde</item>
+        <item quantity="other">Épisode suivant dans %1$d secondes</item>
+    </plurals>
+    <string name="player_next_episode">Épisode suivant</string>
+    <string name="player_end_of_series">Fin de la série</string>
+    <string name="player_replay">Revoir</string>
+
+    <!-- Locked episode (placeholder until the paywall, Sprint 7) -->
+    <string name="player_locked_title">Épisode verrouillé — paywall au sprint 7</string>
+    <string name="player_locked_episode_cost">%1$s · %2$s</string>
+
+    <!-- Settings sheets -->
+    <string name="player_speed_title">Vitesse de lecture</string>
+    <string name="player_quality_title">Qualité vidéo</string>
+    <string name="player_subtitles_title">Sous-titres</string>
+    <string name="player_speed">Vitesse</string>
+    <string name="player_quality">Qualité</string>
+    <string name="player_subtitles">Sous-titres</string>
+    <string name="player_subtitles_off">Désactivés</string>
+    <string name="player_subtitles_none">Aucun sous-titre pour cet épisode.</string>
+    <string name="player_subtitle_option">%1$s (%2$s)</string>
+    <string name="player_quality_auto">Auto</string>
+    <string name="player_quality_auto_live">Auto · %1$dp</string>
+
+    <!-- Developer instrumentation badge (S01-A2-01 spike), never translated -->
+    <string name="player_debug_startup" translatable="false">1st frame %1$d ms · %2$s · %3$d/%4$d</string>
+    <string name="player_debug_preloaded" translatable="false">preloaded</string>
+    <string name="player_debug_cold" translatable="false">cold</string>
+</resources>

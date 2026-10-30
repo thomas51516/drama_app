@@ -95,3 +95,23 @@ suspend inline fun <T> ApiErrorMapper.call(crossinline block: suspend () -> T): 
     ) {
         AppResult.Failure(map(e))
     }
+
+/**
+ * Runs a Retrofit call returning a [retrofit2.Response] (204-style endpoints) and maps a non-2xx status to the
+ * same typed errors as [call]; a successful answer becomes [AppResult.Success] of [Unit].
+ */
+suspend inline fun ApiErrorMapper.callUnit(crossinline block: suspend () -> retrofit2.Response<*>): AppResult<Unit> =
+    try {
+        val response = block()
+        if (response.isSuccessful) {
+            AppResult.Success(Unit)
+        } else {
+            AppResult.Failure(map(response.code(), response.errorBody()?.string()))
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (
+        @Suppress("TooGenericExceptionCaught") e: Exception,
+    ) {
+        AppResult.Failure(map(e))
+    }

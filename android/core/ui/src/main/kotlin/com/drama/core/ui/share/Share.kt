@@ -2,11 +2,12 @@ package com.drama.core.ui.share
 
 import android.content.Context
 import android.content.Intent
+import com.drama.core.ui.R
 
 /** Opens the system share sheet with [text] (M-16). */
 fun Context.shareText(
     text: String,
-    chooserTitle: String = "Partager",
+    chooserTitle: String = getString(R.string.action_share),
 ) {
     val send =
         Intent(Intent.ACTION_SEND).apply {

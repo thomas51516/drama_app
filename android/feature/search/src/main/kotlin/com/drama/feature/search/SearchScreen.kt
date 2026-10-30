@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,16 +46,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.drama.core.common.result.AppError
 import com.drama.core.ui.component.ErrorState
 import com.drama.core.ui.component.PosterCard
+import com.drama.core.ui.text.asString
+import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Series
+import com.drama.core.ui.R as CoreR
 
 data class SearchActions(
     val onQueryChanged: (String) -> Unit,
@@ -119,19 +129,25 @@ fun SearchContent(
                     .padding(end = DramaSpacing.md, top = DramaSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = actions.onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+            IconButton(onClick = actions.onBack, modifier = Modifier.size(DramaSizes.touchTarget)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreR.string.action_back))
             }
             OutlinedTextField(
                 value = state.query,
                 onValueChange = actions.onQueryChanged,
-                placeholder = { Text("Titre, genre, mot-clé…") },
+                placeholder = {
+                    Text(
+                        stringResource(R.string.search_placeholder),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (state.query.isNotEmpty()) {
-                        IconButton(onClick = actions.onClear) {
-                            Icon(Icons.Default.Clear, contentDescription = "Effacer")
+                        IconButton(onClick = actions.onClear, modifier = Modifier.size(DramaSizes.touchTarget)) {
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(CoreR.string.action_clear))
                         }
                     }
                 },
@@ -146,16 +162,18 @@ fun SearchContent(
         }
         GenreChips(chips = state.genreChips, selected = state.selectedGenre, onSelect = actions.onGenreSelected)
         if (state.isSearching) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        val errorMessage = state.errorMessage
         when {
             state.showSuggestions -> SuggestionList(state.suggestions, onPick = actions.onSubmit)
             state.isIdle && !state.searched -> RecentSearches(state.recentSearches, actions)
-            state.error != null -> ErrorState(message = state.error.toMessage(), onRetry = actions.onRetry)
+            errorMessage != null -> ErrorState(message = errorMessage.asString(), onRetry = actions.onRetry)
             state.showEmpty -> EmptyResults(state, onPick = actions.onSubmit)
             else -> ResultsGrid(state, onOpenSeries = actions.onOpenSeries)
         }
     }
 }
 
+/** Genre filter chips; [FilterChip] already exposes its selected state to TalkBack. */
 @Composable
 private fun GenreChips(
     chips: List<String>,
@@ -170,7 +188,13 @@ private fun GenreChips(
             FilterChip(
                 selected = genre == selected,
                 onClick = { onSelect(genre) },
-                label = { Text(genre.replaceFirstChar(Char::titlecase)) },
+                label = {
+                    Text(
+                        genre.replaceFirstChar(Char::titlecase),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
             )
         }
     }
@@ -183,11 +207,14 @@ private fun SuggestionList(
 ) {
     LazyColumn {
         items(suggestions, key = { it }) { suggestion ->
+            val description = stringResource(R.string.search_suggestion_cd, suggestion)
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .clickable { onPick(suggestion) }
+                        .clickable(onClick = { onPick(suggestion) }, role = Role.Button)
+                        .semantics { contentDescription = description }
+                        .heightIn(min = DramaSizes.touchTarget)
                         .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm + DramaSpacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -215,7 +242,7 @@ private fun RecentSearches(
 ) {
     if (recent.isEmpty()) {
         Text(
-            text = "Recherchez une série par titre, genre ou mot-clé.",
+            text = stringResource(R.string.search_hint_empty),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier =
@@ -235,20 +262,27 @@ private fun RecentSearches(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Recherches récentes",
+                    text = stringResource(R.string.search_recent_heading),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .semantics { heading() },
                 )
-                TextButton(onClick = actions.onClearRecent) { Text("Tout effacer") }
+                TextButton(onClick = actions.onClearRecent) { Text(stringResource(R.string.search_clear_all)) }
             }
         }
         items(recent, key = { it }) { query ->
+            val suggestionDescription = stringResource(R.string.search_suggestion_cd, query)
+            // The row is the "search again" button; the trailing remove button stays its own node.
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .clickable { actions.onSubmit(query) }
+                        .clickable(onClick = { actions.onSubmit(query) }, role = Role.Button)
+                        .semantics { contentDescription = suggestionDescription }
+                        .heightIn(min = DramaSizes.touchTarget)
                         .padding(start = DramaSpacing.md, end = DramaSpacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -258,8 +292,15 @@ private fun RecentSearches(
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = { actions.onRemoveRecent(query) }) {
-                    Icon(Icons.Default.Close, contentDescription = "Supprimer", modifier = Modifier.size(18.dp))
+                IconButton(
+                    onClick = { actions.onRemoveRecent(query) },
+                    modifier = Modifier.size(DramaSizes.touchTarget),
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.search_remove_recent_cd, query),
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }
@@ -278,15 +319,21 @@ private fun EmptyResults(
                 .padding(DramaSpacing.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        val genre = state.selectedGenre
         Text(
-            text = "Aucune série pour « ${state.query} »" + (state.selectedGenre?.let { " dans $it" } ?: "") + ".",
+            text =
+                if (genre != null) {
+                    stringResource(R.string.search_no_results_genre, state.query, genre)
+                } else {
+                    stringResource(R.string.search_no_results, state.query)
+                },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         if (state.suggestions.isNotEmpty()) {
             Spacer(Modifier.height(DramaSpacing.md))
             Text(
-                "Essayez :",
+                stringResource(R.string.search_try),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -314,7 +361,7 @@ private fun ResultsGrid(
         }
         if (state.searched && state.results.isNotEmpty()) {
             Text(
-                text = "${state.total} résultat${if (state.total > 1) "s" else ""}",
+                text = pluralStringResource(R.plurals.search_result_count, state.total, state.total),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier =
@@ -331,12 +378,13 @@ private fun ResultCard(
     series: Series,
     onOpenSeries: (String) -> Unit,
 ) {
+    val episodeCount = series.episodeCount
     PosterCard(
         title = series.title,
         imageUrl = series.posterVerticalUrl,
         subtitle =
             listOfNotNull(
-                "${series.episodeCount} ép.",
+                pluralStringResource(CoreR.plurals.episode_count_short, episodeCount, episodeCount),
                 series.genres.firstOrNull()?.replaceFirstChar(Char::titlecase),
             ).joinToString(" · "),
         onClick = { onOpenSeries(series.id) },
@@ -345,20 +393,4 @@ private fun ResultCard(
     )
 }
 
-private fun AppError?.toMessage(): String =
-    when (this) {
-        is AppError.Network -> "Pas de connexion. Vérifiez le réseau puis réessayez."
-        is AppError.Server -> "Le service est indisponible ($code). Réessayez dans un instant."
-        is AppError.Http ->
-            if (code ==
-                HTTP_NOT_IMPLEMENTED
-            ) {
-                "La recherche arrive bientôt."
-            } else {
-                "Recherche impossible."
-            }
-        else -> "Recherche impossible."
-    }
-
-private const val HTTP_NOT_IMPLEMENTED = 501
 private val GRID_MIN_CELL = 108.dp

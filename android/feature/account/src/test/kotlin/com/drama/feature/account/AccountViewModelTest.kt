@@ -7,8 +7,10 @@ import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.AccountDeletion
 import com.drama.domain.model.AuthProvider
+import com.drama.domain.model.NotificationPreferences
 import com.drama.domain.model.OtpChallenge
 import com.drama.domain.model.SessionState
 import com.drama.domain.model.SignInResult
@@ -116,7 +118,7 @@ class AccountViewModelTest {
             viewModel.onPhoneChanged("12")
             viewModel.onRequestOtp()
             advanceUntilIdle()
-            assertEquals("Numéro invalide", viewModel.uiState.value.phoneError)
+            assertEquals(UiText.Res(R.string.account_phone_invalid), viewModel.uiState.value.phoneError)
             assertTrue(account.otpRequests.isEmpty())
         }
 
@@ -152,7 +154,7 @@ class AccountViewModelTest {
 
             viewModel.onOtpChanged("000000")
             advanceUntilIdle()
-            assertEquals("Code incorrect ou expiré", viewModel.uiState.value.otpError)
+            assertEquals(UiText.Res(R.string.account_err_otp_invalid), viewModel.uiState.value.otpError)
             assertEquals("", viewModel.uiState.value.otpCode)
             assertEquals(AccountStep.OTP, viewModel.uiState.value.step)
         }
@@ -167,9 +169,9 @@ class AccountViewModelTest {
             viewModel.onPasswordChanged("short")
             viewModel.onSubmitEmail()
             advanceUntilIdle()
-            assertTrue(
-                viewModel.uiState.value.emailError!!
-                    .contains("8 caractères"),
+            assertEquals(
+                UiText.of(R.string.account_password_too_short, 8),
+                viewModel.uiState.value.emailError,
             )
             assertTrue(account.registrations.isEmpty())
 
@@ -178,7 +180,7 @@ class AccountViewModelTest {
             advanceUntilIdle()
             assertEquals(listOf("thomas@example.com"), account.registrations)
             assertTrue(events.contains(AnalyticsEvent.Signup("email", linked = false)))
-            assertEquals("Connecté", viewModel.uiState.value.message)
+            assertEquals(UiText.Res(R.string.account_msg_signed_in), viewModel.uiState.value.message)
         }
 
     @Test
@@ -199,7 +201,7 @@ class AccountViewModelTest {
             viewModel.onLogout()
             advanceUntilIdle()
             assertEquals(1, account.logouts)
-            assertEquals("Déconnecté. Vous continuez en invité.", viewModel.uiState.value.message)
+            assertEquals(UiText.Res(R.string.account_msg_logged_out), viewModel.uiState.value.message)
             assertTrue(viewModel.uiState.value.isGuest)
             assertNull(viewModel.uiState.value.profile)
         }
@@ -294,6 +296,7 @@ class AccountViewModelTest {
             displayName: String?,
             language: String?,
             country: String?,
+            notificationPreferences: NotificationPreferences?,
         ): AppResult<UserProfile> = failOr { user().copy(displayName = displayName, language = language) }
 
         override suspend fun logout(): AppResult<Unit> {

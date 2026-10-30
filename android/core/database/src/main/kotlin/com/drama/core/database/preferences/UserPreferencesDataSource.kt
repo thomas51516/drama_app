@@ -21,6 +21,11 @@ data class UserPreferences(
     val subtitleMode: String? = null,
     /** Recent search queries, most recent first (M-03). */
     val recentSearches: List<String> = emptyList(),
+    /** FCM token last registered with `PUT /me/devices/push` and the user it was registered for (M-54). */
+    val pushToken: String? = null,
+    val pushTokenUserId: String? = null,
+    /** True once the POST_NOTIFICATIONS prompt was shown. */
+    val notificationPromptShown: Boolean = false,
 )
 
 /** DataStore-backed user preferences (M-13 speed and quality, M-14 subtitles, M-17 data saver). */
@@ -38,8 +43,25 @@ class UserPreferencesDataSource
                     maxVideoHeight = prefs[Keys.MAX_VIDEO_HEIGHT] ?: 0,
                     subtitleMode = prefs[Keys.SUBTITLE_MODE],
                     recentSearches = prefs[Keys.RECENT_SEARCHES].toSearchList(),
+                    pushToken = prefs[Keys.PUSH_TOKEN],
+                    pushTokenUserId = prefs[Keys.PUSH_TOKEN_USER_ID],
+                    notificationPromptShown = prefs[Keys.NOTIFICATION_PROMPT_SHOWN] ?: false,
                 )
             }
+
+        suspend fun setRegisteredPushToken(
+            token: String?,
+            userId: String?,
+        ) {
+            dataStore.edit { prefs ->
+                if (token == null) prefs.remove(Keys.PUSH_TOKEN) else prefs[Keys.PUSH_TOKEN] = token
+                if (userId == null) prefs.remove(Keys.PUSH_TOKEN_USER_ID) else prefs[Keys.PUSH_TOKEN_USER_ID] = userId
+            }
+        }
+
+        suspend fun setNotificationPromptShown(shown: Boolean) {
+            dataStore.edit { it[Keys.NOTIFICATION_PROMPT_SHOWN] = shown }
+        }
 
         suspend fun setDataSaverEnabled(enabled: Boolean) {
             dataStore.edit { it[Keys.DATA_SAVER] = enabled }
@@ -71,6 +93,9 @@ class UserPreferencesDataSource
             val MAX_VIDEO_HEIGHT = intPreferencesKey("max_video_height")
             val SUBTITLE_MODE = stringPreferencesKey("subtitle_mode")
             val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
+            val PUSH_TOKEN = stringPreferencesKey("push_token")
+            val PUSH_TOKEN_USER_ID = stringPreferencesKey("push_token_user_id")
+            val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
         }
 
         private companion object {

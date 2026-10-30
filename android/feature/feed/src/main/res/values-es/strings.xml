@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_title">Para ti</string>
+    <string name="feed_empty">Todavía no hay avances.</string>
+    <string name="feed_tap_to_unmute">Toca para activar el sonido</string>
+    <string name="feed_add_to_list">Añadir</string>
+    <string name="feed_likes_cd">%1$s Me gusta</string>
+    <string name="feed_episode_title">Episodio %1$d · %2$s</string>
+    <string name="feed_watch_series">Ver la serie</string>
+    <string name="feed_paused">En pausa</string>
+    <string name="feed_count_thousands">%1$s k</string>
+    <string name="feed_count_millions">%1$s M</string>
+
+    <string name="feed_error_load">No se pudo cargar el feed.</string>
+    <string name="feed_playback_failed">No se puede reproducir</string>
+    <string name="feed_playback_failed_reason">No se puede reproducir (%1$s)</string>
+    <string name="feed_preview_unavailable">Avance no disponible</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Benchmark build type (S06-A2-02): release bytecode (R8) but reachable local backend and profileable by the
+         macrobenchmark / baseline profile runner. Never shipped. -->
+    <application android:networkSecurityConfig="@xml/network_security_config">
+        <profileable android:shell="true" tools:targetApi="29" />
+    </application>
+</manifest>

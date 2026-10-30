@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_home">Início</string>
+    <string name="tab_for_you">Para você</string>
+    <string name="tab_my_list">Minha lista</string>
+    <string name="tab_profile">Perfil</string>
+
+    <string name="push_snackbar_open">Ver</string>
+    <string name="channel_new_episodes">Novos episódios</string>
+    <string name="channel_new_episodes_description">Um novo episódio de uma série da sua lista está disponível.</string>
+    <string name="channel_offers">Ofertas</string>
+    <string name="channel_offers_description">Promoções de moedas e VIP.</string>
+    <string name="channel_reminders">Lembretes</string>
+    <string name="channel_reminders_description">Lembrete do seu bônus diário.</string>
+    <string name="channel_support">Suporte</string>
+    <string name="channel_support_description">Respostas do suporte às suas solicitações.</string>
+</resources>

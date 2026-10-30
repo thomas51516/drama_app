@@ -9,8 +9,12 @@ import com.drama.data.local.CatalogLocalDataSource
 import com.drama.data.local.RoomCatalogLocalDataSource
 import com.drama.data.repository.DataStorePlayerSettingsRepository
 import com.drama.data.repository.DefaultAccountRepository
+import com.drama.data.repository.DefaultHelpRepository
+import com.drama.data.repository.DefaultNotificationsRepository
+import com.drama.data.repository.DefaultPushRepository
 import com.drama.data.repository.DefaultSessionRepository
 import com.drama.data.repository.RemoteCatalogRepository
+import com.drama.data.repository.RemoteEventsRepository
 import com.drama.data.repository.RemoteFeedRepository
 import com.drama.data.repository.RemotePlaybackRepository
 import com.drama.data.repository.RemoteSearchRepository
@@ -21,10 +25,14 @@ import com.drama.data.session.DataStoreSessionStore
 import com.drama.data.session.InstallationDeviceIdProvider
 import com.drama.domain.repository.AccountRepository
 import com.drama.domain.repository.CatalogRepository
+import com.drama.domain.repository.EventsRepository
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.FeedRepository
+import com.drama.domain.repository.HelpRepository
+import com.drama.domain.repository.NotificationsRepository
 import com.drama.domain.repository.PlaybackRepository
 import com.drama.domain.repository.PlayerSettingsRepository
+import com.drama.domain.repository.PushRepository
 import com.drama.domain.repository.SearchRepository
 import com.drama.domain.repository.SessionRepository
 import com.drama.domain.repository.WatchHistoryRepository
@@ -83,6 +91,22 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindAccountRepository(impl: DefaultAccountRepository): AccountRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHelpRepository(impl: DefaultHelpRepository): HelpRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationsRepository(impl: DefaultNotificationsRepository): NotificationsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPushRepository(impl: DefaultPushRepository): PushRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindEventsRepository(impl: RemoteEventsRepository): EventsRepository
 
     companion object {
         /** `-PdramaUseFakeCatalog=true` (debug) swaps in the Sprint 1 fake catalogue; the API otherwise. */

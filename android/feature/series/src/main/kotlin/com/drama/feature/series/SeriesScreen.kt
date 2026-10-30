@@ -1,5 +1,9 @@
 package com.drama.feature.series
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,6 +11,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -22,6 +29,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +43,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -49,7 +58,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,11 +81,16 @@ import com.drama.core.ui.component.OfflineBanner
 import com.drama.core.ui.component.PosterImage
 import com.drama.core.ui.component.SkeletonBox
 import com.drama.core.ui.share.shareText
+import com.drama.core.ui.text.UiText
+import com.drama.core.ui.text.asString
 import com.drama.core.ui.theme.DramaColors
+import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.LikeState
 import com.drama.domain.model.Series
+import com.drama.core.ui.R as CoreR
 
 @Composable
 fun SeriesScreen(
@@ -80,8 +104,18 @@ fun SeriesScreen(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.notice) {
         val notice = state.notice ?: return@LaunchedEffect
-        snackbar.showSnackbar(notice)
+        snackbar.showSnackbar(notice.asString(context))
         viewModel.onNoticeShown()
+    }
+    // M-54: the first "add to My list" is the sensible moment to ask for notifications (new episodes).
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(state.requestNotificationPermission) {
+        if (!state.requestNotificationPermission) return@LaunchedEffect
+        viewModel.onNotificationPermissionPrompted()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
     Box(modifier = modifier.fillMaxSize()) {
         SeriesContent(
@@ -125,28 +159,41 @@ fun SeriesContent(
     ) {
         when {
             state.isLoading -> SeriesSkeleton()
-            state.showError -> ErrorState(message = state.error.toMessage(), onRetry = actions.onRetry)
+            state.showError -> ErrorState(message = state.error.toMessage().asString(), onRetry = actions.onRetry)
             state.series != null -> SeriesBody(series = state.series, state = state, actions = actions)
         }
+        // Drawn over the body but read first by TalkBack: back, share, favourite, then the title and the rest.
         Row(
             modifier =
                 Modifier
                     .statusBarsPadding()
                     .padding(DramaSpacing.xs)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .semantics {
+                        isTraversalGroup = true
+                        traversalIndex = TOP_BAR_TRAVERSAL_INDEX
+                    },
         ) {
             RoundIconButton(onClick = actions.onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = Color.White)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(CoreR.string.action_back),
+                    tint = Color.White,
+                )
             }
             Spacer(Modifier.weight(1f))
             if (state.series != null) {
                 RoundIconButton(onClick = actions.onShare) {
-                    Icon(Icons.Default.Share, contentDescription = "Partager", tint = Color.White)
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = stringResource(CoreR.string.action_share),
+                        tint = Color.White,
+                    )
                 }
-                RoundIconButton(onClick = actions.onToggleFavorite) {
+                RoundIconToggleButton(checked = state.isFavorite, onCheckedChange = { actions.onToggleFavorite() }) {
                     Icon(
                         imageVector = if (state.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (state.isFavorite) "Retirer de Ma liste" else "Ajouter à Ma liste",
+                        contentDescription = stringResource(CoreR.string.my_list),
                         tint = if (state.isFavorite) MaterialTheme.colorScheme.primary else Color.White,
                     )
                 }
@@ -154,6 +201,8 @@ fun SeriesContent(
         }
     }
 }
+
+private val roundButtonBackground = Color.Black.copy(alpha = 0.45f)
 
 @Composable
 private fun RoundIconButton(
@@ -165,12 +214,34 @@ private fun RoundIconButton(
         modifier =
             Modifier
                 .padding(horizontal = DramaSpacing.xxs)
-                .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                .size(DramaSizes.touchTarget)
+                .background(roundButtonBackground, CircleShape),
     ) {
         content()
     }
 }
 
+/** Same look as [RoundIconButton] with checkbox semantics, so TalkBack announces the favourite state. */
+@Composable
+private fun RoundIconToggleButton(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    IconToggleButton(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier =
+            Modifier
+                .padding(horizontal = DramaSpacing.xxs)
+                .size(DramaSizes.touchTarget)
+                .background(roundButtonBackground, CircleShape),
+    ) {
+        content()
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SeriesBody(
     series: Series,
@@ -190,22 +261,30 @@ private fun SeriesBody(
         item(span = { GridItemSpan(maxLineSpan) }) { PosterHeader(series) }
         if (state.error != null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                OfflineBanner(message = "Hors ligne : contenu en cache", onRetry = onRetry)
+                OfflineBanner(message = stringResource(CoreR.string.state_offline_cached), onRetry = onRetry)
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.padding(horizontal = DramaSpacing.md)) {
                 MetaRow(series)
                 Spacer(Modifier.height(DramaSpacing.md))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Wraps the like button under the primary button when the font scale makes the label long.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     DramaPrimaryButton(
-                        text = state.primaryActionLabel,
+                        text = state.primaryActionLabel.asString(),
                         onClick = { state.resumeTarget?.let { onPlayEpisode(it.episodeId) } },
                         enabled = state.resumeTarget != null,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(Modifier.width(DramaSpacing.sm))
-                    LikeButton(state = state.likeState, onClick = actions.onToggleLike)
+                    LikeButton(
+                        state = state.likeState,
+                        onClick = actions.onToggleLike,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
                 }
                 if (state.isRefreshing) {
                     LinearProgressIndicator(
@@ -219,9 +298,10 @@ private fun SeriesBody(
                 Synopsis(text = series.synopsis, expanded = state.synopsisExpanded, onToggle = onToggleSynopsis)
                 Spacer(Modifier.height(DramaSpacing.lg))
                 Text(
-                    text = "Épisodes",
+                    text = stringResource(R.string.series_episodes_heading),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.semantics { heading() },
                 )
                 Spacer(Modifier.height(DramaSpacing.sm))
             }
@@ -238,7 +318,7 @@ private fun SeriesBody(
         if (state.episodes.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    text = "Aucun épisode disponible pour le moment.",
+                    text = stringResource(R.string.series_no_episodes),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(DramaSpacing.md),
                 )
@@ -256,9 +336,10 @@ private fun PosterHeader(series: Series) {
                 .fillMaxWidth()
                 .aspectRatio(HEADER_RATIO),
     ) {
+        // The title below is the accessible name of the header; the poster only illustrates it.
         PosterImage(
             url = series.posterVerticalUrl ?: series.posterHorizontalUrl,
-            contentDescription = series.title,
+            contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             fallbackText = null,
         )
@@ -286,21 +367,38 @@ private fun PosterHeader(series: Series) {
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
             )
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetaRow(series: Series) {
-    Row(
+    val ageLabel = ageRatingLabel(series.ageRating)
+    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Chip(text = series.ageRating.toAgeLabel(), outlined = true)
-        Chip(text = "${series.episodeCount} épisodes")
-        if (series.freeEpisodeCount > 0) Chip(text = "${series.freeEpisodeCount} gratuits", accent = true)
+        Chip(
+            text = ageLabel,
+            outlined = true,
+            contentDescription = stringResource(R.string.series_age_rating_cd, ageLabel),
+        )
+        Chip(text = pluralStringResource(CoreR.plurals.episode_count, series.episodeCount, series.episodeCount))
+        if (series.freeEpisodeCount > 0) {
+            Chip(
+                text =
+                    pluralStringResource(
+                        R.plurals.series_free_count,
+                        series.freeEpisodeCount,
+                        series.freeEpisodeCount,
+                    ),
+                accent = true,
+            )
+        }
     }
     if (series.genres.isNotEmpty()) {
         Spacer(Modifier.height(DramaSpacing.sm))
@@ -312,35 +410,43 @@ private fun MetaRow(series: Series) {
     }
 }
 
-/** "J'aime" toggle with its count (M-16). */
+/** "J'aime" toggle with its count (M-16): a checkbox node for TalkBack, 48 dp tall at the default font scale. */
 @Composable
 private fun LikeButton(
-    state: com.drama.domain.model.LikeState?,
+    state: LikeState?,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val liked = state?.liked == true
+    val likes = state?.likes
+    val likeLabel = stringResource(CoreR.string.like)
+    val description = likes?.let { stringResource(R.string.series_like_count_cd, it) } ?: likeLabel
     val shape = RoundedCornerShape(12.dp)
     Row(
         modifier =
-            Modifier
+            modifier
                 .clip(shape)
                 .background(if (liked) DramaColors.CrimsonSoft else MaterialTheme.colorScheme.surfaceContainerHigh)
                 .then(if (liked) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
-                .clickable(onClick = onClick)
+                .toggleable(value = liked, onValueChange = { onClick() }, role = Role.Checkbox)
+                .semantics { contentDescription = description }
+                .heightIn(min = DramaSizes.touchTarget)
                 .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm + DramaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(DramaSpacing.xs),
     ) {
         Icon(
             Icons.Default.ThumbUp,
-            contentDescription = if (liked) "Je n'aime plus" else "J'aime",
+            contentDescription = null,
             tint = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.size(18.dp),
         )
         Text(
-            text = state?.likes?.toString() ?: "J'aime",
+            text = likes?.toString() ?: likeLabel,
             style = MaterialTheme.typography.labelLarge,
             color = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -350,12 +456,15 @@ private fun Chip(
     text: String,
     outlined: Boolean = false,
     accent: Boolean = false,
+    contentDescription: String? = null,
 ) {
     val shape = RoundedCornerShape(6.dp)
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
         color = if (accent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier =
             Modifier
                 .then(
@@ -367,6 +476,12 @@ private fun Chip(
                             shape,
                         )
                     },
+                ).then(
+                    if (contentDescription != null) {
+                        Modifier.semantics { this.contentDescription = contentDescription }
+                    } else {
+                        Modifier
+                    },
                 ).padding(horizontal = DramaSpacing.sm, vertical = DramaSpacing.xs),
     )
 }
@@ -377,13 +492,23 @@ private fun Synopsis(
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {
-    val body = text.ifBlank { "Synopsis à venir." }
+    val body = text.ifBlank { stringResource(R.string.series_synopsis_placeholder) }
+    val canToggle = body.length > SYNOPSIS_TOGGLE_THRESHOLD
+    val expandedState =
+        stringResource(if (expanded) R.string.series_synopsis_expanded else R.string.series_synopsis_collapsed)
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onToggle)
-                .animateContentSize(),
+                .then(
+                    if (canToggle) {
+                        Modifier
+                            .clickable(onClick = onToggle, role = Role.Button)
+                            .semantics { stateDescription = expandedState }
+                    } else {
+                        Modifier
+                    },
+                ).animateContentSize(),
     ) {
         Text(
             text = body,
@@ -392,9 +517,9 @@ private fun Synopsis(
             maxLines = if (expanded) Int.MAX_VALUE else SYNOPSIS_COLLAPSED_LINES,
             overflow = TextOverflow.Ellipsis,
         )
-        if (body.length > SYNOPSIS_TOGGLE_THRESHOLD) {
+        if (canToggle) {
             Text(
-                text = if (expanded) "Réduire" else "Lire la suite",
+                text = stringResource(if (expanded) R.string.series_read_less else R.string.series_read_more),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = DramaSpacing.xs),
@@ -403,7 +528,10 @@ private fun Synopsis(
     }
 }
 
-/** Episode number with its access status: free, unlocked (check) or locked (lock + coin cost). */
+/**
+ * Episode number with its access status: free, unlocked (check) or locked (lock + coin cost). TalkBack reads
+ * "Épisode N, gratuit / débloqué / verrouillé, 12 pièces[, épisode en cours]".
+ */
 @Composable
 private fun EpisodeCell(
     episode: Episode,
@@ -417,6 +545,27 @@ private fun EpisodeCell(
             highlighted -> DramaColors.CrimsonSoft
             else -> MaterialTheme.colorScheme.surfaceContainerHigh
         }
+    val statusLabel =
+        stringResource(
+            when (episode.access) {
+                EpisodeAccess.FREE -> R.string.series_episode_free
+                EpisodeAccess.UNLOCKED -> R.string.series_episode_unlocked
+                EpisodeAccess.LOCKED -> R.string.series_episode_locked
+            },
+        )
+    val coinLabel =
+        if (episode.access == EpisodeAccess.LOCKED && episode.coinCost > 0) {
+            pluralStringResource(CoreR.plurals.coin_count, episode.coinCost, episode.coinCost)
+        } else {
+            null
+        }
+    val description =
+        listOfNotNull(
+            stringResource(CoreR.string.episode_number, episode.index),
+            statusLabel,
+            coinLabel,
+            if (highlighted) stringResource(R.string.series_episode_current) else null,
+        ).joinToString(", ")
     Column(
         modifier =
             modifier
@@ -424,7 +573,8 @@ private fun EpisodeCell(
                 .clip(shape)
                 .background(container)
                 .then(if (highlighted) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
-                .clickable(onClick = onClick)
+                .clickable(onClick = onClick, role = Role.Button)
+                .semantics { contentDescription = description }
                 .padding(DramaSpacing.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -433,20 +583,21 @@ private fun EpisodeCell(
             text = episode.index.toString(),
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
         )
         Spacer(Modifier.height(DramaSpacing.xxs))
         when (episode.access) {
             EpisodeAccess.FREE ->
-                StatusLabel(text = "Gratuit", color = DramaColors.Success)
+                StatusLabel(text = statusLabel, color = DramaColors.Success)
             EpisodeAccess.UNLOCKED ->
                 StatusLabel(
-                    text = "Débloqué",
+                    text = statusLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     icon = Icons.Default.Check,
                 )
             EpisodeAccess.LOCKED ->
                 StatusLabel(
-                    text = if (episode.coinCost > 0) "${episode.coinCost}" else "Verrouillé",
+                    text = if (episode.coinCost > 0) episode.coinCost.toString() else statusLabel,
                     color = MaterialTheme.colorScheme.secondary,
                     icon = Icons.Default.Lock,
                 )
@@ -466,11 +617,17 @@ private fun EpisodeCell(
 private fun StatusLabel(
     text: String,
     color: Color,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    icon: ImageVector? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         if (icon != null) Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(11.dp))
-        Text(text = text, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -498,7 +655,7 @@ private fun SeriesSkeleton() {
                 Modifier
                     .padding(horizontal = DramaSpacing.md)
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .height(DramaSizes.touchTarget),
         )
         Spacer(Modifier.height(DramaSpacing.md))
         Row(
@@ -517,24 +674,27 @@ private fun SeriesSkeleton() {
     }
 }
 
-private fun String.toAgeLabel(): String =
-    when (uppercase()) {
-        "ALL" -> "Tous publics"
-        "PG12" -> "12+"
-        "PG16" -> "16+"
-        "R18" -> "18+"
-        else -> this
+/** Age rating code from the catalogue ("ALL", "PG12", ...) to its label; unknown codes are shown as-is. */
+@Composable
+private fun ageRatingLabel(rating: String): String =
+    when (rating.uppercase()) {
+        "ALL" -> stringResource(R.string.series_age_all)
+        "PG12" -> stringResource(R.string.series_age_12)
+        "PG16" -> stringResource(R.string.series_age_16)
+        "R18" -> stringResource(R.string.series_age_18)
+        else -> rating
     }
 
-private fun AppError?.toMessage(): String =
+private fun AppError?.toMessage(): UiText =
     when (this) {
-        is AppError.Network -> "Pas de connexion. Vérifiez le réseau puis réessayez."
-        is AppError.NotFound -> "Cette série n'est plus disponible."
-        is AppError.Server -> "Le service est indisponible ($code). Réessayez dans un instant."
-        else -> "Impossible de charger la série."
+        is AppError.Network -> UiText.Res(CoreR.string.error_network)
+        is AppError.NotFound -> UiText.Res(R.string.series_error_not_found)
+        is AppError.Server -> UiText.of(CoreR.string.error_server, code)
+        else -> UiText.Res(R.string.series_error_load)
     }
 
 private const val EPISODE_COLUMNS = 5
 private const val HEADER_RATIO = 3f / 4f
+private const val TOP_BAR_TRAVERSAL_INDEX = -1f
 private const val SYNOPSIS_COLLAPSED_LINES = 3
 private const val SYNOPSIS_TOGGLE_THRESHOLD = 120

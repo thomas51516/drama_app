@@ -110,10 +110,27 @@ android {
             signingConfig =
                 if (releaseSigningConfigured) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
+        // S06-A2-02: release bytecode, debug key, local backend reachable (src/benchmark manifest allows cleartext and
+        // marks the app profileable). Used by :benchmark (macrobenchmark + baseline profile) and the startup
+        // measurements of the README; never distributed.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
+            // Real class names in the generated profile (see benchmark-rules.pro).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+                "benchmark-rules.pro",
+            )
+        }
     }
 
     bundle {
-        language.enableSplit = true
+        // Language split off (S05-A2-03): the in-app selector (AppCompat per-app locales) needs every translation
+        // on the device, and the four string tables weigh a few dozen KB.
+        language.enableSplit = false
         density.enableSplit = true
         abi.enableSplit = true
     }
@@ -137,6 +154,12 @@ dependencies {
     implementation(project(":feature:feed"))
     implementation(project(":feature:search"))
     implementation(project(":feature:mylist"))
+    implementation(project(":feature:help"))
+    implementation(project(":feature:notifications"))
+
+    // Per-app locales (S05-A1-03) and the baseline profile installer (S06-A2-02).
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.profileinstaller)
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -155,4 +178,5 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.messaging)
 }

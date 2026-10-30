@@ -6,6 +6,7 @@ import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Series
 import com.drama.domain.repository.FavoritesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.drama.core.ui.R as CoreR
 
 data class MyListUiState(
     val isLoading: Boolean = true,
@@ -25,6 +27,26 @@ data class MyListUiState(
     val synced: Boolean = false,
 ) {
     val showEmpty: Boolean get() = !isLoading && items.isEmpty()
+
+    /** User-facing message for [error], resolved by the UI (S05-A2-03). */
+    val errorMessage: UiText?
+        get() =
+            when (val error = error) {
+                null -> null
+                is AppError.Network -> UiText.Res(R.string.mylist_error_network)
+                is AppError.Server -> UiText.of(CoreR.string.error_server, error.code)
+                is AppError.Http ->
+                    if (error.code == HTTP_NOT_IMPLEMENTED) {
+                        UiText.Res(R.string.mylist_error_sync_coming_soon)
+                    } else {
+                        UiText.Res(R.string.mylist_error_sync_failed)
+                    }
+                else -> UiText.Res(R.string.mylist_error_sync_failed)
+            }
+
+    private companion object {
+        const val HTTP_NOT_IMPLEMENTED = 501
+    }
 }
 
 /** "Ma liste" tab (M-16, S05-A1-02): Room-cached favorites, pull-to-refresh, optimistic removal. */

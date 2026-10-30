@@ -10,11 +10,15 @@ import com.drama.core.network.api.UserApi
 import com.drama.core.network.auth.SessionManager
 import com.drama.core.network.auth.SessionStore
 import com.drama.core.network.auth.StoredSession
+import com.drama.data.local.CatalogLocalDataSource
 import com.drama.domain.model.AuthProvider
+import com.drama.domain.model.Episode
+import com.drama.domain.model.HomeContent
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.Series
 import com.drama.domain.model.SessionState
 import com.drama.domain.repository.FavoritesRepository
+import com.drama.domain.repository.PushRepository
 import com.drama.domain.repository.SessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +47,8 @@ class DefaultAccountRepositoryTest {
     private val store = InMemorySessionStore()
     private val sessionRepository = FakeSessionRepository()
     private val favorites = FakeFavorites()
+    private val push = FakePush()
+    private val catalogLocal = FakeCatalogLocal()
     private lateinit var sessionManager: SessionManager
     private lateinit var repository: DefaultAccountRepository
 
@@ -104,6 +110,8 @@ class DefaultAccountRepositoryTest {
                 sessionManager = sessionManager,
                 sessionRepository = sessionRepository,
                 favorites = favorites,
+                push = push,
+                catalogLocal = catalogLocal,
                 deviceIdProvider = { "install-1234" },
                 errorMapper = mapper,
                 logger = NoOpLogger,
@@ -179,8 +187,63 @@ class DefaultAccountRepositoryTest {
             assertEquals(1, sessionRepository.logouts)
             assertEquals(1, sessionRepository.ensureCalls)
             assertEquals(1, favorites.clears)
+            assertEquals(1, push.unregisters)
             assertEquals(null, repository.profile.first())
         }
+
+    private class FakePush : PushRepository {
+        var unregisters = 0
+        override val permissionPromptShown: Flow<Boolean> = MutableStateFlow(false)
+
+        override suspend fun markPermissionPromptShown() = Unit
+
+        override suspend fun syncToken(force: Boolean): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun onNewToken(token: String): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun unregister(): AppResult<Unit> {
+            unregisters++
+            return AppResult.Success(Unit)
+        }
+    }
+
+    private class FakeCatalogLocal : CatalogLocalDataSource {
+        var clears = 0
+
+        override suspend fun fetchedAt(key: String): Long? = null
+
+        override suspend fun getHome(): HomeContent? = null
+
+        override fun observeHome(): Flow<HomeContent?> = MutableStateFlow(null)
+
+        override suspend fun saveHome(
+            content: HomeContent,
+            nowEpochMs: Long,
+        ) = Unit
+
+        override suspend fun getSeries(seriesId: String): Series? = null
+
+        override fun observeSeries(seriesId: String): Flow<Series?> = MutableStateFlow(null)
+
+        override suspend fun saveSeries(
+            series: Series,
+            nowEpochMs: Long,
+        ) = Unit
+
+        override suspend fun getEpisodes(seriesId: String): List<Episode>? = null
+
+        override fun observeEpisodes(seriesId: String): Flow<List<Episode>?> = MutableStateFlow(null)
+
+        override suspend fun saveEpisodes(
+            seriesId: String,
+            episodes: List<Episode>,
+            nowEpochMs: Long,
+        ) = Unit
+
+        override suspend fun clear() {
+            clears++
+        }
+    }
 
     private class InMemorySessionStore : SessionStore {
         private val state = MutableStateFlow<StoredSession?>(null)

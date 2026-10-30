@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_continue_watching">Continuar a assistir</string>
+    <string name="home_empty">Ainda não há séries publicadas.</string>
+    <string name="home_error_load">Não foi possível carregar a página inicial.</string>
+    <plurals name="home_card_meta">
+        <item quantity="one">%1$d ep. · %2$s</item>
+        <item quantity="many">%1$d ep. · %2$s</item>
+        <item quantity="other">%1$d ep. · %2$s</item>
+    </plurals>
+</resources>

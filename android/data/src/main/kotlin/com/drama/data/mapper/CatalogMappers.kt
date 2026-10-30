@@ -129,6 +129,7 @@ fun AuthUserDto.toDomain(): UserProfile =
         providers = providers.mapNotNull(AuthProvider::from),
         createdAtEpochMs = parseInstantMs(createdAt),
         deletionScheduledAtEpochMs = parseInstantMs(deletionScheduledAt),
+        notificationPreferences = notificationPreferences.toDomain(),
     )
 
 fun String.toEpisodeAccess(): EpisodeAccess =

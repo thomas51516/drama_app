@@ -6,6 +6,7 @@ import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Series
 import com.drama.domain.repository.SearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.drama.core.ui.R as CoreR
 
 data class SearchUiState(
     val query: String = "",
@@ -39,8 +41,26 @@ data class SearchUiState(
     /** Genres offered as chips: the fixed catalogue genres plus whatever the results carry. */
     val genreChips: List<String> get() = (DEFAULT_GENRES + results.flatMap { it.genres }).distinct()
 
+    /** User-facing message for [error], resolved by the UI (S05-A2-03). */
+    val errorMessage: UiText?
+        get() =
+            when (val error = error) {
+                null -> null
+                is AppError.Network -> UiText.Res(CoreR.string.error_network)
+                is AppError.Server -> UiText.of(CoreR.string.error_server, error.code)
+                is AppError.Http ->
+                    if (error.code == HTTP_NOT_IMPLEMENTED) {
+                        UiText.Res(R.string.search_error_coming_soon)
+                    } else {
+                        UiText.Res(R.string.search_error_failed)
+                    }
+                else -> UiText.Res(R.string.search_error_failed)
+            }
+
     companion object {
+        /** Catalogue genre keys (server identifiers, shown capitalised as-is). */
         val DEFAULT_GENRES = listOf("romance", "drame", "comédie", "thriller", "famille", "action")
+        private const val HTTP_NOT_IMPLEMENTED = 501
     }
 }
 

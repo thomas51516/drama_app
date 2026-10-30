@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_continue_watching">Continue watching</string>
+    <string name="home_empty">No series published yet.</string>
+    <string name="home_error_load">Unable to load the home page.</string>
+    <plurals name="home_card_meta">
+        <item quantity="one">%1$d ep. · %2$s</item>
+        <item quantity="other">%1$d ep. · %2$s</item>
+    </plurals>
+</resources>

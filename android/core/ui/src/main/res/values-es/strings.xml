@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_retry">Reintentar</string>
+    <string name="action_back">Atrás</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_send">Enviar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_watch">Ver</string>
+    <string name="action_clear">Borrar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_see_all">Ver todo</string>
+
+    <string name="state_loading">Cargando…</string>
+    <string name="state_offline_cached">Sin conexión: contenido en caché</string>
+    <string name="state_offline">Estás sin conexión. Comprueba tu red e inténtalo de nuevo.</string>
+    <string name="state_coming_soon">Próximamente</string>
+
+    <string name="error_network">Sin conexión. Comprueba la red e inténtalo de nuevo.</string>
+    <string name="error_network_short">Sin conexión</string>
+    <string name="error_server">El servicio no está disponible (%1$d). Inténtalo en un momento.</string>
+    <string name="error_server_short">Servicio no disponible (%1$d)</string>
+    <string name="error_session_expired">La sesión ha caducado, inténtalo de nuevo.</string>
+    <string name="error_not_found">Contenido no encontrado</string>
+    <string name="error_rate_limited">Demasiadas solicitudes, inténtalo en unos minutos</string>
+    <string name="error_generic">Se ha producido un error. Inténtalo de nuevo.</string>
+
+    <string name="my_list">Mi lista</string>
+    <string name="my_list_add">Añadir a Mi lista</string>
+    <string name="my_list_remove">Quitar de Mi lista</string>
+    <string name="like">Me gusta</string>
+    <string name="unlike">Ya no me gusta</string>
+    <string name="episode_number">Episodio %1$d</string>
+    <string name="episode_short">Ep. %1$d</string>
+    <plurals name="episode_count">
+        <item quantity="one">%1$d episodio</item>
+        <item quantity="other">%1$d episodios</item>
+    </plurals>
+    <plurals name="episode_count_short">
+        <item quantity="one">%1$d ep.</item>
+        <item quantity="other">%1$d ep.</item>
+    </plurals>
+    <plurals name="coin_count">
+        <item quantity="one">%1$d moneda</item>
+        <item quantity="other">%1$d monedas</item>
+    </plurals>
+    <string name="selected">Seleccionado</string>
+    <string name="search">Buscar</string>
+    <string name="progress_percent">Progreso: %1$d %%</string>
+</resources>

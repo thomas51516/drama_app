@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +47,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,9 +70,13 @@ import com.drama.core.common.result.AppError
 import com.drama.core.ui.component.DramaPrimaryButton
 import com.drama.core.ui.component.ErrorState
 import com.drama.core.ui.component.PosterImage
+import com.drama.core.ui.text.UiText
+import com.drama.core.ui.text.asString
+import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.FeedItem
 import kotlinx.coroutines.flow.distinctUntilChanged
+import com.drama.core.ui.R as CoreR
 
 data class FeedActions(
     val onPageSettled: (Int) -> Unit,
@@ -81,6 +98,7 @@ fun FeedScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val player by viewModel.activePlayer.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     // Pause when the tab leaves the screen (composition) or the app goes to the background (lifecycle).
     DisposableEffect(Unit) {
@@ -94,7 +112,7 @@ fun FeedScreen(
     LaunchedEffect(state.error, state.items.isEmpty()) {
         val error = state.error
         if (error != null && state.items.isNotEmpty()) {
-            snackbar.showSnackbar(error.toMessage())
+            snackbar.showSnackbar(error.toMessage().asString(context))
             viewModel.onErrorShown()
         }
     }
@@ -132,10 +150,10 @@ fun FeedContent(
     ) {
         when {
             state.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            state.showError -> ErrorState(message = state.error.toMessage(), onRetry = actions.onRetry)
+            state.showError -> ErrorState(message = state.error.toMessage().asString(), onRetry = actions.onRetry)
             state.items.isEmpty() ->
                 Text(
-                    text = "Aucun extrait pour le moment.",
+                    text = stringResource(R.string.feed_empty),
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     modifier =
@@ -172,14 +190,15 @@ fun FeedContent(
             }
         }
         Text(
-            text = "Pour vous",
+            text = stringResource(R.string.feed_title),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = Color.White,
             modifier =
                 Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
-                    .padding(top = DramaSpacing.sm),
+                    .padding(top = DramaSpacing.sm)
+                    .semantics { heading() },
         )
         if (state.isLoadingMore) {
             LinearProgressIndicator(
@@ -243,7 +262,7 @@ private fun FeedPage(
                 }
             is FeedPageState.Failed ->
                 Text(
-                    text = pageState.message,
+                    text = pageState.message.asString(),
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     modifier =
@@ -255,8 +274,9 @@ private fun FeedPage(
             FeedPageState.Idle, FeedPageState.Ready -> Unit
         }
         if (isCurrent && isMuted) {
+            // Also a real button: TalkBack users cannot rely on the tap gesture of the page.
             Text(
-                text = "Appuyez pour activer le son",
+                text = stringResource(R.string.feed_tap_to_unmute),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.White,
                 modifier =
@@ -264,7 +284,10 @@ private fun FeedPage(
                         .align(Alignment.TopEnd)
                         .statusBarsPadding()
                         .padding(top = DramaSpacing.xl + DramaSpacing.md, end = DramaSpacing.md)
-                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(50))
+                        .minimumInteractiveComponentSize()
+                        .clip(RoundedCornerShape(50))
+                        .clickable(onClick = actions.onTap, role = Role.Button)
+                        .background(Color.Black.copy(alpha = 0.5f))
                         .padding(horizontal = DramaSpacing.sm + DramaSpacing.xs, vertical = DramaSpacing.xs),
             )
         }
@@ -277,39 +300,26 @@ private fun FeedPage(
                     .padding(end = DramaSpacing.sm, bottom = RAIL_BOTTOM_PADDING),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.45f))
-                        .clickable { actions.onToggleFavorite(item) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (isFavorite) "Retirer de Ma liste" else "Ajouter à Ma liste",
-                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White,
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            Text(
-                text = if (isFavorite) "Ma liste" else "Ajouter",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-            )
+            FavoriteToggle(isFavorite = isFavorite, onToggle = { actions.onToggleFavorite(item) })
             item.likes?.let { likes ->
+                val compact = formatCount(likes)
+                val likesDescription = stringResource(R.string.feed_likes_cd, compact)
                 Spacer(Modifier.height(DramaSpacing.sm))
-                Text(
-                    text = "♥ ${formatCount(likes)}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
-                )
-                Text(
-                    text = "J'aime",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = likesDescription },
+                ) {
+                    Text(
+                        text = stringResource(R.string.feed_likes_short, compact),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                    )
+                    Text(
+                        text = stringResource(CoreR.string.like),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                    )
+                }
             }
         }
 
@@ -321,20 +331,27 @@ private fun FeedPage(
                     .fillMaxWidth(OVERLAY_WIDTH_FRACTION)
                     .padding(start = DramaSpacing.md, bottom = DramaSpacing.lg),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // One button for the poster and the title: TalkBack reads "title, meta, button".
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable(onClick = { actions.onOpenSeries(item.series.id) }, role = Role.Button)
+                        .heightIn(min = DramaSizes.touchTarget),
+            ) {
                 PosterImage(
                     url = item.series.posterVerticalUrl,
-                    contentDescription = item.series.title,
+                    contentDescription = null,
                     fallbackText = null,
                     modifier =
                         Modifier
                             .width(44.dp)
                             .height(66.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable { actions.onOpenSeries(item.series.id) },
+                            .clip(RoundedCornerShape(6.dp)),
                 )
                 Spacer(Modifier.width(DramaSpacing.sm + DramaSpacing.xs))
-                Column(modifier = Modifier.clickable { actions.onOpenSeries(item.series.id) }) {
+                Column {
                     Text(
                         text = item.series.title,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -342,13 +359,14 @@ private fun FeedPage(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    val episodeCount = item.series.episodeCount
                     val meta =
                         listOfNotNull(
                             item.series.genres
                                 .take(2)
                                 .joinToString(" · ") { it.replaceFirstChar(Char::titlecase) }
                                 .takeIf { it.isNotBlank() },
-                            "${item.series.episodeCount} ép.",
+                            pluralStringResource(CoreR.plurals.episode_count_short, episodeCount, episodeCount),
                         ).joinToString(" · ")
                     Text(
                         text = meta,
@@ -361,7 +379,7 @@ private fun FeedPage(
             }
             Spacer(Modifier.height(DramaSpacing.sm + DramaSpacing.xs))
             Text(
-                text = "Épisode ${item.episode.index} · ${item.episode.title}",
+                text = stringResource(R.string.feed_episode_title, item.episode.index, item.episode.title),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.85f),
                 maxLines = 1,
@@ -369,11 +387,12 @@ private fun FeedPage(
             )
             Spacer(Modifier.height(DramaSpacing.sm))
             DramaPrimaryButton(
-                text = "Regarder la série",
+                text = stringResource(R.string.feed_watch_series),
                 onClick = { actions.onWatch(item.series.id, item.episode.id) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        // Preview progress is decorative: the preview loops and cannot be seeked.
         LinearProgressIndicator(
             progress = { progress },
             color = MaterialTheme.colorScheme.primary,
@@ -384,12 +403,13 @@ private fun FeedPage(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .height(2.dp),
+                    .height(2.dp)
+                    .clearAndSetSemantics {},
         )
         if (isCurrent && player == null && pageState == FeedPageState.Ready) {
             Icon(
                 Icons.Default.PlayArrow,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.feed_paused),
                 tint = Color.White.copy(alpha = 0.8f),
                 modifier =
                     Modifier
@@ -400,20 +420,68 @@ private fun FeedPage(
     }
 }
 
-private fun formatCount(count: Int): String =
-    when {
-        count >= 1_000_000 -> "%.1f M".format(count / 1_000_000f)
-        count >= 1_000 -> "%.1f k".format(count / 1_000f)
-        else -> count.toString()
+/** Heart + label as one checkbox node ("Ajouter" / "Ma liste"), 48 dp touch target. */
+@Composable
+private fun FavoriteToggle(
+    isFavorite: Boolean,
+    onToggle: () -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier =
+            Modifier
+                .widthIn(min = DramaSizes.touchTarget)
+                .toggleable(value = isFavorite, onValueChange = { onToggle() }, role = Role.Checkbox),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(DramaSizes.touchTarget)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.45f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = null,
+                tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Text(
+            text = stringResource(if (isFavorite) CoreR.string.my_list else R.string.feed_add_to_list),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
+}
 
-private fun AppError?.toMessage(): String =
+/** Compact like count: 999, "1,2 k", "3,4 M" with the decimal separator of the current (observable) locale. */
+@Composable
+private fun formatCount(count: Int): String {
+    val locale = LocalConfiguration.current.locales[0]
+    return when {
+        count >= MILLION ->
+            stringResource(R.string.feed_count_millions, String.format(locale, "%.1f", count / MILLION_F))
+        count >= THOUSAND ->
+            stringResource(R.string.feed_count_thousands, String.format(locale, "%.1f", count / THOUSAND_F))
+        else -> String.format(locale, "%d", count)
+    }
+}
+
+private fun AppError?.toMessage(): UiText =
     when (this) {
-        is AppError.Network -> "Pas de connexion. Vérifiez le réseau puis réessayez."
-        is AppError.Server -> "Le service est indisponible ($code). Réessayez dans un instant."
-        is AppError.Unauthenticated -> "Session expirée, réessayez."
-        else -> "Impossible de charger le flux."
+        is AppError.Network -> UiText.Res(CoreR.string.error_network)
+        is AppError.Server -> UiText.of(CoreR.string.error_server, code)
+        is AppError.Unauthenticated -> UiText.Res(CoreR.string.error_session_expired)
+        else -> UiText.Res(R.string.feed_error_load)
     }
 
 private const val OVERLAY_WIDTH_FRACTION = 0.78f
+private const val THOUSAND = 1_000
+private const val MILLION = 1_000_000
+private const val THOUSAND_F = 1_000f
+private const val MILLION_F = 1_000_000f
 private val RAIL_BOTTOM_PADDING = 120.dp

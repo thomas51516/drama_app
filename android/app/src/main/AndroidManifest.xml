@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- M-54: runtime permission on Android 13+, requested after the first favourite or from the settings. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".DramaApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.Drama">
 
@@ -19,12 +23,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- drama://series/{seriesId}: custom-scheme fallback of the share links (M-16). -->
+            <!-- drama://series/{seriesId}: custom-scheme fallback of the share links (M-16).
+                 drama://player/{seriesId}/{episodeId}, drama://notifications, drama://help: push routing (M-54). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="drama" android:host="series" />
+                <data android:scheme="drama" android:host="player" />
+                <data android:scheme="drama" android:host="notifications" />
+                <data android:scheme="drama" android:host="help" />
             </intent-filter>
             <!-- https://${appLinksHost}/s/{seriesId}: verified App Link (S04-A1-03). The host comes from the Gradle
                  property dramaAppLinksHost and must publish /.well-known/assetlinks.json (see android/README.md). -->
@@ -37,6 +45,34 @@
                 <data android:pathPrefix="/s/" />
             </intent-filter>
         </activity>
+
+        <!-- Per-app locales below Android 13: AppCompat persists the choice itself (S05-A1-03). -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
+        <!-- FCM (M-54): token refresh and data messages; the backend sends `data` only, the app builds the notification. -->
+        <service
+            android:name=".push.DramaMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="new_episodes" />
     </application>
 
 </manifest>

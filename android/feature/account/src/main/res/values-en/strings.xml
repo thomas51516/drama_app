@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_title">Profile</string>
+    <string name="account_title_phone">Phone</string>
+    <string name="account_title_otp">Verification code</string>
+    <string name="account_title_register">Create an account</string>
+    <string name="account_title_login">Sign in</string>
+    <string name="account_title_edit_profile">Edit profile</string>
+    <string name="account_title_settings">Settings</string>
+
+    <string name="account_guest_headline">Create an account or sign in</string>
+    <string name="account_guest_body">You are watching as a guest. Link an account to keep your history, favourites and coins on all your devices.</string>
+    <string name="account_google">Continue with Google</string>
+    <string name="account_google_unconfigured">Not configured</string>
+    <string name="account_phone">Continue with my phone number</string>
+    <string name="account_phone_subtitle">6-digit code by SMS</string>
+    <string name="account_email">Continue with my e-mail</string>
+    <string name="account_email_subtitle">Sign up or sign in with a password</string>
+    <string name="account_guest_id">Guest id: %1$s…</string>
+    <string name="account_avatar_guest">Guest avatar</string>
+    <string name="account_avatar">Avatar of %1$s</string>
+
+    <string name="account_phone_intro">We will text you a 6-digit code.</string>
+    <string name="account_country_picker">Choose the country code</string>
+    <string name="account_phone_label">Phone number</string>
+    <string name="account_phone_placeholder">90 00 00 00</string>
+    <string name="account_phone_invalid">Invalid number</string>
+    <string name="account_request_code">Send me the code</string>
+    <string name="account_code_sent_to">Code sent to %1$s</string>
+    <string name="account_code_label">6-digit code</string>
+    <string name="account_validate">Confirm</string>
+    <string name="account_resend_code">Resend the code</string>
+    <string name="account_resend_code_in">Resend the code in %1$d s</string>
+    <string name="account_otp_send_failed">The code could not be sent</string>
+
+    <string name="account_have_account">I already have an account</string>
+    <string name="account_email_label">E-mail address</string>
+    <string name="account_password_label">Password (at least %1$d characters)</string>
+    <string name="account_create_my_account">Create my account</string>
+    <string name="account_email_invalid">Invalid e-mail address</string>
+    <string name="account_password_too_short">Password: at least %1$d characters</string>
+
+    <string name="account_profile_loading">Loading…</string>
+    <string name="account_default_label">My account</string>
+    <string name="account_provider_google">Google</string>
+    <string name="account_provider_phone">Phone</string>
+    <string name="account_provider_email">E-mail</string>
+    <string name="account_provider_none">Account</string>
+    <string name="account_row_email">E-mail</string>
+    <string name="account_row_phone">Phone</string>
+    <string name="account_row_country">Country</string>
+    <string name="account_row_language">Language</string>
+    <string name="account_row_status">Status</string>
+    <string name="account_status_vip">VIP</string>
+    <string name="account_status_standard">Standard</string>
+    <string name="account_value_missing">—</string>
+    <string name="account_edit_profile">Edit name</string>
+    <string name="account_logout">Sign out</string>
+    <string name="account_delete">Delete my account</string>
+    <string name="account_display_name">Display name</string>
+
+    <string name="account_delete_title">Delete my account?</string>
+    <string name="account_delete_body">Your account will be disabled right away and your data erased within 30 days. Your history, favourites and coins will be lost.</string>
+
+    <string name="account_msg_google_failed">Google sign-in failed</string>
+    <string name="account_msg_profile_updated">Profile updated</string>
+    <string name="account_msg_update_failed">Update failed</string>
+    <string name="account_msg_logged_out">Signed out. You continue as a guest.</string>
+    <string name="account_msg_logout_incomplete">Sign-out incomplete</string>
+    <string name="account_msg_deleted">Account deleted: your data will be erased within 30 days.</string>
+    <string name="account_msg_delete_failed">Deletion failed</string>
+    <string name="account_msg_sign_in_failed">Sign-in failed</string>
+    <string name="account_msg_linked">Account linked, your history is kept</string>
+    <string name="account_msg_signed_in">Signed in</string>
+    <string name="account_err_invalid_credentials">Incorrect credentials</string>
+    <string name="account_err_email_taken">This e-mail address is already in use</string>
+    <string name="account_err_otp_invalid">Incorrect or expired code</string>
+    <string name="account_err_otp_attempts">Too many attempts, request a new code</string>
+    <string name="account_err_google_disabled">Google sign-in is not configured</string>
+
+    <string name="settings_section">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_hint">Applied immediately to the whole app.</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_hint">Choose what DRAMA may send you.</string>
+    <string name="settings_notif_new_episodes">New episodes</string>
+    <string name="settings_notif_new_episodes_hint">When a series in My list releases an episode.</string>
+    <string name="settings_notif_offers">Offers</string>
+    <string name="settings_notif_offers_hint">Deals on coins and VIP.</string>
+    <string name="settings_notif_checkin">Daily reminder</string>
+    <string name="settings_notif_checkin_hint">A reminder for your check-in bonus.</string>
+    <string name="settings_notif_permission_off">Notifications are turned off for DRAMA on this phone.</string>
+    <string name="settings_notif_permission_allow">Allow notifications</string>
+    <string name="settings_notif_permission_system">Open phone settings</string>
+    <string name="settings_data_saver">Data saver</string>
+    <string name="settings_help">Help</string>
+    <string name="settings_help_hint">FAQ and contact support</string>
+    <string name="settings_my_notifications">My notifications</string>
+    <string name="settings_my_notifications_hint">History of received messages</string>
+    <string name="settings_msg_language_saved">Language saved</string>
+    <string name="settings_msg_language_local_only">Language applied on this device (offline)</string>
+    <string name="settings_msg_prefs_saved">Preferences saved</string>
+    <string name="settings_msg_prefs_failed">Preferences not saved, try again</string>
+    <string name="settings_open">Open settings</string>
+    <string name="settings_language_value">Language: %1$s</string>
+</resources>

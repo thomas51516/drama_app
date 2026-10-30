@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,14 +23,20 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.drama.core.player.engine.TrackSelectionMapper
+import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.PlayerSettings
 import com.drama.domain.model.Subtitle
 import com.drama.domain.model.SubtitleMode
 import com.drama.domain.model.VideoQuality
 import com.drama.feature.player.PlayerUiState
+import com.drama.feature.player.R
 
 /** Which bottom sheet is open over the player. */
 enum class PlayerSheet {
@@ -42,6 +51,17 @@ data class SettingsActions(
     val onQualitySelected: (VideoQuality) -> Unit,
     val onSubtitleSelected: (SubtitleMode) -> Unit,
 )
+
+/** Localised quality label: the manual cap (`540p`) or `player_quality_auto` plus the live rendition when known. */
+@Composable
+internal fun PlayerUiState.qualityText(): String =
+    manualQualityLabel
+        ?: playingShortSide?.let { stringResource(R.string.player_quality_auto_live, it) }
+        ?: stringResource(R.string.player_quality_auto)
+
+/** Localised subtitle label: the active language code (`FR`) or `player_subtitles_off`. */
+@Composable
+internal fun PlayerUiState.subtitleText(): String = subtitleCode ?: stringResource(R.string.player_subtitles_off)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +89,7 @@ fun PlayerSettingsSheet(
                 PlayerSheet.SETTINGS -> SettingsMenu(state = state, onNavigate = onNavigate)
                 PlayerSheet.SPEED ->
                     OptionList(
-                        title = "Vitesse de lecture",
+                        title = stringResource(R.string.player_speed_title),
                         options = PlayerSettings.SPEEDS,
                         selected = state.settings.speed,
                         label = TrackSelectionMapper::speedLabel,
@@ -78,17 +98,19 @@ fun PlayerSettingsSheet(
                             onDismiss()
                         },
                     )
-                PlayerSheet.QUALITY ->
+                PlayerSheet.QUALITY -> {
+                    val autoLabel = stringResource(R.string.player_quality_auto)
                     OptionList(
-                        title = "Qualité vidéo",
+                        title = stringResource(R.string.player_quality_title),
                         options = state.qualityOptions,
                         selected = state.settings.quality,
-                        label = TrackSelectionMapper::qualityLabel,
+                        label = { if (it == VideoQuality.AUTO) autoLabel else TrackSelectionMapper.qualityLabel(it) },
                         onSelect = {
                             actions.onQualitySelected(it)
                             onDismiss()
                         },
                     )
+                }
                 PlayerSheet.SUBTITLES ->
                     SubtitleList(
                         options = state.subtitleOptions,
@@ -109,12 +131,14 @@ private fun SettingsMenu(
     state: PlayerUiState,
     onNavigate: (PlayerSheet) -> Unit,
 ) {
-    SheetTitle("Paramètres de lecture")
-    MenuRow(title = "Sous-titres", value = state.subtitleLabel.let { if (it == "Off") "Désactivés" else it }) {
+    SheetTitle(stringResource(R.string.player_settings_title))
+    MenuRow(title = stringResource(R.string.player_subtitles), value = state.subtitleText()) {
         onNavigate(PlayerSheet.SUBTITLES)
     }
-    MenuRow(title = "Vitesse", value = state.speedLabel) { onNavigate(PlayerSheet.SPEED) }
-    MenuRow(title = "Qualité", value = state.qualityLabel) { onNavigate(PlayerSheet.QUALITY) }
+    MenuRow(title = stringResource(R.string.player_speed), value = state.speedLabel) { onNavigate(PlayerSheet.SPEED) }
+    MenuRow(title = stringResource(R.string.player_quality), value = state.qualityText()) {
+        onNavigate(PlayerSheet.QUALITY)
+    }
 }
 
 @Composable
@@ -126,8 +150,10 @@ private fun <T> OptionList(
     onSelect: (T) -> Unit,
 ) {
     SheetTitle(title)
-    options.forEach { option ->
-        OptionRow(text = label(option), selected = option == selected, onClick = { onSelect(option) })
+    Column(Modifier.selectableGroup()) {
+        options.forEach { option ->
+            OptionRow(text = label(option), selected = option == selected, onClick = { onSelect(option) })
+        }
     }
 }
 
@@ -138,27 +164,32 @@ private fun SubtitleList(
     active: String?,
     onSelect: (SubtitleMode) -> Unit,
 ) {
-    SheetTitle("Sous-titres")
-    OptionRow(
-        text = "Désactivés",
-        selected =
-            mode == SubtitleMode.Off || (active == null && mode !is SubtitleMode.Language),
-        onClick = {
-            onSelect(SubtitleMode.Off)
-        },
-    )
-    options.forEach { subtitle ->
+    SheetTitle(stringResource(R.string.player_subtitles_title))
+    Column(Modifier.selectableGroup()) {
         OptionRow(
-            text =
-                subtitle.label.ifBlank { subtitle.language }.replaceFirstChar(Char::titlecase) +
-                    " (${subtitle.language.uppercase()})",
-            selected = active == subtitle.language,
-            onClick = { onSelect(SubtitleMode.Language(subtitle.language)) },
+            text = stringResource(R.string.player_subtitles_off),
+            selected =
+                mode == SubtitleMode.Off || (active == null && mode !is SubtitleMode.Language),
+            onClick = {
+                onSelect(SubtitleMode.Off)
+            },
         )
+        options.forEach { subtitle ->
+            OptionRow(
+                text =
+                    stringResource(
+                        R.string.player_subtitle_option,
+                        subtitle.label.ifBlank { subtitle.language }.replaceFirstChar(Char::titlecase),
+                        subtitle.language.uppercase(),
+                    ),
+                selected = active == subtitle.language,
+                onClick = { onSelect(SubtitleMode.Language(subtitle.language)) },
+            )
+        }
     }
     if (options.isEmpty()) {
         Text(
-            text = "Aucun sous-titre pour cet épisode.",
+            text = stringResource(R.string.player_subtitles_none),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = DramaSpacing.lg, vertical = DramaSpacing.sm),
@@ -172,7 +203,10 @@ private fun SheetTitle(text: String) {
         text = text,
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(horizontal = DramaSpacing.lg, vertical = DramaSpacing.sm),
+        modifier =
+            Modifier
+                .padding(horizontal = DramaSpacing.lg, vertical = DramaSpacing.sm)
+                .semantics { heading() },
     )
     Spacer(Modifier.height(DramaSpacing.xs))
 }
@@ -187,7 +221,8 @@ private fun MenuRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .heightIn(min = DramaSizes.touchTarget)
+                .clickable(onClick = onClick, role = Role.Button)
                 .padding(horizontal = DramaSpacing.lg, vertical = DramaSpacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -201,6 +236,7 @@ private fun MenuRow(
     }
 }
 
+/** One choice in a list: announced as a radio button, so the check icon is decorative. */
 @Composable
 private fun OptionRow(
     text: String,
@@ -211,7 +247,8 @@ private fun OptionRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .heightIn(min = DramaSizes.touchTarget)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
                 .padding(horizontal = DramaSpacing.lg, vertical = DramaSpacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -224,7 +261,7 @@ private fun OptionRow(
         if (selected) {
             Icon(
                 Icons.Default.Check,
-                contentDescription = "Sélectionné",
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )

@@ -2,6 +2,7 @@ package com.drama.feature.player
 
 import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.player.engine.TrackSelectionMapper
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.PlayerSettings
 import com.drama.domain.model.Subtitle
@@ -28,7 +29,7 @@ sealed interface PageState {
     ) : PageState
 
     data class Failed(
-        val message: String,
+        val message: UiText,
     ) : PageState
 }
 
@@ -49,7 +50,7 @@ data class PlayerUiState(
     val endOfEpisode: EndOfEpisode? = null,
     val preloadedIndices: Set<Int> = emptySet(),
     val startupMetrics: List<StartupMetric> = emptyList(),
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     /** Persisted preferences (M-13, M-14). */
     val settings: PlayerSettings = PlayerSettings(),
     /** Text tracks offered by the current episode (from `/play`). */
@@ -65,16 +66,16 @@ data class PlayerUiState(
 
     fun pageState(index: Int): PageState = pages[index] ?: PageState.Idle
 
+    /** Technical label (`1.5x`), identical in every language. */
     val speedLabel: String get() = TrackSelectionMapper.speedLabel(settings.speed)
 
-    /** "Auto" plus the live rendition when known (`Auto · 540p`), or the manual cap. */
-    val qualityLabel: String
-        get() =
-            if (settings.quality == VideoQuality.AUTO) {
-                playingShortSide?.let { "Auto · ${it}p" } ?: "Auto"
-            } else {
-                TrackSelectionMapper.qualityLabel(settings.quality)
-            }
+    /**
+     * Manual cap label (`540p`), or null in `Auto` mode: the UI then renders the localised "Auto" together with
+     * [playingShortSide] when known (S05-A2-03, labels are resolved from resources in the composables).
+     */
+    val manualQualityLabel: String?
+        get() = settings.quality.takeIf { it != VideoQuality.AUTO }?.let(TrackSelectionMapper::qualityLabel)
 
-    val subtitleLabel: String get() = activeSubtitleLanguage?.uppercase() ?: "Off"
+    /** Upper-cased code of the active text track (`FR`), or null when subtitles are off or unavailable. */
+    val subtitleCode: String? get() = activeSubtitleLanguage?.uppercase()
 }

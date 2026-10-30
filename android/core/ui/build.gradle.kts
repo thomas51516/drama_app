@@ -5,6 +5,8 @@ plugins {
 
 android {
     namespace = "com.drama.core.ui"
+    // Shared user-facing strings (retry, offline, back, ...) in four languages (S05-A2-03).
+    androidResources.enable = true
 }
 
 dependencies {

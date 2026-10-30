@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_title">Para você</string>
+    <string name="feed_empty">Ainda não há prévias.</string>
+    <string name="feed_tap_to_unmute">Toque para ativar o som</string>
+    <string name="feed_add_to_list">Adicionar</string>
+    <string name="feed_likes_cd">%1$s curtidas</string>
+    <string name="feed_episode_title">Episódio %1$d · %2$s</string>
+    <string name="feed_watch_series">Assistir à série</string>
+    <string name="feed_paused">Em pausa</string>
+    <string name="feed_count_thousands">%1$s mil</string>
+    <string name="feed_count_millions">%1$s M</string>
+
+    <string name="feed_error_load">Não foi possível carregar o feed.</string>
+    <string name="feed_playback_failed">Não foi possível reproduzir</string>
+    <string name="feed_playback_failed_reason">Não foi possível reproduzir (%1$s)</string>
+    <string name="feed_preview_unavailable">Prévia indisponível</string>
+</resources>

@@ -12,6 +12,7 @@ import com.drama.core.player.engine.PlaybackEngine
 import com.drama.core.player.engine.PlaybackEngineFactory
 import com.drama.core.player.engine.PlaybackEvent
 import com.drama.core.player.engine.PlaybackPosition
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.FeedItem
@@ -46,6 +47,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.drama.core.ui.R as CoreR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FeedViewModelTest {
@@ -87,10 +89,14 @@ class FeedViewModelTest {
 
     /** Expiry of the next `/play` answers; once drained the URLs never expire, so no timer outlives a test. */
     private val playExpiries = ArrayDeque<Long>()
+
+    /** When set, every `/play` call fails with this error. */
+    private var playFailure: AppError? = null
     private val playback =
         object : PlaybackRepository {
             override suspend fun startPlayback(episodeId: String): AppResult<PlaySession> {
                 playCalls += episodeId
+                playFailure?.let { return AppResult.Failure(it) }
                 return AppResult.Success(
                     PlaySession(
                         episodeId = episodeId,
@@ -221,7 +227,23 @@ class FeedViewModelTest {
             engine.emit(PlaybackEvent.Error(0, "ERROR_CODE_IO_BAD_HTTP_STATUS", httpStatus = 403))
             runCurrent()
             assertEquals(1, playCalls.size)
-            assertTrue(viewModel.uiState.value.pageState(0) is FeedPageState.Failed)
+            assertEquals(
+                FeedPageState.Failed(UiText.of(R.string.feed_playback_failed_reason, "ERROR_CODE_IO_BAD_HTTP_STATUS")),
+                viewModel.uiState.value.pageState(0),
+            )
+        }
+
+    @Test
+    fun `a failed resolution exposes a localised message`() =
+        runTest(dispatcher) {
+            pages[null] = FeedPage(listOf(item(1, previewExpiresAt = 10_000L)), nextCursor = null)
+            playFailure = AppError.Network()
+            val viewModel = viewModel()
+            runCurrent()
+            assertEquals(
+                FeedPageState.Failed(UiText.Res(CoreR.string.error_network_short)),
+                viewModel.uiState.value.pageState(0),
+            )
         }
 
     @Test

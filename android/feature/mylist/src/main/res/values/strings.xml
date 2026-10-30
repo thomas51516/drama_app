@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mylist_offline_cached">Hors ligne : liste en cache</string>
+    <string name="mylist_empty_title">Votre liste est vide</string>
+    <string name="mylist_empty_hint">Appuyez sur le cœur d\'une série pour la retrouver ici.</string>
+    <string name="mylist_remove_cd">Retirer %1$s de Ma liste</string>
+    <string name="mylist_error_network">Pas de connexion. Votre liste sera synchronisée au retour du réseau.</string>
+    <string name="mylist_error_sync_coming_soon">La synchronisation arrive bientôt.</string>
+    <string name="mylist_error_sync_failed">Synchronisation impossible.</string>
+</resources>

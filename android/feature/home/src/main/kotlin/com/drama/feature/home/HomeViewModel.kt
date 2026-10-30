@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.Resource
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.ContinueWatchingItem
 import com.drama.domain.model.HomeBanner
 import com.drama.domain.model.HomeContent
@@ -19,21 +20,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.drama.core.ui.R as CoreR
 
-/** One card of a home row, flattened for the UI. [resumeEpisodeId] is set on the continue-watching row only. */
+/**
+ * One card of a home row, flattened for the UI. [resumeEpisodeId] is set on the continue-watching row only.
+ * [subtitle] and [badge] are [UiText] so the view model never formats a localised string (S05-A2-03).
+ */
 data class HomeCard(
     val seriesId: String,
     val title: String,
     val posterUrl: String?,
-    val subtitle: String?,
-    val badge: String? = null,
+    val subtitle: UiText?,
+    val badge: UiText? = null,
     val progress: Float? = null,
     val resumeEpisodeId: String? = null,
 )
 
+/** A home row: server titles are [UiText.Raw], the local continue-watching title is a resource. */
 data class HomeRowUi(
     val key: String,
-    val title: String,
+    val title: UiText,
     val type: HomeRowType,
     val cards: List<HomeCard>,
 )
@@ -119,7 +125,7 @@ class HomeViewModel
         companion object {
             const val CONTINUE_WATCHING_LIMIT = 10
             const val CONTINUE_WATCHING_KEY = "continue_watching"
-            const val CONTINUE_WATCHING_TITLE = "Continuer à regarder"
+            val CONTINUE_WATCHING_TITLE: UiText = UiText.Res(R.string.home_continue_watching)
 
             /**
              * Rows shown on screen: empty rows are dropped; the continue-watching row merges the local history
@@ -148,7 +154,7 @@ class HomeViewModel
                     continueCards.takeIf { it.isNotEmpty() }?.let {
                         HomeRowUi(
                             key = serverContinue?.key ?: CONTINUE_WATCHING_KEY,
-                            title = serverContinue?.title ?: CONTINUE_WATCHING_TITLE,
+                            title = serverContinue?.title?.let(UiText::Raw) ?: CONTINUE_WATCHING_TITLE,
                             type = HomeRowType.CONTINUE_WATCHING,
                             cards = it,
                         )
@@ -165,7 +171,12 @@ class HomeViewModel
                     }
                     if (row.items.isEmpty()) return@forEach
                     result +=
-                        HomeRowUi(row.key, row.title, row.type, row.items.map { it.toCard(continueWatching = false) })
+                        HomeRowUi(
+                            key = row.key,
+                            title = UiText.Raw(row.title),
+                            type = row.type,
+                            cards = row.items.map { it.toCard(continueWatching = false) },
+                        )
                 }
                 if (continueRow != null && !continueInserted) result.add(0, continueRow)
                 return result
@@ -176,8 +187,8 @@ class HomeViewModel
                     seriesId = series.id,
                     title = series.title,
                     posterUrl = series.posterVerticalUrl,
-                    subtitle = "Épisode $episodeIndex",
-                    badge = "Ép. $episodeIndex",
+                    subtitle = UiText.of(CoreR.string.episode_number, episodeIndex),
+                    badge = UiText.of(CoreR.string.episode_short, episodeIndex),
                     progress = progressFraction ?: 0f,
                     resumeEpisodeId = episodeId,
                 )
@@ -185,17 +196,18 @@ class HomeViewModel
             private fun HomeItem.toCard(continueWatching: Boolean): HomeCard {
                 val resume = episode?.takeIf { continueWatching }
                 val genre = series.genres.firstOrNull()?.replaceFirstChar(Char::titlecase)
+                val count = series.episodeCount
                 return HomeCard(
                     seriesId = series.id,
                     title = series.title,
                     posterUrl = series.posterVerticalUrl,
                     subtitle =
-                        if (resume != null) {
-                            "Épisode ${resume.index}"
-                        } else {
-                            listOfNotNull("${series.episodeCount} ép.", genre).joinToString(" · ")
+                        when {
+                            resume != null -> UiText.of(CoreR.string.episode_number, resume.index)
+                            genre != null -> UiText.Plural(R.plurals.home_card_meta, count, listOf(count, genre))
+                            else -> UiText.Plural(CoreR.plurals.episode_count_short, count)
                         },
-                    badge = resume?.let { "Ép. ${it.index}" },
+                    badge = resume?.let { UiText.of(CoreR.string.episode_short, it.index) },
                     progress = if (continueWatching) progressFraction ?: 0f else null,
                     resumeEpisodeId = resume?.id,
                 )

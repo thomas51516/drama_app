@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="series_episodes_heading">Episódios</string>
+    <string name="series_no_episodes">Ainda não há episódios disponíveis.</string>
+    <string name="series_age_all">Livre para todos</string>
+    <string name="series_age_rating_cd">Classificação: %1$s</string>
+    <plurals name="series_free_count">
+        <item quantity="one">%1$d grátis</item>
+        <item quantity="many">%1$d grátis</item>
+        <item quantity="other">%1$d grátis</item>
+    </plurals>
+
+    <string name="series_resume_episode">Retomar o episódio %1$d</string>
+    <string name="series_like_count_cd">Curtir, %1$d</string>
+
+    <string name="series_synopsis_placeholder">Sinopse em breve.</string>
+    <string name="series_read_more">Ler mais</string>
+    <string name="series_read_less">Mostrar menos</string>
+    <string name="series_synopsis_expanded">Expandido</string>
+    <string name="series_synopsis_collapsed">Recolhido</string>
+
+    <string name="series_episode_free">Grátis</string>
+    <string name="series_episode_unlocked">Desbloqueado</string>
+    <string name="series_episode_locked">Bloqueado</string>
+    <string name="series_episode_current">Episódio atual</string>
+
+    <string name="series_notice_added">Adicionado à Minha lista</string>
+    <string name="series_notice_removed">Removido da Minha lista</string>
+    <string name="series_notice_favorite_failed">Não foi possível atualizar a Minha lista</string>
+    <string name="series_notice_like_failed">Não foi possível guardar a sua curtida</string>
+
+    <string name="series_error_not_found">Esta série já não está disponível.</string>
+    <string name="series_error_load">Não foi possível carregar a série.</string>
+</resources>

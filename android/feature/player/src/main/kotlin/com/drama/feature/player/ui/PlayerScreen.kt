@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,6 +50,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,13 +80,18 @@ import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.ui.component.ErrorMessage
 import com.drama.core.ui.component.LoadingIndicator
 import com.drama.core.ui.share.shareText
+import com.drama.core.ui.text.UiText
+import com.drama.core.ui.text.asString
+import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Episode
 import com.drama.feature.player.EndOfEpisode
 import com.drama.feature.player.PageState
 import com.drama.feature.player.PlayerUiState
 import com.drama.feature.player.PlayerViewModel
+import com.drama.feature.player.R
 import kotlinx.coroutines.flow.distinctUntilChanged
+import com.drama.core.ui.R as CoreR
 
 /** Callbacks of the player surface, grouped so the stateless content keeps a short signature. */
 data class PlayerActions(
@@ -128,6 +146,11 @@ fun PlayerScreen(
     )
 }
 
+/**
+ * Stateless player. TalkBack order (S06-A1-03): top bar (back, episode, chips, share, settings), then the video
+ * surface of the current page (custom actions for play/pause and ±10 s), then the bottom block (title, mute,
+ * seek bar). Every text comes from resources (S05-A2-03).
+ */
 @Composable
 fun PlayerContent(
     state: PlayerUiState,
@@ -147,7 +170,8 @@ fun PlayerContent(
     ) {
         when {
             state.isLoading -> LoadingIndicator()
-            state.episodes.isEmpty() -> ErrorMessage(state.errorMessage ?: "Aucun épisode")
+            state.episodes.isEmpty() ->
+                ErrorMessage(state.errorMessage?.asString() ?: stringResource(R.string.player_no_episodes))
             else -> {
                 val pagerState = rememberPagerState(initialPage = state.currentIndex) { state.episodes.size }
                 LaunchedEffect(pagerState) {
@@ -197,17 +221,23 @@ fun PlayerContent(
             modifier =
                 Modifier
                     .align(Alignment.TopCenter)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    // Drawn last (over the pager) but read first.
+                    .semantics {
+                        isTraversalGroup = true
+                        traversalIndex = TOP_BAR_TRAVERSAL_INDEX
+                    },
         )
         state.errorMessage?.takeIf { state.episodes.isNotEmpty() }?.let { message ->
             Text(
-                text = message,
+                text = message.asString(),
                 color = MaterialTheme.colorScheme.error,
                 modifier =
                     Modifier
                         .align(Alignment.Center)
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                        .padding(DramaSpacing.md),
+                        .padding(DramaSpacing.md)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
         sheet?.let { open ->
@@ -236,15 +266,20 @@ private fun PlayerTopBar(
             modifier
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
                 .statusBarsPadding()
-                .height(TOP_BAR_HEIGHT)
+                // Minimum, not fixed: the title must not clip at 200 % font scale.
+                .heightIn(min = TOP_BAR_HEIGHT)
                 .padding(horizontal = DramaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = Color.White)
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(CoreR.string.action_back),
+                tint = Color.White,
+            )
         }
         Text(
-            text = state.currentEpisode?.let { "Épisode ${it.index}" } ?: "",
+            text = state.currentEpisode?.let { stringResource(CoreR.string.episode_number, it.index) } ?: "",
             color = Color.White,
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
@@ -252,52 +287,84 @@ private fun PlayerTopBar(
             modifier = Modifier.weight(1f),
         )
         if (state.episodes.isNotEmpty()) {
-            SettingChip(text = state.speedLabel, onClick = { onOpenSheet(PlayerSheet.SPEED) })
-            SettingChip(text = state.qualityLabel, onClick = { onOpenSheet(PlayerSheet.QUALITY) })
+            val qualityText = state.qualityText()
+            val subtitleText = state.subtitleText()
             SettingChip(
-                text = "CC ${state.subtitleLabel}",
+                text = state.speedLabel,
+                contentDescription = stringResource(R.string.player_speed_chip_description, state.speedLabel),
+                onClick = { onOpenSheet(PlayerSheet.SPEED) },
+            )
+            SettingChip(
+                text = qualityText,
+                contentDescription = stringResource(R.string.player_quality_chip_description, qualityText),
+                onClick = { onOpenSheet(PlayerSheet.QUALITY) },
+            )
+            SettingChip(
+                text =
+                    stringResource(
+                        R.string.player_subtitles_chip,
+                        state.subtitleCode ?: stringResource(R.string.player_subtitles_off_short),
+                    ),
+                contentDescription = stringResource(R.string.player_subtitles_chip_description, subtitleText),
                 active = state.activeSubtitleLanguage != null,
                 onClick = { onOpenSheet(PlayerSheet.SUBTITLES) },
             )
             IconButton(onClick = onShare) {
-                Icon(Icons.Default.Share, contentDescription = "Partager la série", tint = Color.White)
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = stringResource(R.string.player_share_series),
+                    tint = Color.White,
+                )
             }
             IconButton(onClick = { onOpenSheet(PlayerSheet.SETTINGS) }) {
-                Icon(Icons.Default.Settings, contentDescription = "Paramètres de lecture", tint = Color.White)
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.player_settings_title),
+                    tint = Color.White,
+                )
             }
         }
     }
 }
 
+/** Compact pill in the top bar; the visible pill keeps its size, the touch target is at least 48 dp tall. */
 @Composable
 private fun SettingChip(
     text: String,
+    contentDescription: String,
     onClick: () -> Unit,
     active: Boolean = false,
 ) {
-    Text(
-        text = text,
-        color = Color.White,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 1,
+    Box(
         modifier =
             Modifier
-                .padding(horizontal = DramaSpacing.xxs)
-                .background(
-                    if (active) {
-                        MaterialTheme.colorScheme.primary.copy(
-                            alpha = 0.85f,
-                        )
-                    } else {
-                        Color.White.copy(alpha = 0.16f)
-                    },
-                    RoundedCornerShape(50),
-                ).clickable(onClick = onClick)
-                .padding(
-                    horizontal = DramaSpacing.sm + DramaSpacing.xxs,
-                    vertical = DramaSpacing.xs + DramaSpacing.xxs,
-                ),
-    )
+                .heightIn(min = DramaSizes.touchTarget)
+                .clickable(onClick = onClick, role = Role.Button)
+                .semantics { this.contentDescription = contentDescription }
+                .padding(horizontal = DramaSpacing.xxs),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier =
+                Modifier
+                    .background(
+                        if (active) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                        } else {
+                            Color.White.copy(alpha = 0.16f)
+                        },
+                        RoundedCornerShape(50),
+                    ).padding(
+                        horizontal = DramaSpacing.sm + DramaSpacing.xxs,
+                        vertical = DramaSpacing.xs + DramaSpacing.xxs,
+                    ),
+        )
+    }
 }
 
 @OptIn(UnstableApi::class)
@@ -312,12 +379,37 @@ private fun EpisodePage(
     endOfEpisode: EndOfEpisode?,
     actions: PlayerActions,
 ) {
+    val surfaceDescription = stringResource(R.string.player_surface_description, episode.index)
+    val playbackState =
+        stringResource(if (isPlaying) R.string.player_state_playing else R.string.player_state_paused)
+    val playPauseLabel = stringResource(if (isPlaying) R.string.player_action_pause else R.string.player_action_play)
+    val forwardLabel = UiText.Plural(R.plurals.player_action_forward, SEEK_STEP_SECONDS).asString()
+    val rewindLabel = UiText.Plural(R.plurals.player_action_rewind, SEEK_STEP_SECONDS).asString()
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .pointerInput(actions) {
+                // TalkBack controls playback through custom actions, no double-tap gesture needed.
+                .semantics {
+                    contentDescription = surfaceDescription
+                    stateDescription = playbackState
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(playPauseLabel) {
+                                actions.onTap()
+                                true
+                            },
+                            CustomAccessibilityAction(forwardLabel) {
+                                actions.onDoubleTap(true)
+                                true
+                            },
+                            CustomAccessibilityAction(rewindLabel) {
+                                actions.onDoubleTap(false)
+                                true
+                            },
+                        )
+                }.pointerInput(actions) {
                     detectTapGestures(
                         onTap = { actions.onTap() },
                         onDoubleTap = { offset -> actions.onDoubleTap(offset.x > size.width / 2) },
@@ -346,9 +438,12 @@ private fun EpisodePage(
             is PageState.Locked -> LockedPlaceholder(episode = episode, coinCost = pageState.coinCost)
             is PageState.Failed ->
                 Text(
-                    text = pageState.message,
+                    text = pageState.message.asString(),
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier =
+                        Modifier
+                            .align(Alignment.Center)
+                            .semantics { liveRegion = LiveRegionMode.Polite },
                 )
             PageState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             PageState.Ready, PageState.Idle -> Unit
@@ -378,14 +473,18 @@ private fun EpisodePage(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Épisode ${episode.index} — ${episode.title}",
+                    text = stringResource(R.string.player_episode_title, episode.index, episode.title),
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                PillButton(text = if (isMuted) "Muet" else "Son", onClick = actions.onToggleMute)
+                PillButton(
+                    text = stringResource(if (isMuted) R.string.player_muted else R.string.player_sound),
+                    contentDescription = stringResource(if (isMuted) R.string.player_unmute else R.string.player_mute),
+                    onClick = actions.onToggleMute,
+                )
             }
             Spacer(Modifier.height(DramaSpacing.sm))
             SeekBar(position = position, onSeek = actions.onSeek, modifier = Modifier.fillMaxWidth())
@@ -398,30 +497,37 @@ private fun LockedPlaceholder(
     episode: Episode,
     coinCost: Int?,
 ) {
+    val episodeLabel = stringResource(CoreR.string.episode_number, episode.index)
+    val detail =
+        coinCost?.let { cost ->
+            stringResource(
+                R.string.player_locked_episode_cost,
+                episodeLabel,
+                UiText.Plural(CoreR.plurals.coin_count, cost).asString(),
+            )
+        } ?: episodeLabel
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(Color(0xFF14141C))
-                .padding(DramaSpacing.lg),
+                .padding(DramaSpacing.lg)
+                .semantics(mergeDescendants = true) {},
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = "🔒", fontSize = 48.sp)
+        // Decorative glyph: the title carries the meaning.
+        Text(text = LOCK_GLYPH, fontSize = 48.sp, modifier = Modifier.clearAndSetSemantics {})
         Spacer(Modifier.height(DramaSpacing.md))
         Text(
-            text = "Épisode verrouillé — paywall au sprint 7",
+            text = stringResource(R.string.player_locked_title),
             color = Color.White,
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(DramaSpacing.sm))
         Text(
-            text =
-                buildString {
-                    append("Épisode ${episode.index}")
-                    coinCost?.let { append(" · $it pièces") }
-                },
+            text = detail,
             color = Color.White.copy(alpha = 0.7f),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
@@ -445,15 +551,25 @@ private fun EndOfEpisodeOverlay(
         verticalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
     ) {
         if (end.nextIndex != null) {
-            Text("Épisode suivant dans ${end.countdownSeconds} s", color = Color.White)
-            PillButton(text = "Épisode suivant ▶", onClick = onNext)
+            Text(
+                text = UiText.Plural(R.plurals.player_next_in, end.countdownSeconds).asString(),
+                color = Color.White,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+            val next = stringResource(R.string.player_next_episode)
+            PillButton(text = next + NEXT_GLYPH, contentDescription = next, onClick = onNext)
         } else {
-            Text("Fin de la série", color = Color.White)
-            PillButton(text = "Revoir", onClick = onReplay)
+            Text(
+                text = stringResource(R.string.player_end_of_series),
+                color = Color.White,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+            PillButton(text = stringResource(R.string.player_replay), onClick = onReplay)
         }
     }
 }
 
+/** Decorative: the paused state is announced by the video surface ([EpisodePage] `stateDescription`). */
 @Composable
 private fun PauseBadge(modifier: Modifier = Modifier) {
     Box(
@@ -461,30 +577,42 @@ private fun PauseBadge(modifier: Modifier = Modifier) {
             modifier
                 .size(72.dp)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.55f)),
+                .background(Color.Black.copy(alpha = 0.55f))
+                .clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = "▶", color = Color.White, fontSize = 32.sp)
+        Text(text = PLAY_GLYPH, color = Color.White, fontSize = 32.sp)
     }
 }
 
-/** One-line startup measurement (S01-A2-01 spike instrumentation), kept discreet under the top bar. */
+/**
+ * One-line startup measurement (S01-A2-01 spike instrumentation), kept discreet under the top bar.
+ * Developer information: not translated, hidden from accessibility services.
+ */
 @Composable
 private fun StartupBadge(
     state: PlayerUiState,
     modifier: Modifier = Modifier,
 ) {
     val last = state.lastStartup ?: return
-    val mode = if (last.wasPreloaded) "préchargé" else "à froid"
+    val mode = stringResource(if (last.wasPreloaded) R.string.player_debug_preloaded else R.string.player_debug_cold)
     Text(
-        text = "1re image ${last.startupMs} ms · $mode · ${state.currentIndex + 1}/${state.episodes.size}",
+        text =
+            stringResource(
+                R.string.player_debug_startup,
+                last.startupMs,
+                mode,
+                state.currentIndex + 1,
+                state.episodes.size,
+            ),
         color = Color(0xFFB9F6CA),
         fontSize = 10.sp,
         fontFamily = FontFamily.Monospace,
         modifier =
             modifier
                 .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
-                .padding(horizontal = DramaSpacing.sm, vertical = DramaSpacing.xxs),
+                .padding(horizontal = DramaSpacing.sm, vertical = DramaSpacing.xxs)
+                .clearAndSetSemantics {},
     )
 }
 
@@ -517,5 +645,11 @@ private tailrec fun Context.findActivity(): Activity? =
         else -> null
     }
 
+/** Minimum height of the top bar; it grows with the font scale. */
 private val TOP_BAR_HEIGHT = 48.dp
 private val SUBTITLE_BOTTOM_INSET = 112.dp
+private const val TOP_BAR_TRAVERSAL_INDEX = -1f
+private val SEEK_STEP_SECONDS = (PlayerViewModel.SEEK_STEP_MS / 1_000L).toInt()
+private const val LOCK_GLYPH = "🔒"
+private const val PLAY_GLYPH = "▶"
+private const val NEXT_GLYPH = " ▶"

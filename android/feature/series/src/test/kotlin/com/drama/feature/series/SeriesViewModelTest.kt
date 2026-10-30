@@ -6,6 +6,7 @@ import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.share.HostShareLinkProvider
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.LikeState
@@ -14,6 +15,7 @@ import com.drama.domain.model.Series
 import com.drama.domain.model.WatchHistoryEntry
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.FavoritesRepository
+import com.drama.domain.repository.PushRepository
 import com.drama.domain.usecase.ObserveSeriesDetailUseCase
 import com.drama.domain.usecase.SeriesDetail
 import com.drama.feature.series.navigation.SeriesRoute
@@ -35,6 +37,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.drama.core.ui.R as CoreR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SeriesViewModelTest {
@@ -72,9 +75,46 @@ class SeriesViewModelTest {
             favorites = favorites,
             shareLinks = HostShareLinkProvider("links.drama.example"),
             analytics = analytics,
+            push = push,
         )
 
     private val favorites = FakeFavoritesRepository()
+    private val push = FakePushRepository()
+
+    @Test
+    fun `first favourite asks for the notification permission once`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            details.emit(SeriesDetail(series(), episodes, null, isRefreshing = false, error = null))
+            advanceUntilIdle()
+            viewModel.onToggleFavorite()
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.requestNotificationPermission)
+            viewModel.onNotificationPermissionPrompted()
+            advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.requestNotificationPermission)
+            assertTrue(push.shown.value)
+            viewModel.onToggleFavorite() // remove
+            advanceUntilIdle()
+            viewModel.onToggleFavorite() // add again: already prompted
+            advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.requestNotificationPermission)
+        }
+
+    private class FakePushRepository : PushRepository {
+        val shown = MutableStateFlow(false)
+        override val permissionPromptShown: Flow<Boolean> = shown
+
+        override suspend fun markPermissionPromptShown() {
+            shown.value = true
+        }
+
+        override suspend fun syncToken(force: Boolean): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun onNewToken(token: String): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun unregister(): AppResult<Unit> = AppResult.Success(Unit)
+    }
 
     @Test
     fun `favorite heart is optimistic and rolls back on failure`() =
@@ -87,14 +127,14 @@ class SeriesViewModelTest {
             viewModel.onToggleFavorite()
             advanceUntilIdle()
             assertTrue(viewModel.uiState.value.isFavorite)
-            assertEquals("Ajouté à Ma liste", viewModel.uiState.value.notice)
+            assertEquals(UiText.Res(R.string.series_notice_added), viewModel.uiState.value.notice)
             assertTrue(events.contains(AnalyticsEvent.Favorite("s1", added = true, source = "home")))
 
             favorites.failNext = true
             viewModel.onToggleFavorite()
             advanceUntilIdle()
             assertTrue(viewModel.uiState.value.isFavorite) // rolled back to "favorite"
-            assertEquals("Impossible de mettre à jour Ma liste", viewModel.uiState.value.notice)
+            assertEquals(UiText.Res(R.string.series_notice_favorite_failed), viewModel.uiState.value.notice)
         }
 
     @Test
@@ -233,7 +273,7 @@ class SeriesViewModelTest {
             advanceUntilIdle()
             val loaded = vm.uiState.value
             assertFalse(loaded.isLoading)
-            assertEquals("Reprendre l'épisode 2", loaded.primaryActionLabel)
+            assertEquals(UiText.of(R.string.series_resume_episode, 2), loaded.primaryActionLabel)
             assertEquals(4, loaded.episodes.size)
 
             details.emit(
@@ -247,7 +287,7 @@ class SeriesViewModelTest {
             )
             advanceUntilIdle()
             val stale = vm.uiState.value
-            assertEquals("Regarder", stale.primaryActionLabel)
+            assertEquals(UiText.Res(CoreR.string.action_watch), stale.primaryActionLabel)
             assertFalse(stale.showError)
             assertTrue(stale.error is AppError.Network)
 

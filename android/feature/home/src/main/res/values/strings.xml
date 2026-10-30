@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_brand" translatable="false">DRAMA</string>
+    <string name="home_continue_watching">Continuer à regarder</string>
+    <string name="home_empty">Aucune série publiée pour le moment.</string>
+    <string name="home_error_load">Impossible de charger l\'accueil.</string>
+    <!-- Poster subtitle: episode count (short) and first genre. -->
+    <plurals name="home_card_meta">
+        <item quantity="one">%1$d ép. · %2$s</item>
+        <item quantity="other">%1$d ép. · %2$s</item>
+    </plurals>
+</resources>

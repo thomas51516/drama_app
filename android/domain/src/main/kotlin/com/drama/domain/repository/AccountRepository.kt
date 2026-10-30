@@ -2,6 +2,7 @@ package com.drama.domain.repository
 
 import com.drama.core.common.result.AppResult
 import com.drama.domain.model.AccountDeletion
+import com.drama.domain.model.NotificationPreferences
 import com.drama.domain.model.OtpChallenge
 import com.drama.domain.model.SignInResult
 import com.drama.domain.model.UserProfile
@@ -38,10 +39,12 @@ interface AccountRepository {
         password: String,
     ): AppResult<SignInResult>
 
+    /** `PATCH /me`; absent fields are left untouched. Works for guests too (language, notifications). */
     suspend fun updateProfile(
         displayName: String? = null,
         language: String? = null,
         country: String? = null,
+        notificationPreferences: NotificationPreferences? = null,
     ): AppResult<UserProfile>
 
     /** `POST /auth/logout` (best effort), wipes the local account data and opens a new guest session. */

@@ -8,11 +8,13 @@ import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.share.ShareLinkProvider
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.ResumeTarget
 import com.drama.domain.model.Series
 import com.drama.domain.repository.FavoritesRepository
+import com.drama.domain.repository.PushRepository
 import com.drama.domain.usecase.ObserveSeriesDetailUseCase
 import com.drama.feature.series.navigation.SeriesRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,9 +22,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.drama.core.ui.R as CoreR
 
 data class SeriesUiState(
     val isLoading: Boolean = true,
@@ -36,18 +40,20 @@ data class SeriesUiState(
     val isFavorite: Boolean = false,
     /** "J'aime" count and state; null until the catalogue or a toggle provides it. */
     val likeState: LikeState? = null,
-    /** One-shot message (toggle rolled back, ...). */
-    val notice: String? = null,
+    /** One-shot message (toggle rolled back, ...), resolved by the UI (S05-A2-03). */
+    val notice: UiText? = null,
+    /** One-shot (M-54): ask for POST_NOTIFICATIONS right after the first favourite, never at launch. */
+    val requestNotificationPermission: Boolean = false,
 ) {
     val showError: Boolean get() = error != null && series == null
 
     /** Label of the primary button: "Regarder" for a fresh series, "Reprendre l'épisode N" afterwards. */
-    val primaryActionLabel: String
+    val primaryActionLabel: UiText
         get() =
             when {
-                resumeTarget == null -> "Regarder"
-                resumeTarget.isResume -> "Reprendre l'épisode ${resumeTarget.episodeIndex}"
-                else -> "Regarder"
+                resumeTarget == null -> UiText.Res(CoreR.string.action_watch)
+                resumeTarget.isResume -> UiText.of(R.string.series_resume_episode, resumeTarget.episodeIndex)
+                else -> UiText.Res(CoreR.string.action_watch)
             }
 }
 
@@ -61,6 +67,7 @@ class SeriesViewModel
         private val favorites: FavoritesRepository,
         private val shareLinks: ShareLinkProvider,
         private val analytics: AnalyticsTracker,
+        private val push: PushRepository,
     ) : ViewModel() {
         val seriesId: String = checkNotNull(savedStateHandle[SeriesRoute.ARG_SERIES_ID])
 
@@ -101,12 +108,20 @@ class SeriesViewModel
             analytics.track(AnalyticsEvent.Favorite(seriesId, adding, source))
             viewModelScope.launch {
                 when (favorites.setFavorite(series, adding)) {
-                    is AppResult.Success ->
+                    is AppResult.Success -> {
+                        val promptNow = adding && !push.permissionPromptShown.first()
                         uiStateFlow.update {
-                            it.copy(notice = if (adding) "Ajouté à Ma liste" else "Retiré de Ma liste")
+                            it.copy(
+                                notice =
+                                    UiText.Res(
+                                        if (adding) R.string.series_notice_added else R.string.series_notice_removed,
+                                    ),
+                                requestNotificationPermission = it.requestNotificationPermission || promptNow,
+                            )
                         }
+                    }
                     is AppResult.Failure ->
-                        uiStateFlow.update { it.copy(notice = "Impossible de mettre à jour Ma liste") }
+                        uiStateFlow.update { it.copy(notice = UiText.Res(R.string.series_notice_favorite_failed)) }
                 }
             }
         }
@@ -125,7 +140,7 @@ class SeriesViewModel
                         uiStateFlow.update {
                             it.copy(
                                 likeState = current,
-                                notice = "Impossible d'enregistrer votre J'aime",
+                                notice = UiText.Res(R.string.series_notice_like_failed),
                             )
                         }
                 }
@@ -139,6 +154,12 @@ class SeriesViewModel
         }
 
         fun onNoticeShown() = uiStateFlow.update { it.copy(notice = null) }
+
+        /** The UI launched (or skipped, below API 33) the permission request: never ask again from a favourite. */
+        fun onNotificationPermissionPrompted() {
+            uiStateFlow.update { it.copy(requestNotificationPermission = false) }
+            viewModelScope.launch { push.markPermissionPromptShown() }
+        }
 
         private fun load() {
             collectJob?.cancel()

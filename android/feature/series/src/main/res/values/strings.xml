@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Header and meta -->
+    <string name="series_episodes_heading">Épisodes</string>
+    <string name="series_no_episodes">Aucun épisode disponible pour le moment.</string>
+    <string name="series_age_all">Tous publics</string>
+    <string name="series_age_12" translatable="false">12+</string>
+    <string name="series_age_16" translatable="false">16+</string>
+    <string name="series_age_18" translatable="false">18+</string>
+    <string name="series_age_rating_cd">Classification : %1$s</string>
+    <plurals name="series_free_count">
+        <item quantity="one">%1$d gratuit</item>
+        <item quantity="other">%1$d gratuits</item>
+    </plurals>
+
+    <!-- Primary action and like -->
+    <string name="series_resume_episode">Reprendre l\'épisode %1$d</string>
+    <string name="series_like_count_cd">J\'aime, %1$d</string>
+
+    <!-- Synopsis -->
+    <string name="series_synopsis_placeholder">Synopsis à venir.</string>
+    <string name="series_read_more">Lire la suite</string>
+    <string name="series_read_less">Réduire</string>
+    <string name="series_synopsis_expanded">Développé</string>
+    <string name="series_synopsis_collapsed">Réduit</string>
+
+    <!-- Episode grid -->
+    <string name="series_episode_free">Gratuit</string>
+    <string name="series_episode_unlocked">Débloqué</string>
+    <string name="series_episode_locked">Verrouillé</string>
+    <string name="series_episode_current">Épisode en cours</string>
+
+    <!-- Notices -->
+    <string name="series_notice_added">Ajouté à Ma liste</string>
+    <string name="series_notice_removed">Retiré de Ma liste</string>
+    <string name="series_notice_favorite_failed">Impossible de mettre à jour Ma liste</string>
+    <string name="series_notice_like_failed">Impossible d\'enregistrer votre J\'aime</string>
+
+    <!-- Errors -->
+    <string name="series_error_not_found">Cette série n\'est plus disponible.</string>
+    <string name="series_error_load">Impossible de charger la série.</string>
+</resources>

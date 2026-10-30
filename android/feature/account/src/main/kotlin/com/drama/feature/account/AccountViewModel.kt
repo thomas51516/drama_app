@@ -9,6 +9,7 @@ import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.AuthProvider
 import com.drama.domain.model.OtpChallenge
 import com.drama.domain.model.SessionState
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.drama.core.ui.R as CoreR
 
 /** Which screen of the account flow is shown. */
 enum class AccountStep {
@@ -33,6 +35,7 @@ enum class AccountStep {
     OTP,
     EMAIL,
     EDIT_PROFILE,
+    SETTINGS,
 }
 
 enum class EmailMode {
@@ -50,25 +53,24 @@ data class AccountUiState(
     val countries: List<Country> = Country.ALL,
     val country: Country = Country.DEFAULT,
     val phoneNumber: String = "",
-    val phoneError: String? = null,
+    val phoneError: UiText? = null,
     // OTP
     val phoneE164: String? = null,
     val challenge: OtpChallenge? = null,
     val otpCode: String = "",
-    val otpError: String? = null,
+    val otpError: UiText? = null,
     /** Seconds before "Renvoyer le code" becomes available (from `resendAfter`). */
     val resendInSeconds: Int = 0,
     // E-mail
     val emailMode: EmailMode = EmailMode.LOGIN,
     val email: String = "",
     val password: String = "",
-    val emailError: String? = null,
+    val emailError: UiText? = null,
     // Profile edit
     val editDisplayName: String = "",
-    val editLanguage: String = "fr",
     val confirmDelete: Boolean = false,
     /** One-shot snackbar text. */
-    val message: String? = null,
+    val message: UiText? = null,
 ) {
     val isGuest: Boolean get() = (session as? SessionState.Authenticated)?.isGuest != false
     val isRegistered: Boolean get() = (session as? SessionState.Authenticated)?.isGuest == false
@@ -78,13 +80,6 @@ data class AccountUiState(
     companion object {
         const val OTP_LENGTH = 6
         const val MIN_PASSWORD_LENGTH = 8
-        val LANGUAGES: List<Pair<String, String>> =
-            listOf(
-                "fr" to "Français",
-                "en" to "English",
-                "es" to "Español",
-                "pt" to "Português",
-            )
     }
 }
 
@@ -92,6 +87,8 @@ data class AccountUiState(
  * Account tab (M-50/M-51/M-52, S05-A2-01/02). A guest sees the three sign-in options; a registered viewer the
  * profile card. Every successful sign-in replaces the session in place (history kept) and shows
  * "Compte rattaché, votre historique est conservé" when the server reports `linked = true`.
+ * Texts are [UiText] so the view model stays free of Android resources (S05-A2-03); language and notification
+ * preferences live in [SettingsViewModel].
  */
 @HiltViewModel
 class AccountViewModel
@@ -109,7 +106,6 @@ class AccountViewModel
                 AccountUiState(
                     googleConfigured = authConfig.isGoogleConfigured,
                     country = Country.forIso(deviceLocale.country),
-                    editLanguage = deviceLocale.language,
                 ),
             )
         val uiState: StateFlow<AccountUiState> = uiStateFlow.asStateFlow()
@@ -130,7 +126,6 @@ class AccountViewModel
                         it.copy(
                             profile = profile,
                             editDisplayName = profile?.displayName ?: it.editDisplayName,
-                            editLanguage = profile?.language ?: it.editLanguage,
                         )
                     }
                 }
@@ -170,7 +165,13 @@ class AccountViewModel
         }
 
         fun onGoogleFailed(message: String?) {
-            uiStateFlow.update { it.copy(isBusy = false, message = message ?: "Connexion Google impossible") }
+            uiStateFlow.update {
+                it.copy(
+                    isBusy = false,
+                    message =
+                        message?.let(UiText::Raw) ?: UiText.Res(R.string.account_msg_google_failed),
+                )
+            }
         }
 
         // --- Phone + OTP (M-51) ---
@@ -183,7 +184,7 @@ class AccountViewModel
             val state = uiStateFlow.value
             val e164 = Country.toE164(state.country, state.phoneNumber)
             if (e164 == null) {
-                uiStateFlow.update { it.copy(phoneError = "Numéro invalide") }
+                uiStateFlow.update { it.copy(phoneError = UiText.Res(R.string.account_phone_invalid)) }
                 return
             }
             uiStateFlow.update { it.copy(isBusy = true, phoneError = null) }
@@ -206,7 +207,7 @@ class AccountViewModel
                         uiStateFlow.update {
                             it.copy(
                                 isBusy = false,
-                                phoneError = result.error.toMessage("Envoi du code impossible"),
+                                phoneError = result.error.toMessage(R.string.account_otp_send_failed),
                             )
                         }
                 }
@@ -257,11 +258,13 @@ class AccountViewModel
             val state = uiStateFlow.value
             val email = state.email.trim()
             when {
-                !EMAIL.matches(email) -> uiStateFlow.update { it.copy(emailError = "Adresse e-mail invalide") }
+                !EMAIL.matches(email) ->
+                    uiStateFlow.update { it.copy(emailError = UiText.Res(R.string.account_email_invalid)) }
                 state.password.length < AccountUiState.MIN_PASSWORD_LENGTH ->
                     uiStateFlow.update {
                         it.copy(
-                            emailError = "Mot de passe : ${AccountUiState.MIN_PASSWORD_LENGTH} caractères minimum",
+                            emailError =
+                                UiText.of(R.string.account_password_too_short, AccountUiState.MIN_PASSWORD_LENGTH),
                         )
                     }
                 state.emailMode == EmailMode.REGISTER ->
@@ -280,29 +283,24 @@ class AccountViewModel
         fun onEditDisplayNameChanged(value: String) =
             uiStateFlow.update { it.copy(editDisplayName = value.take(MAX_NAME)) }
 
-        fun onEditLanguageChanged(value: String) = uiStateFlow.update { it.copy(editLanguage = value) }
-
+        /** Display name only: the language moved to the settings screen (S05-A1-03). */
         fun onSaveProfile() {
             val state = uiStateFlow.value
             uiStateFlow.update { it.copy(isBusy = true) }
             viewModelScope.launch {
-                val result =
-                    account.updateProfile(
-                        displayName = state.editDisplayName.trim(),
-                        language = state.editLanguage,
-                    )
+                val result = account.updateProfile(displayName = state.editDisplayName.trim())
                 uiStateFlow.update {
                     when (result) {
                         is AppResult.Success ->
                             it.copy(
                                 isBusy = false,
                                 step = AccountStep.OVERVIEW,
-                                message = "Profil mis à jour",
+                                message = UiText.Res(R.string.account_msg_profile_updated),
                             )
                         is AppResult.Failure ->
                             it.copy(
                                 isBusy = false,
-                                message = result.error.toMessage("Mise à jour impossible"),
+                                message = result.error.toMessage(R.string.account_msg_update_failed),
                             )
                     }
                 }
@@ -319,8 +317,8 @@ class AccountViewModel
                         step = AccountStep.OVERVIEW,
                         message =
                             when (result) {
-                                is AppResult.Success -> "Déconnecté. Vous continuez en invité."
-                                is AppResult.Failure -> result.error.toMessage("Déconnexion incomplète")
+                                is AppResult.Success -> UiText.Res(R.string.account_msg_logged_out)
+                                is AppResult.Failure -> result.error.toMessage(R.string.account_msg_logout_incomplete)
                             },
                     )
                 }
@@ -339,8 +337,8 @@ class AccountViewModel
                         step = AccountStep.OVERVIEW,
                         message =
                             when (result) {
-                                is AppResult.Success -> "Compte supprimé : vos données seront effacées sous 30 jours."
-                                is AppResult.Failure -> result.error.toMessage("Suppression impossible")
+                                is AppResult.Success -> UiText.Res(R.string.account_msg_deleted)
+                                is AppResult.Failure -> result.error.toMessage(R.string.account_msg_delete_failed)
                             },
                     )
                 }
@@ -363,7 +361,7 @@ class AccountViewModel
                 when (val result = call()) {
                     is AppResult.Success -> onSignedIn(provider, signup, result.value)
                     is AppResult.Failure -> {
-                        val message = result.error.toMessage("Connexion impossible")
+                        val message = result.error.toMessage(R.string.account_msg_sign_in_failed)
                         logger.w(TAG, "sign-in failed provider=$provider: ${result.error}")
                         uiStateFlow.update {
                             when (errorField) {
@@ -399,34 +397,41 @@ class AccountViewModel
                     password = "",
                     otpCode = "",
                     challenge = null,
-                    message = if (result.linked) LINKED_MESSAGE else "Connecté",
+                    message = if (result.linked) LINKED_MESSAGE else UiText.Res(R.string.account_msg_signed_in),
                 )
             }
         }
 
-        private fun AppError.toMessage(fallback: String): String =
+        private fun AppError.toMessage(fallback: Int): UiText =
             when (this) {
-                is AppError.Network -> "Pas de connexion"
-                is AppError.Unauthenticated -> "Identifiants incorrects"
+                is AppError.Network -> UiText.Res(CoreR.string.error_network_short)
+                is AppError.Unauthenticated -> UiText.Res(R.string.account_err_invalid_credentials)
                 is AppError.Http ->
                     when (serverCode) {
-                        "INVALID_CREDENTIALS" -> "Identifiants incorrects"
-                        "EMAIL_TAKEN" -> "Cette adresse e-mail est déjà utilisée"
-                        "OTP_INVALID", "INVALID_OTP", "OTP_EXPIRED" -> "Code incorrect ou expiré"
-                        "OTP_TOO_MANY_ATTEMPTS" -> "Trop d'essais, demandez un nouveau code"
-                        "GOOGLE_AUTH_DISABLED" -> "Connexion Google non configurée"
-                        "RATE_LIMITED" -> "Trop de demandes, réessayez dans quelques minutes"
-                        else -> if (code == HTTP_NOT_IMPLEMENTED) "Bientôt disponible" else message ?: fallback
+                        "INVALID_CREDENTIALS" -> UiText.Res(R.string.account_err_invalid_credentials)
+                        "EMAIL_TAKEN" -> UiText.Res(R.string.account_err_email_taken)
+                        "OTP_INVALID", "INVALID_OTP", "OTP_EXPIRED" -> UiText.Res(R.string.account_err_otp_invalid)
+                        "OTP_TOO_MANY_ATTEMPTS" -> UiText.Res(R.string.account_err_otp_attempts)
+                        "GOOGLE_AUTH_DISABLED" -> UiText.Res(R.string.account_err_google_disabled)
+                        "RATE_LIMITED" -> UiText.Res(CoreR.string.error_rate_limited)
+                        else -> {
+                            val serverMessage = message
+                            when {
+                                code == HTTP_NOT_IMPLEMENTED -> UiText.Res(CoreR.string.state_coming_soon)
+                                serverMessage != null -> UiText.Raw(serverMessage)
+                                else -> UiText.Res(fallback)
+                            }
+                        }
                     }
-                is AppError.Server -> "Service indisponible ($code)"
-                else -> fallback
+                is AppError.Server -> UiText.of(CoreR.string.error_server_short, code)
+                else -> UiText.Res(fallback)
             }
 
         companion object {
             private const val TAG = "Account"
             private const val MAX_NAME = 80
             private const val HTTP_NOT_IMPLEMENTED = 501
-            const val LINKED_MESSAGE = "Compte rattaché, votre historique est conservé"
+            val LINKED_MESSAGE: UiText = UiText.Res(R.string.account_msg_linked)
             private val EMAIL = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
         }
     }

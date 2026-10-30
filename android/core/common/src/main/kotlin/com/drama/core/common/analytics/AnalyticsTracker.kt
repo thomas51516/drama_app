@@ -77,6 +77,18 @@ sealed class AnalyticsEvent(
         val resultCount: Int,
     ) : AnalyticsEvent("search", mapOf("query" to query, "result_count" to resultCount))
 
+    /** Push notification tapped (M-54); also sent to `POST /events`. */
+    data class PushOpen(
+        val notificationId: String?,
+        val type: String,
+    ) : AnalyticsEvent(
+            "push_open",
+            buildMap {
+                put("type", type)
+                notificationId?.let { put("notification_id", it) }
+            },
+        )
+
     /** "Ma liste" heart toggled (M-16). */
     data class Favorite(
         val seriesId: String,

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_no_episodes">Nenhum episódio</string>
+    <string name="player_error_load_series">Não foi possível carregar a série</string>
+    <string name="player_error_playback">Reprodução indisponível</string>
+    <string name="player_error_engine">Erro de reprodução: %1$s</string>
+
+    <string name="player_share_series">Partilhar a série</string>
+    <string name="player_settings_title">Definições de reprodução</string>
+    <string name="player_speed_chip_description">Velocidade de reprodução: %1$s</string>
+    <string name="player_quality_chip_description">Qualidade: %1$s</string>
+    <string name="player_subtitles_chip_description">Legendas: %1$s</string>
+    <string name="player_subtitles_chip">CC %1$s</string>
+    <string name="player_subtitles_off_short">Não</string>
+
+    <string name="player_surface_description">Leitor de vídeo, episódio %1$d</string>
+    <string name="player_state_playing">a reproduzir</string>
+    <string name="player_state_paused">em pausa</string>
+    <string name="player_action_play">Reproduzir</string>
+    <string name="player_action_pause">Pausar</string>
+    <plurals name="player_action_forward">
+        <item quantity="one">Avançar %1$d segundo</item>
+        <item quantity="many">Avançar %1$d segundos</item>
+        <item quantity="other">Avançar %1$d segundos</item>
+    </plurals>
+    <plurals name="player_action_rewind">
+        <item quantity="one">Recuar %1$d segundo</item>
+        <item quantity="many">Recuar %1$d segundos</item>
+        <item quantity="other">Recuar %1$d segundos</item>
+    </plurals>
+
+    <string name="player_episode_title">Episódio %1$d — %2$s</string>
+    <string name="player_muted">Sem som</string>
+    <string name="player_sound">Som</string>
+    <string name="player_mute">Desativar o som</string>
+    <string name="player_unmute">Ativar o som</string>
+    <string name="player_seek_position">Posição %1$s de %2$s</string>
+
+    <plurals name="player_next_in">
+        <item quantity="one">Próximo episódio em %1$d segundo</item>
+        <item quantity="many">Próximo episódio em %1$d segundos</item>
+        <item quantity="other">Próximo episódio em %1$d segundos</item>
+    </plurals>
+    <string name="player_next_episode">Próximo episódio</string>
+    <string name="player_end_of_series">Fim da série</string>
+    <string name="player_replay">Ver novamente</string>
+
+    <string name="player_locked_title">Episódio bloqueado — pagamento disponível no sprint 7</string>
+    <string name="player_locked_episode_cost">%1$s · %2$s</string>
+
+    <string name="player_speed_title">Velocidade de reprodução</string>
+    <string name="player_quality_title">Qualidade de vídeo</string>
+    <string name="player_subtitles_title">Legendas</string>
+    <string name="player_speed">Velocidade</string>
+    <string name="player_quality">Qualidade</string>
+    <string name="player_subtitles">Legendas</string>
+    <string name="player_subtitles_off">Desativadas</string>
+    <string name="player_subtitles_none">Sem legendas para este episódio.</string>
+    <string name="player_subtitle_option">%1$s (%2$s)</string>
+    <string name="player_quality_auto">Auto</string>
+    <string name="player_quality_auto_live">Auto · %1$dp</string>
+</resources>

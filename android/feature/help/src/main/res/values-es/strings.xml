@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="help_title">Ayuda</string>
+    <string name="help_tab_faq">Preguntas frecuentes</string>
+    <string name="help_tab_contact">Contacto</string>
+    <string name="help_tab_tickets">Mis solicitudes</string>
+
+    <!-- FAQ -->
+    <string name="help_faq_search_placeholder">Buscar en las preguntas frecuentes</string>
+    <string name="help_faq_search_clear">Borrar la búsqueda</string>
+    <string name="help_faq_empty_search">Ninguna respuesta para «%1$s». Prueba con otra palabra o contáctanos.</string>
+    <string name="help_faq_empty">Las preguntas frecuentes están vacías por ahora.</string>
+    <string name="help_faq_unavailable">Las preguntas frecuentes llegarán pronto.</string>
+    <string name="help_faq_expanded">Respuesta visible</string>
+    <string name="help_faq_collapsed">Respuesta oculta</string>
+    <string name="help_faq_ask_support">Preguntar al soporte</string>
+
+    <!-- Contact form -->
+    <string name="help_contact_intro">Describe tu problema: nuestro equipo te responde directamente en la aplicación.</string>
+    <string name="help_contact_category">Categoría</string>
+    <string name="help_category_account">Cuenta</string>
+    <string name="help_category_coins">Monedas</string>
+    <string name="help_category_vip">VIP</string>
+    <string name="help_category_payment">Pago</string>
+    <string name="help_category_playback">Reproducción</string>
+    <string name="help_category_content">Contenido</string>
+    <string name="help_category_other">Otro</string>
+    <string name="help_contact_subject">Asunto</string>
+    <string name="help_contact_message">Mensaje</string>
+    <string name="help_contact_email">Correo electrónico (opcional)</string>
+    <string name="help_contact_email_hint">Para recibir la respuesta también por correo electrónico.</string>
+    <string name="help_contact_subject_error">Indica un asunto de al menos %1$d caracteres.</string>
+    <string name="help_contact_message_error">Describe tu problema con al menos %1$d caracteres.</string>
+    <string name="help_contact_email_error">Dirección de correo electrónico no válida.</string>
+    <string name="help_contact_send">Enviar la solicitud</string>
+    <string name="help_contact_sending">Enviando…</string>
+    <string name="help_contact_failed">No se pudo enviar la solicitud. Inténtalo de nuevo.</string>
+    <string name="help_contact_sent_title">Solicitud enviada</string>
+    <string name="help_contact_sent_body">Tu solicitud n.º %1$s se ha recibido correctamente. La respuesta aparecerá en «Mis solicitudes».</string>
+    <string name="help_contact_sent_new">Nueva solicitud</string>
+    <string name="help_contact_sent_view">Ver mis solicitudes</string>
+
+    <!-- Tickets -->
+    <string name="help_tickets_empty">Todavía no has enviado ninguna solicitud.</string>
+    <string name="help_tickets_empty_action">Contactar con el soporte</string>
+    <string name="help_tickets_failed">No se pudieron cargar tus solicitudes.</string>
+    <string name="help_tickets_refresh">Actualizar</string>
+    <string name="help_ticket_number">Solicitud n.º %1$s</string>
+    <string name="help_ticket_status_open">Abierta</string>
+    <string name="help_ticket_status_answered">Respondida</string>
+    <string name="help_ticket_status_closed">Cerrada</string>
+    <string name="help_ticket_messages_expanded">Mensajes visibles</string>
+    <string name="help_ticket_messages_collapsed">Mensajes ocultos</string>
+    <string name="help_ticket_from_user">Tú</string>
+    <string name="help_ticket_from_support">Soporte</string>
+    <plurals name="help_ticket_message_count">
+        <item quantity="one">%1$d mensaje</item>
+        <item quantity="many">%1$d mensajes</item>
+        <item quantity="other">%1$d mensajes</item>
+    </plurals>
+</resources>

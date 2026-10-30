@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_title">Pour vous</string>
+    <string name="feed_empty">Aucun extrait pour le moment.</string>
+    <string name="feed_tap_to_unmute">Appuyez pour activer le son</string>
+    <string name="feed_add_to_list">Ajouter</string>
+    <string name="feed_likes_short" translatable="false">♥ %1$s</string>
+    <string name="feed_likes_cd">%1$s J\'aime</string>
+    <string name="feed_episode_title">Épisode %1$d · %2$s</string>
+    <string name="feed_watch_series">Regarder la série</string>
+    <string name="feed_paused">En pause</string>
+    <!-- Compact counts: 1,2 k / 3,4 M -->
+    <string name="feed_count_thousands">%1$s k</string>
+    <string name="feed_count_millions">%1$s M</string>
+
+    <!-- Errors -->
+    <string name="feed_error_load">Impossible de charger le flux.</string>
+    <string name="feed_playback_failed">Lecture impossible</string>
+    <string name="feed_playback_failed_reason">Lecture impossible (%1$s)</string>
+    <string name="feed_preview_unavailable">Extrait indisponible</string>
+</resources>

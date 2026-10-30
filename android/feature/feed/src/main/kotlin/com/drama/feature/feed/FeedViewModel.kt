@@ -13,6 +13,7 @@ import com.drama.core.player.engine.PlaybackEngine
 import com.drama.core.player.engine.PlaybackEngineFactory
 import com.drama.core.player.engine.PlaybackEvent
 import com.drama.core.player.engine.PlaybackPosition
+import com.drama.core.ui.text.UiText
 import com.drama.domain.model.FeedItem
 import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.SignedUrlPolicy
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.drama.core.ui.R as CoreR
 
 /** Per-page stream resolution. */
 sealed interface FeedPageState {
@@ -38,8 +40,9 @@ sealed interface FeedPageState {
 
     data object Ready : FeedPageState
 
+    /** Resolution or playback failed; [message] is resolved by the UI (S05-A2-03). */
     data class Failed(
-        val message: String,
+        val message: UiText,
     ) : FeedPageState
 }
 
@@ -411,7 +414,8 @@ class FeedViewModel
                 return
             }
             uiStateFlow.update {
-                it.copy(pages = it.pages + (index to FeedPageState.Failed("Lecture impossible (${event.message})")))
+                val failed = FeedPageState.Failed(UiText.of(R.string.feed_playback_failed_reason, event.message))
+                it.copy(pages = it.pages + (index to failed))
             }
         }
 
@@ -419,13 +423,13 @@ class FeedViewModel
             engine.release()
         }
 
-        private fun AppError.toUserMessage(): String =
+        private fun AppError.toUserMessage(): UiText =
             when (this) {
-                is AppError.Network -> "Pas de connexion"
-                is AppError.Locked -> "Extrait indisponible"
-                is AppError.NotFound -> "Contenu introuvable"
-                is AppError.Server -> "Service indisponible ($code)"
-                else -> "Lecture impossible"
+                is AppError.Network -> UiText.Res(CoreR.string.error_network_short)
+                is AppError.Locked -> UiText.Res(R.string.feed_preview_unavailable)
+                is AppError.NotFound -> UiText.Res(CoreR.string.error_not_found)
+                is AppError.Server -> UiText.of(CoreR.string.error_server_short, code)
+                else -> UiText.Res(R.string.feed_playback_failed)
             }
 
         companion object {

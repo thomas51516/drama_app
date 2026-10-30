@@ -26,9 +26,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.drama.core.ui.R
 import com.drama.core.ui.theme.DramaSpacing
 
 @Composable
@@ -75,7 +77,7 @@ fun ErrorState(
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.height(DramaSpacing.md))
-        DramaPrimaryButton(text = "Réessayer", onClick = onRetry)
+        DramaPrimaryButton(text = stringResource(R.string.action_retry), onClick = onRetry)
     }
 }
 
@@ -100,7 +102,9 @@ fun OfflineBanner(
             color = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onRetry) { Text("Réessayer", style = MaterialTheme.typography.labelMedium) }
+        TextButton(onClick = onRetry) {
+            Text(stringResource(R.string.action_retry), style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mylist_offline_cached">Offline: showing your cached list</string>
+    <string name="mylist_empty_title">Your list is empty</string>
+    <string name="mylist_empty_hint">Tap the heart on a series to find it here.</string>
+    <string name="mylist_remove_cd">Remove %1$s from My list</string>
+    <string name="mylist_error_network">No connection. Your list will sync when the network is back.</string>
+    <string name="mylist_error_sync_coming_soon">Sync is coming soon.</string>
+    <string name="mylist_error_sync_failed">Sync failed.</string>
+</resources>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_no_episodes">No episodes</string>
+    <string name="player_error_load_series">Could not load the series</string>
+    <string name="player_error_playback">Playback unavailable</string>
+    <string name="player_error_engine">Playback error: %1$s</string>
+
+    <string name="player_share_series">Share the series</string>
+    <string name="player_settings_title">Playback settings</string>
+    <string name="player_speed_chip_description">Playback speed: %1$s</string>
+    <string name="player_quality_chip_description">Quality: %1$s</string>
+    <string name="player_subtitles_chip_description">Subtitles: %1$s</string>
+    <string name="player_subtitles_chip">CC %1$s</string>
+    <string name="player_subtitles_off_short">Off</string>
+
+    <string name="player_surface_description">Video player, episode %1$d</string>
+    <string name="player_state_playing">playing</string>
+    <string name="player_state_paused">paused</string>
+    <string name="player_action_play">Play</string>
+    <string name="player_action_pause">Pause</string>
+    <plurals name="player_action_forward">
+        <item quantity="one">Skip forward %1$d second</item>
+        <item quantity="other">Skip forward %1$d seconds</item>
+    </plurals>
+    <plurals name="player_action_rewind">
+        <item quantity="one">Skip back %1$d second</item>
+        <item quantity="other">Skip back %1$d seconds</item>
+    </plurals>
+
+    <string name="player_episode_title">Episode %1$d — %2$s</string>
+    <string name="player_muted">Muted</string>
+    <string name="player_sound">Sound</string>
+    <string name="player_mute">Mute</string>
+    <string name="player_unmute">Unmute</string>
+    <string name="player_seek_position">Position %1$s of %2$s</string>
+
+    <plurals name="player_next_in">
+        <item quantity="one">Next episode in %1$d second</item>
+        <item quantity="other">Next episode in %1$d seconds</item>
+    </plurals>
+    <string name="player_next_episode">Next episode</string>
+    <string name="player_end_of_series">End of the series</string>
+    <string name="player_replay">Watch again</string>
+
+    <string name="player_locked_title">Locked episode — paywall coming in sprint 7</string>
+    <string name="player_locked_episode_cost">%1$s · %2$s</string>
+
+    <string name="player_speed_title">Playback speed</string>
+    <string name="player_quality_title">Video quality</string>
+    <string name="player_subtitles_title">Subtitles</string>
+    <string name="player_speed">Speed</string>
+    <string name="player_quality">Quality</string>
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_subtitles_off">Off</string>
+    <string name="player_subtitles_none">No subtitles for this episode.</string>
+    <string name="player_subtitle_option">%1$s (%2$s)</string>
+    <string name="player_quality_auto">Auto</string>
+    <string name="player_quality_auto_live">Auto · %1$dp</string>
+</resources>

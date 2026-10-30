@@ -11,21 +11,29 @@ android {
         buildConfig = true
     }
 
+    // Emulator loopback to the NestJS backend. Override with -PdramaApiBaseUrl=... if needed.
+    val baseUrl = (project.findProperty("dramaApiBaseUrl") as String?) ?: "http://10.0.2.2:3000/"
+    // Base des médias de dev (MinIO, bucket drama-media). Pour un téléphone physique sur le même Wi-Fi :
+    // -PdramaMediaBaseUrl=http://<IP-du-PC>:9000/drama-media
+    val mediaBaseUrl =
+        (project.findProperty("dramaMediaBaseUrl") as String?) ?: "http://10.0.2.2:9000/drama-media"
+    // Debug toggle: -PdramaUseFakeCatalog=true serves the Sprint 1 fake catalogue instead of the API.
+    val useFakeCatalog = (project.findProperty("dramaUseFakeCatalog") as String?)?.toBoolean() ?: false
+
     defaultConfig {
-        // Emulator loopback to the NestJS backend. Override with -PdramaApiBaseUrl=... if needed.
-        val baseUrl = (project.findProperty("dramaApiBaseUrl") as String?) ?: "http://10.0.2.2:3000/"
         buildConfigField("String", "API_BASE_URL", "\"$baseUrl\"")
-        // Base des médias de dev (MinIO, bucket drama-media). Pour un téléphone physique sur le même Wi-Fi :
-        // -PdramaMediaBaseUrl=http://<IP-du-PC>:9000/drama-media
-        val mediaBaseUrl =
-            (project.findProperty("dramaMediaBaseUrl") as String?) ?: "http://10.0.2.2:9000/drama-media"
         buildConfigField("String", "MEDIA_BASE_URL", "\"${mediaBaseUrl.trimEnd('/')}\"")
-        // Debug toggle: -PdramaUseFakeCatalog=true serves the Sprint 1 fake catalogue instead of the API.
-        val useFakeCatalog = (project.findProperty("dramaUseFakeCatalog") as String?)?.toBoolean() ?: false
         buildConfigField("boolean", "USE_FAKE_CATALOG", "$useFakeCatalog")
     }
 
     buildTypes {
+        // Matches the app's `benchmark` type: release settings but the dev URLs of defaultConfig (S06-A2-02).
+        create("benchmark") {
+            initWith(getByName("release"))
+            buildConfigField("String", "API_BASE_URL", "\"$baseUrl\"")
+            buildConfigField("String", "MEDIA_BASE_URL", "\"${mediaBaseUrl.trimEnd('/')}\"")
+            buildConfigField("boolean", "USE_FAKE_CATALOG", "$useFakeCatalog")
+        }
         release {
             buildConfigField("String", "API_BASE_URL", "\"https://api.drama.example/\"")
             buildConfigField("String", "MEDIA_BASE_URL", "\"https://cdn.drama.example\"")

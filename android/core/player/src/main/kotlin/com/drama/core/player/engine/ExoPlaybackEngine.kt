@@ -26,6 +26,7 @@ import androidx.media3.exoplayer.source.preload.DefaultPreloadManager.PreloadSta
 import androidx.media3.exoplayer.source.preload.PreloadException
 import androidx.media3.exoplayer.source.preload.PreloadManagerListener
 import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.drama.core.common.logging.Logger
 import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.StreamFormat
@@ -129,11 +130,21 @@ class ExoPlaybackEngine(
             }
         }
 
+    // S06-A2-01: the first segment is always the lowest rendition (fast first frame on 3G / low-end devices);
+    // ABR takes over after the first rendered frame (see PlayerEvents.onRenderedFirstFrame). Preloaded sources
+    // use the same rule so the player never has to re-download a different rendition when it takes them over.
+    private var startupLowestBitrate = true
+
     private val preloadManagerBuilder =
         DefaultPreloadManager
             .Builder(context, targetPreloadStatusControl)
             .setDataSourceFactory(dataSourceFactory)
             .setLoadControl(loadControl)
+            .setTrackSelectorFactory { selectorContext ->
+                DefaultTrackSelector(selectorContext).apply {
+                    parameters = buildUponParameters().setForceLowestBitrate(true).build()
+                }
+            }
 
     private val preloadManager: DefaultPreloadManager =
         preloadManagerBuilder.build().also { manager ->
@@ -212,6 +223,7 @@ class ExoPlaybackEngine(
         val player = idlePlayers.removeFirstOrNull() ?: createPlayer()
         current = player
         player.volume = if (muted) 0f else 1f
+        startupLowestBitrate = true
         applySettings(player)
         tracksFlow.value = AvailableTracks()
         currentWasPreloaded = index in preloadedIndices
@@ -317,13 +329,15 @@ class ExoPlaybackEngine(
             player.trackSelectionParameters
                 .buildUpon()
                 .setMaxVideoSize(cap, cap)
+                .setForceLowestBitrate(startupLowestBitrate)
                 .setPreferredTextLanguage(subtitleLanguage)
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, subtitleLanguage == null)
                 .build()
         if (player.playbackParameters.speed != playbackSpeed) player.setPlaybackSpeed(playbackSpeed)
         logger.i(
             TAG,
-            "settings applied speed=$playbackSpeed max_short_side=$maxVideoShortSide subtitles=${subtitleLanguage ?: "off"}",
+            "settings applied speed=$playbackSpeed max_short_side=$maxVideoShortSide " +
+                "subtitles=${subtitleLanguage ?: "off"} startup_lowest=$startupLowestBitrate",
         )
     }
 
@@ -378,6 +392,11 @@ class ExoPlaybackEngine(
                     "preloaded=$currentWasPreloaded",
             )
             eventsFlow.tryEmit(PlaybackEvent.FirstFrameRendered(currentIndex, startupMs, readyMs, currentWasPreloaded))
+            // First frame is on screen: release the "lowest rendition" constraint, ABR picks the next chunks.
+            if (startupLowestBitrate) {
+                startupLowestBitrate = false
+                applySettings(player)
+            }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_home">Inicio</string>
+    <string name="tab_for_you">Para ti</string>
+    <string name="tab_my_list">Mi lista</string>
+    <string name="tab_profile">Perfil</string>
+
+    <string name="push_snackbar_open">Ver</string>
+    <string name="channel_new_episodes">Nuevos episodios</string>
+    <string name="channel_new_episodes_description">Hay un nuevo episodio de una serie de tu lista.</string>
+    <string name="channel_offers">Ofertas</string>
+    <string name="channel_offers_description">Promociones en monedas y VIP.</string>
+    <string name="channel_reminders">Recordatorios</string>
+    <string name="channel_reminders_description">Recordatorio de tu bono diario.</string>
+    <string name="channel_support">Soporte</string>
+    <string name="channel_support_description">Respuestas del soporte a tus solicitudes.</string>
+</resources>

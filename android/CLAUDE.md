@@ -56,6 +56,32 @@ core:common                     (pure Kotlin/JVM)
   features only call `FavoritesRepository`. The feed is never cached (signed previews).
 - Share links come from `ShareLinkProvider` (`https://<BuildConfig.APP_LINKS_HOST>/s/{id}`, `drama://` fallback);
   the host is the Gradle property `dramaAppLinksHost` (manifest placeholder `appLinksHost`, `autoVerify` filter).
+- i18n (S05-A2-03): feature modules and `:core:ui` have Android resources enabled; every user-facing string is a
+  resource (FR default in `values/`, full EN/ES/PT in `values-en|es|pt/`, same keys, Lint `MissingTranslation` is an
+  error). Shared vocabulary lives in `core/ui/src/main/res` (`action_*`, `state_*`, `error_*`, plurals
+  `episode_count`, `coin_count`). View models never hold French: they emit `UiText` (`:core:ui/text`), resolved with
+  `asString()` in composables. Keys are prefixed by feature (`home_`, `player_`, `help_`, ...).
+- Language (S05-A1-03): `AppLanguage` (:core:common) is the list of supported languages; `AppLocaleController`
+  (bound in :app to `AppCompatDelegate.setApplicationLocales`, `MainActivity` is an `AppCompatActivity`,
+  `localeConfig` + `autoStoreLocales` in the manifest) applies the choice immediately; `AndroidDeviceLocale` reads it
+  first so `Accept-Language` follows. `SettingsViewModel` (:feature:account) applies then `PATCH /me language`, and
+  `DefaultAccountRepository` clears the catalogue cache so localised rows are refetched. Language splits are off in the
+  bundle (all four string tables ship).
+- Push (M-54): `PushRepository` (:domain) / `DefaultPushRepository` (:data) register the FCM token with
+  `PUT /me/devices/push` once per (token, user) (`AppStartup` observes the session user id; `onNewToken` forces it),
+  and unregister it before logout / delete. `PushTokenProvider` + `AppInfoProvider` (:core:common) are bound in :app
+  (`FirebasePushTokenProvider`). `NotificationRouting` (:domain, pure Kotlin) is the single rule for payload ->
+  target -> `drama://` deep link and channel; `:app/push` holds the `FirebaseMessagingService`, channels,
+  `PushNotifier` (status bar), `ForegroundPushBus` (snackbar when visible) and `PushOpenHandler` (`push_open` to
+  Firebase + `POST /events`, mark read). `POST_NOTIFICATIONS` is asked after the first favourite (series) or from the
+  settings, never at launch (`PushRepository.permissionPromptShown`).
+- Help (M-53): `HelpRepository` (`GET /help/faq?lang`, `POST /help/contact`, `GET /help/tickets`) in :data,
+  `:feature:help` screen (FAQ / contact / tickets). `NotificationsRepository` (`GET /me/notifications`,
+  `POST /me/notifications/{id}/read`) feeds `:feature:notifications`. `EventsRepository` = `POST /events`.
+- Performance (S06-A2): `benchmark` build type on :app (release bytecode, debug key, dev URLs, profileable) used by
+  `:benchmark` (macrobenchmark, `BaselineProfileGenerator`, `StartupBenchmark`); the generated profile is committed as
+  `app/src/main/baseline-prof.txt`. The engine forces the lowest rendition until the first rendered frame
+  (`ExoPlaybackEngine.startupLowestBitrate`), then normal ABR.
 - Google sign-in: `BuildConfig.GOOGLE_WEB_CLIENT_ID` (-PdramaGoogleWebClientId, `drama.googleWebClientId` in
   `local.properties`, env `DRAMA_GOOGLE_WEB_CLIENT_ID`); empty = `AuthConfig.isGoogleConfigured` false and the button
   is disabled. The Credential Manager call lives in `:feature:account/google`, the token is verified server-side.
@@ -78,5 +104,9 @@ core:common                     (pure Kotlin/JVM)
 - Release: R8 + resource shrinking are on; new reflection-based libraries need rules in `app/proguard-rules.pro`.
   Signing comes from `DRAMA_KEYSTORE_*` (env or `local.properties`), falling back to the debug key so
   `:app:bundleRelease` always builds. The CI `bundle` job (tags `v*`) signs and distributes only when secrets exist.
-- Strings shown to users are French; code, identifiers, log tags and comments are English.
+- Strings shown to users are resources (French source, EN/ES/PT translations); code, identifiers, log tags and
+  comments are English. Never hard-code a user-facing string in Kotlin.
+- Accessibility (S06-A1-03): every icon/button has a `contentDescription` (null only when decorative next to a
+  text), clickable rows use `Role` + `semantics(mergeDescendants = true)`, section titles are `heading()`, touch
+  targets are >= 48 dp (`DramaSizes.touchTarget`), text containers use `heightIn(min)` so 200 % font scale never clips.
 - The server is the source of truth for balances, prices and entitlements: no monetisation logic on the client.

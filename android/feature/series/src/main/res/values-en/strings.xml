@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="series_episodes_heading">Episodes</string>
+    <string name="series_no_episodes">No episode available yet.</string>
+    <string name="series_age_all">All audiences</string>
+    <string name="series_age_rating_cd">Rating: %1$s</string>
+    <plurals name="series_free_count">
+        <item quantity="one">%1$d free</item>
+        <item quantity="other">%1$d free</item>
+    </plurals>
+
+    <string name="series_resume_episode">Resume episode %1$d</string>
+    <string name="series_like_count_cd">Like, %1$d</string>
+
+    <string name="series_synopsis_placeholder">Synopsis coming soon.</string>
+    <string name="series_read_more">Read more</string>
+    <string name="series_read_less">Show less</string>
+    <string name="series_synopsis_expanded">Expanded</string>
+    <string name="series_synopsis_collapsed">Collapsed</string>
+
+    <string name="series_episode_free">Free</string>
+    <string name="series_episode_unlocked">Unlocked</string>
+    <string name="series_episode_locked">Locked</string>
+    <string name="series_episode_current">Current episode</string>
+
+    <string name="series_notice_added">Added to My list</string>
+    <string name="series_notice_removed">Removed from My list</string>
+    <string name="series_notice_favorite_failed">Could not update My list</string>
+    <string name="series_notice_like_failed">Could not save your like</string>
+
+    <string name="series_error_not_found">This series is no longer available.</string>
+    <string name="series_error_load">Unable to load the series.</string>
+</resources>

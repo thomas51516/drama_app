@@ -5,6 +5,9 @@ import com.drama.core.network.BuildConfig
 import com.drama.core.network.api.AccountAuthApi
 import com.drama.core.network.api.AuthApi
 import com.drama.core.network.api.CatalogApi
+import com.drama.core.network.api.EventsApi
+import com.drama.core.network.api.HelpApi
+import com.drama.core.network.api.NotificationsApi
 import com.drama.core.network.api.PlaybackApi
 import com.drama.core.network.api.UserApi
 import com.drama.core.network.auth.AuthInterceptor
@@ -53,6 +56,8 @@ object NetworkModule {
         Json {
             ignoreUnknownKeys = true
             explicitNulls = false
+            // Defaults such as `platform = "android"` or an all-true preference set must reach the server.
+            encodeDefaults = true
             coerceInputValues = true
             isLenient = true
         }
@@ -156,6 +161,18 @@ object NetworkModule {
     @Provides
     @Singleton
     fun providePlaybackApi(retrofit: Retrofit): PlaybackApi = retrofit.create(PlaybackApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHelpApi(retrofit: Retrofit): HelpApi = retrofit.create(HelpApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideNotificationsApi(retrofit: Retrofit): NotificationsApi = retrofit.create(NotificationsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideEventsApi(retrofit: Retrofit): EventsApi = retrofit.create(EventsApi::class.java)
 
     private fun retrofit(
         client: OkHttpClient,

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications_title">Notificações</string>
+    <string name="notifications_unread">Não lida</string>
+    <string name="notifications_empty_title">Nenhuma notificação por enquanto</string>
+    <string name="notifications_empty_body">Novos episódios, ofertas e respostas do suporte aparecerão aqui.</string>
+    <string name="notifications_coming_soon">O histórico de notificações chega em breve.</string>
+</resources>

@@ -39,6 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,10 +56,13 @@ import com.drama.core.ui.component.OfflineBanner
 import com.drama.core.ui.component.PosterCard
 import com.drama.core.ui.component.PosterImage
 import com.drama.core.ui.component.SkeletonBox
+import com.drama.core.ui.text.UiText
+import com.drama.core.ui.text.asString
 import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.HomeBanner
 import kotlinx.coroutines.delay
+import com.drama.core.ui.R as CoreR
 
 /** Home (M-01, S03-A1-01): banner carousel, configured rows of 2:3 posters, continue watching, pull-to-refresh. */
 @Composable
@@ -96,7 +104,7 @@ fun HomeContent(
         HomeTopBar(onOpenSearch = onOpenSearch)
         when {
             state.isLoading -> HomeSkeleton()
-            state.showError -> ErrorState(message = state.error.toMessage(), onRetry = onRefresh)
+            state.showError -> ErrorState(message = state.error.toMessage().asString(), onRetry = onRefresh)
             else ->
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
@@ -111,7 +119,7 @@ fun HomeContent(
                         if (state.error != null) {
                             item(key = "offline") {
                                 OfflineBanner(
-                                    message = "Hors ligne : contenu en cache",
+                                    message = stringResource(CoreR.string.state_offline_cached),
                                     onRetry = onRefresh,
                                 )
                             }
@@ -124,7 +132,7 @@ fun HomeContent(
                         if (state.isEmpty) {
                             item(key = "empty") {
                                 Text(
-                                    text = "Aucune série publiée pour le moment.",
+                                    text = stringResource(R.string.home_empty),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(DramaSpacing.lg),
                                 )
@@ -135,9 +143,7 @@ fun HomeContent(
                                 row = row,
                                 onCardClick = { card ->
                                     val episodeId = card.resumeEpisodeId
-                                    if (episodeId !=
-                                        null
-                                    ) {
+                                    if (episodeId != null) {
                                         onResumeEpisode(card.seriesId, episodeId)
                                     } else {
                                         onOpenSeries(card.seriesId)
@@ -166,13 +172,20 @@ private fun HomeTopBar(onOpenSearch: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "DRAMA",
+            text = stringResource(R.string.home_brand),
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black, letterSpacing = 2.sp),
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .semantics { heading() },
         )
-        IconButton(onClick = onOpenSearch) {
-            Icon(Icons.Default.Search, contentDescription = "Rechercher", tint = MaterialTheme.colorScheme.onBackground)
+        IconButton(onClick = onOpenSearch, modifier = Modifier.size(DramaSizes.touchTarget)) {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = stringResource(CoreR.string.search),
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }
@@ -203,11 +216,13 @@ private fun BannerCarousel(
             BannerCard(banner = banners[page], onClick = { onBannerClick(banners[page]) })
         }
         if (banners.size > 1) {
+            // Page dots are purely decorative: the pager itself is swipeable and each banner is a button.
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(top = DramaSpacing.sm),
+                        .padding(top = DramaSpacing.sm)
+                        .clearAndSetSemantics {},
                 horizontalArrangement = Arrangement.Center,
             ) {
                 repeat(banners.size) { index ->
@@ -222,9 +237,7 @@ private fun BannerCarousel(
                                     if (selected) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
-                                        Color.White.copy(
-                                            alpha = 0.35f,
-                                        )
+                                        Color.White.copy(alpha = 0.35f)
                                     },
                                 ),
                     )
@@ -245,11 +258,13 @@ private fun BannerCard(
                 .fillMaxWidth()
                 .aspectRatio(BANNER_RATIO)
                 .clip(RoundedCornerShape(DramaSizes.bannerCornerRadius))
-                .clickable(onClick = onClick),
+                .clickable(onClick = onClick, role = Role.Button)
+                .semantics(mergeDescendants = true) {},
     ) {
+        // The title and subtitle texts below are what TalkBack reads; the image would only repeat them.
         PosterImage(
             url = banner.imageUrl,
-            contentDescription = banner.title,
+            contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             fallbackText = null,
         )
@@ -299,10 +314,13 @@ private fun HomeRowSection(
 ) {
     Column {
         Text(
-            text = row.title,
+            text = row.title.asString(),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
+            modifier =
+                Modifier
+                    .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm)
+                    .semantics { heading() },
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = DramaSpacing.md),
@@ -312,8 +330,8 @@ private fun HomeRowSection(
                 PosterCard(
                     title = card.title,
                     imageUrl = card.posterUrl,
-                    subtitle = card.subtitle,
-                    badge = card.badge,
+                    subtitle = card.subtitle?.asString(),
+                    badge = card.badge?.asString(),
                     progress = card.progress,
                     onClick = { onCardClick(card) },
                 )
@@ -362,11 +380,11 @@ private fun HomeSkeleton() {
     }
 }
 
-private fun AppError?.toMessage(): String =
+private fun AppError?.toMessage(): UiText =
     when (this) {
-        is AppError.Network -> "Pas de connexion. Vérifiez le réseau puis réessayez."
-        is AppError.Server -> "Le service est indisponible ($code). Réessayez dans un instant."
-        else -> "Impossible de charger l'accueil."
+        is AppError.Network -> UiText.Res(CoreR.string.error_network)
+        is AppError.Server -> UiText.of(CoreR.string.error_server, code)
+        else -> UiText.Res(R.string.home_error_load)
     }
 
 private const val BANNER_AUTO_ADVANCE_MS = 5_000L

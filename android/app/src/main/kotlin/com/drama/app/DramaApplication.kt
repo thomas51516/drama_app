@@ -6,6 +6,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
+import com.drama.app.push.ForegroundPushBus
+import com.drama.app.push.NotificationChannels
 import com.drama.app.startup.AppStartup
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -17,8 +19,13 @@ class DramaApplication :
     @Inject
     lateinit var startup: AppStartup
 
+    @Inject
+    lateinit var foregroundPush: ForegroundPushBus
+
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(foregroundPush)
+        NotificationChannels.ensure(this)
         startup.onAppCreate()
     }
 

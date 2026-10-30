@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_placeholder">Title, genre, keyword…</string>
+    <string name="search_hint_empty">Search for a series by title, genre or keyword.</string>
+    <string name="search_recent_heading">Recent searches</string>
+    <string name="search_clear_all">Clear all</string>
+    <string name="search_remove_recent_cd">Remove the search %1$s</string>
+    <string name="search_suggestion_cd">Search for %1$s</string>
+    <string name="search_no_results">No series for “%1$s”.</string>
+    <string name="search_no_results_genre">No series for “%1$s” in %2$s.</string>
+    <string name="search_try">Try:</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
+    <string name="search_error_coming_soon">Search is coming soon.</string>
+    <string name="search_error_failed">Search failed.</string>
+</resources>

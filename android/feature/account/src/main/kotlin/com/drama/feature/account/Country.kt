@@ -1,5 +1,7 @@
 package com.drama.feature.account
 
+import java.util.Locale
+
 /** Dial-code picker entries for the phone sign-in (M-51). West/Central Africa first, then common diaspora. */
 data class Country(
     val iso: String,
@@ -12,7 +14,18 @@ data class Country(
         get() =
             iso.uppercase().map { Character.toChars(FLAG_BASE + (it.code - 'A'.code)) }.joinToString("") { String(it) }
 
-    val label: String get() = "$flag $name (+$dialCode)"
+    /** Country name in the current app language (java.util.Locale data), so the picker follows the UI language. */
+    val label: String
+        get() {
+            val localized =
+                Locale
+                    .Builder()
+                    .setRegion(iso)
+                    .build()
+                    .getDisplayCountry(Locale.getDefault())
+                    .ifBlank { name }
+            return "$flag $localized (+$dialCode)"
+        }
 
     companion object {
         private const val FLAG_BASE = 0x1F1E6

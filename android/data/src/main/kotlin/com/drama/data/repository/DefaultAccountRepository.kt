@@ -17,14 +17,18 @@ import com.drama.core.network.dto.LogoutRequestDto
 import com.drama.core.network.dto.OtpRequestDto
 import com.drama.core.network.dto.OtpVerifyRequestDto
 import com.drama.core.network.dto.UpdateMeRequestDto
+import com.drama.data.local.CatalogLocalDataSource
 import com.drama.data.mapper.parseInstantMs
 import com.drama.data.mapper.toDomain
+import com.drama.data.mapper.toDto
 import com.drama.domain.model.AccountDeletion
+import com.drama.domain.model.NotificationPreferences
 import com.drama.domain.model.OtpChallenge
 import com.drama.domain.model.SignInResult
 import com.drama.domain.model.UserProfile
 import com.drama.domain.repository.AccountRepository
 import com.drama.domain.repository.FavoritesRepository
+import com.drama.domain.repository.PushRepository
 import com.drama.domain.repository.SessionRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -47,6 +51,8 @@ class DefaultAccountRepository
         private val sessionManager: SessionManager,
         private val sessionRepository: SessionRepository,
         private val favorites: FavoritesRepository,
+        private val push: PushRepository,
+        private val catalogLocal: CatalogLocalDataSource,
         private val deviceIdProvider: DeviceIdProvider,
         private val errorMapper: ApiErrorMapper,
         private val logger: Logger,
@@ -113,13 +119,24 @@ class DefaultAccountRepository
             displayName: String?,
             language: String?,
             country: String?,
+            notificationPreferences: NotificationPreferences?,
         ): AppResult<UserProfile> =
             errorMapper
-                .call { userApi.updateMe(UpdateMeRequestDto(displayName?.trim(), language, country)) }
-                .map { it.toDomain() }
-                .also { result -> if (result is AppResult.Success) profileFlow.value = result.value }
+                .call {
+                    userApi.updateMe(
+                        UpdateMeRequestDto(displayName?.trim(), language, country, notificationPreferences?.toDto()),
+                    )
+                }.map { it.toDomain() }
+                .also { result ->
+                    if (result is AppResult.Success) profileFlow.value = result.value
+                    // Home rows and series are localised server-side: drop the cache so the next read uses the
+                    // new Accept-Language (the per-app locale is applied by the caller).
+                    if (language != null) catalogLocal.clear()
+                }
 
         override suspend fun logout(): AppResult<Unit> {
+            // While the leaving user's bearer is still valid: the device must stop receiving their pushes (M-54).
+            push.unregister()
             sessionManager.currentRefreshToken()?.let { refreshToken ->
                 try {
                     authApi.logout(LogoutRequestDto(refreshToken))
@@ -138,6 +155,7 @@ class DefaultAccountRepository
             when (val result = errorMapper.call { userApi.deleteMe() }) {
                 is AppResult.Failure -> result
                 is AppResult.Success -> {
+                    push.unregister()
                     val deletion = AccountDeletion(parseInstantMs(result.value.scheduledIso))
                     when (val reset = resetToGuest()) {
                         is AppResult.Failure -> reset
