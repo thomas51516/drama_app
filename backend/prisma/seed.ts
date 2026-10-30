@@ -219,6 +219,106 @@ async function main(): Promise<void> {
   console.log(
     `home configuration: 1 banner, ${rows.length} rows (${rows.map((r) => r.key).join(', ')})`,
   );
+
+  // FAQ de départ (M-53) : seulement si aucune entrée n'existe, pour ne pas écraser le travail éditorial.
+  if ((await prisma.faqEntry.count()) === 0) {
+    const faq = [
+      {
+        category: 'account',
+        question: {
+          fr: 'Dois-je créer un compte pour regarder ?',
+          en: 'Do I need an account to watch?',
+          es: '¿Necesito una cuenta para ver?',
+          pt: 'Preciso de uma conta para assistir?',
+        },
+        answer: {
+          fr: 'Non. Vous pouvez regarder les épisodes gratuits sans compte. Créer un compte (Google, téléphone ou e-mail) permet de retrouver votre historique, vos favoris et vos pièces sur tous vos appareils.',
+          en: 'No. You can watch free episodes without an account. Creating one (Google, phone or e-mail) keeps your history, favourites and coins on all your devices.',
+          es: 'No. Puedes ver los episodios gratuitos sin cuenta. Crear una (Google, teléfono o correo) conserva tu historial, favoritos y monedas en todos tus dispositivos.',
+          pt: 'Não. Pode assistir aos episódios gratuitos sem conta. Criar uma (Google, telefone ou e-mail) guarda o seu histórico, favoritos e moedas em todos os seus aparelhos.',
+        },
+      },
+      {
+        category: 'coins',
+        question: {
+          fr: 'À quoi servent les pièces ?',
+          en: 'What are coins for?',
+          es: '¿Para qué sirven las monedas?',
+          pt: 'Para que servem as moedas?',
+        },
+        answer: {
+          fr: 'Les pièces débloquent les épisodes payants. Les premiers épisodes de chaque série sont gratuits. Les pièces bonus offertes sont utilisées en premier et peuvent expirer.',
+          en: 'Coins unlock paid episodes. The first episodes of every series are free. Bonus coins are spent first and may expire.',
+          es: 'Las monedas desbloquean los episodios de pago. Los primeros episodios de cada serie son gratuitos. Las monedas de regalo se usan primero y pueden caducar.',
+          pt: 'As moedas desbloqueiam os episódios pagos. Os primeiros episódios de cada série são gratuitos. As moedas bónus são usadas primeiro e podem expirar.',
+        },
+      },
+      {
+        category: 'vip',
+        question: {
+          fr: "Que comprend l'abonnement VIP ?",
+          en: 'What does the VIP subscription include?',
+          es: '¿Qué incluye la suscripción VIP?',
+          pt: 'O que inclui a assinatura VIP?',
+        },
+        answer: {
+          fr: "L'abonnement VIP donne accès à tous les épisodes pendant sa durée, sans dépenser de pièces. Il se gère depuis Google Play.",
+          en: 'VIP gives access to every episode for the duration of the subscription, without spending coins. It is managed from Google Play.',
+          es: 'El VIP da acceso a todos los episodios durante la suscripción, sin gastar monedas. Se gestiona desde Google Play.',
+          pt: 'O VIP dá acesso a todos os episódios durante a assinatura, sem gastar moedas. É gerido a partir do Google Play.',
+        },
+      },
+      {
+        category: 'playback',
+        question: {
+          fr: 'La vidéo met du temps à démarrer ou saccade, que faire ?',
+          en: 'The video is slow to start or stutters, what can I do?',
+          es: 'El vídeo tarda en empezar o se entrecorta, ¿qué hago?',
+          pt: 'O vídeo demora a começar ou trava, o que fazer?',
+        },
+        answer: {
+          fr: "Dans le lecteur, touchez l'engrenage et choisissez une qualité plus basse, ou laissez « Auto ». Vérifiez aussi votre connexion : en 3G, l'application réduit la qualité automatiquement.",
+          en: 'In the player, tap the gear and pick a lower quality, or leave it on Auto. Check your connection too: on 3G the app lowers the quality automatically.',
+          es: 'En el reproductor, toca el engranaje y elige una calidad más baja, o déjalo en Auto. Revisa también tu conexión: en 3G la app baja la calidad automáticamente.',
+          pt: 'No leitor, toque na engrenagem e escolha uma qualidade mais baixa, ou deixe em Auto. Verifique também a sua ligação: em 3G a aplicação reduz a qualidade automaticamente.',
+        },
+      },
+      {
+        category: 'payment',
+        question: {
+          fr: 'Puis-je payer par mobile money ?',
+          en: 'Can I pay with mobile money?',
+          es: '¿Puedo pagar con dinero móvil?',
+          pt: 'Posso pagar com mobile money?',
+        },
+        answer: {
+          fr: 'Oui, via notre site de recharge : connectez-vous avec le même compte, choisissez un pack et payez avec Flooz, T-Money, MTN MoMo, Orange Money ou Wave selon votre pays. Les pièces sont créditées sur ce compte.',
+          en: 'Yes, through our top-up website: sign in with the same account, choose a pack and pay with Flooz, T-Money, MTN MoMo, Orange Money or Wave depending on your country. Coins are credited to that account.',
+          es: 'Sí, a través de nuestro sitio de recarga: inicia sesión con la misma cuenta, elige un paquete y paga con Flooz, T-Money, MTN MoMo, Orange Money o Wave según tu país. Las monedas se acreditan en esa cuenta.',
+          pt: 'Sim, através do nosso site de recarga: inicie sessão com a mesma conta, escolha um pacote e pague com Flooz, T-Money, MTN MoMo, Orange Money ou Wave consoante o país. As moedas são creditadas nessa conta.',
+        },
+      },
+      {
+        category: 'content',
+        question: {
+          fr: 'À quel rythme sortent les nouveaux épisodes ?',
+          en: 'How often are new episodes released?',
+          es: '¿Con qué frecuencia salen nuevos episodios?',
+          pt: 'Com que frequência saem novos episódios?',
+        },
+        answer: {
+          fr: 'Chaque série a son propre calendrier, souvent un épisode par jour. Ajoutez une série à Ma liste pour être prévenu à chaque nouvel épisode.',
+          en: 'Each series has its own schedule, often one episode a day. Add a series to My list to be notified of every new episode.',
+          es: 'Cada serie tiene su propio calendario, a menudo un episodio al día. Añade una serie a Mi lista para recibir un aviso en cada nuevo episodio.',
+          pt: 'Cada série tem o seu próprio calendário, muitas vezes um episódio por dia. Adicione uma série à Minha lista para ser avisado a cada novo episódio.',
+        },
+      },
+    ];
+    await prisma.faqEntry.createMany({
+      data: faq.map((entry, index) => ({ ...entry, position: index + 1, isPublished: true })),
+    });
+    console.log(`faq: ${faq.length} starter entries`);
+  }
 }
 
 main()
