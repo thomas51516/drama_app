@@ -306,8 +306,8 @@ Le catalogue de dev (seed du backend) et le catalogue factice (`-PdramaUseFakeCa
 de dev (voir `infra/README.md`), à l'adresse `BuildConfig.MEDIA_BASE_URL` (voir la table ci-dessus).
 
 Le build debug autorise le HTTP en clair (`app/src/debug/res/xml/network_security_config.xml`) ; le build
-release ne l'autorise pas. Le lecteur remplit l'écran (`ContentScale.Crop`) : un écran 20:9 rogne
-légèrement les bords d'un contenu 9:16, un contenu 16:9 serait fortement rogné, ce qui est voulu.
+release ne l'autorise pas. Le lecteur affiche l'image entière (`ContentScale.Fit`), jamais rognée : sur un écran 20:9 un contenu 9:16
+laisse de fines bandes noires où se posent les commandes, comme TikTok ; la barre d'état reste visible.
 
 ## Sprint 4 : flux, lecture signée, partage, recherche, Ma liste et compte
 

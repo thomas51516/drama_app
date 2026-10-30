@@ -219,7 +219,7 @@ private fun FeedPage(
             fallbackText = null,
         )
         if (player != null) {
-            ContentFrame(player = player, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            ContentFrame(player = player, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
         Box(
             modifier =

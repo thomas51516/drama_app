@@ -328,8 +328,8 @@ private fun EpisodePage(
             ContentFrame(
                 player = player,
                 modifier = Modifier.fillMaxSize(),
-                // 9:16 content fills the screen (slight side crop on 20:9 screens), like ReelShort.
-                contentScale = ContentScale.Crop,
+                // Whole frame, never cropped: thin letterbox bands on 20:9 screens where the controls sit (like TikTok).
+                contentScale = ContentScale.Fit,
             )
             // Cues sit above the title/seek-bar block and the navigation bar, never under them.
             SubtitleOverlay(
@@ -503,8 +503,9 @@ private fun ImmersiveSystemBars() {
     DisposableEffect(view) {
         val window = view.context.findActivity()?.window
         val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        // Status and navigation bars stay visible (owner's request, like TikTok).
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller?.hide(WindowInsetsCompat.Type.systemBars())
+        controller?.show(WindowInsetsCompat.Type.systemBars())
         onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
     }
 }
