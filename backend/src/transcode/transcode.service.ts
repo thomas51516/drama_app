@@ -3,6 +3,7 @@ import { AuditService } from '../admin/audit/audit.service.js';
 import { CatalogCacheService } from '../cache/catalog-cache.service.js';
 import { type Episode } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NewEpisodeNotifier } from '../push/new-episode-notifier.service.js';
 import { TranscodeMetrics } from './transcode.metrics.js';
 import {
   TRANSCODE_PROVIDER,
@@ -30,6 +31,7 @@ export class TranscodeService {
     private readonly metrics: TranscodeMetrics,
     @Inject(TRANSCODE_PROVIDER) private readonly provider: TranscodeProvider,
     private readonly cache: CatalogCacheService,
+    private readonly notifier: NewEpisodeNotifier,
   ) {}
 
   get providerName(): TranscodeProvider['name'] {
@@ -91,6 +93,8 @@ export class TranscodeService {
     this.logger.log(`Episode ${episode.id} READY (${source})`);
     // Un épisode devient visible : fiche série, grille et accueil (nombre d'épisodes) sont périmés.
     await this.cache.invalidateSeries(episode.seriesId);
+    // Nouvel épisode d'une série suivie (M-54) : ne notifie que s'il est déjà visible.
+    this.notifier.onEpisodeVisible(episode.id);
     return updated;
   }
 

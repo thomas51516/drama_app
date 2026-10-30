@@ -15,7 +15,8 @@ describe('AdminStatsService (B-11 v0)', () => {
       .mockResolvedValueOnce([{ started: 50, completed: 12 }])
       .mockResolvedValueOnce([
         { series_id: 's1', title: 'Le Secret du Lagon', viewers: 9, completions: 7 },
-      ]);
+      ])
+      .mockResolvedValueOnce([{ paywall_views: 15, push_opens: 4 }]);
     const cache = {
       remember: vi.fn((_k: string, _ttl: number, compute: () => Promise<unknown>) => compute()),
     };
@@ -26,7 +27,7 @@ describe('AdminStatsService (B-11 v0)', () => {
   it('returns the contract shape from the four SQL aggregates', async () => {
     const { service, queryRaw } = makeService();
     const result = await service.compute(7, now);
-    expect(queryRaw).toHaveBeenCalledTimes(4);
+    expect(queryRaw).toHaveBeenCalledTimes(5);
     expect(result).toEqual({
       activeUsers: { d1: 3, d7: 10, d30: 25 },
       newUsers: 4,
@@ -35,6 +36,9 @@ describe('AdminStatsService (B-11 v0)', () => {
       episodesStarted: 50,
       episodesCompleted: 12,
       topSeries: [{ seriesId: 's1', title: 'Le Secret du Lagon', viewers: 9, completions: 7 }],
+      paywallViews: 15,
+      unlocks: 0,
+      pushOpens: 4,
       days: 7,
       generatedAt: '2026-10-29T12:00:00.000Z',
     });

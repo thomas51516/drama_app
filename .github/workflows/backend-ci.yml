@@ -80,6 +80,8 @@ jobs:
       MEDIA_SIGNER: plain
       SMS_PROVIDER: console
       SCHEDULER_ENABLED: 'false'
+      PUSH_PROVIDER: log
+      PUSH_QUEUE_ENABLED: 'false'
       SWAGGER_ENABLED: 'true'
 
     steps:

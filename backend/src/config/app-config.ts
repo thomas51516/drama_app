@@ -120,7 +120,25 @@ export class AppConfig {
       jwtTtlSeconds: this.env.ADMIN_JWT_TTL_SECONDS,
       totpEncryptionKey: this.env.TOTP_ENCRYPTION_KEY,
       totpIssuer: this.env.TOTP_ISSUER,
+      trustedDeviceDays: this.env.TRUSTED_DEVICE_DAYS,
     };
+  }
+
+  /** Notifications push (S06-BE-01, B-10). */
+  get push() {
+    return {
+      provider: this.env.PUSH_PROVIDER,
+      firebaseServiceAccountJson: this.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+      firebaseServiceAccountFile: this.env.FIREBASE_SERVICE_ACCOUNT_FILE,
+      dailyCap: this.env.PUSH_DAILY_CAP,
+      queueEnabled: this.env.PUSH_QUEUE_ENABLED,
+      batchSize: this.env.PUSH_BATCH_SIZE,
+    };
+  }
+
+  /** Centre d'aide (S06-BE-02). */
+  get support() {
+    return { contactDailyLimit: this.env.SUPPORT_CONTACT_DAILY_LIMIT };
   }
 
   get uploadUrlTtlSeconds(): number {

@@ -23,6 +23,7 @@ const fallbacks: Record<string, string> = {
   TRANSCODE_PROVIDER: 'webhook',
   TRANSCODE_WORKER_ENABLED: 'false',
   SCHEDULER_ENABLED: 'false',
+  PUSH_QUEUE_ENABLED: 'false',
 };
 for (const [key, value] of Object.entries(fallbacks)) process.env[key] ??= value;
 

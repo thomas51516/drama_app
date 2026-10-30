@@ -1,6 +1,7 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { AdminModule } from './admin/admin.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BillingModule } from './billing/billing.module.js';
 import { CatalogCacheModule } from './cache/catalog-cache.module.js';
@@ -9,11 +10,13 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
 import { ConfigModule } from './config/config.module.js';
 import { HealthModule } from './health/health.module.js';
+import { HelpModule } from './help/help.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { MediaModule } from './media/media.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { PlaybackModule } from './playback/playback.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { PushModule } from './push/push.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { RewardsModule } from './rewards/rewards.module.js';
 import { StorageModule } from './storage/storage.module.js';
@@ -33,6 +36,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     StorageModule,
     MediaModule,
     RateLimitModule,
+    PushModule,
     HealthModule,
     AuthModule,
     CatalogModule,
@@ -42,6 +46,8 @@ import { WalletModule } from './wallet/wallet.module.js';
     BillingModule,
     RewardsModule,
     UsersModule,
+    HelpModule,
+    AnalyticsModule,
     TranscodeModule,
     AdminModule,
     JobsModule,

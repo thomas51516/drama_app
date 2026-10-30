@@ -1,11 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
   HttpStatus,
   Ip,
+  Param,
+  ParseUUIDPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -13,8 +16,10 @@ import {
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
@@ -33,12 +38,17 @@ import {
   AdminSessionDto,
   AdminTotpVerifyDto,
   AdminUserDto,
+  TrustedDeviceDto,
 } from './dto/admin-auth.dto.js';
+import { TrustedDeviceService } from './trusted-device.service.js';
 
 @ApiTags('admin-auth')
 @Controller('admin/auth')
 export class AdminAuthController {
-  constructor(private readonly auth: AdminAuthService) {}
+  constructor(
+    private readonly auth: AdminAuthService,
+    private readonly devices: TrustedDeviceService,
+  ) {}
 
   @Public()
   @Post('login')
@@ -50,7 +60,7 @@ export class AdminAuthController {
   @ApiOperation({
     summary: 'Connexion back-office (étape 1 : mot de passe)',
     description:
-      "Vérifie le mot de passe (Argon2id) et renvoie un jeton de défi valable 5 minutes. À la première connexion, le secret TOTP et l'URI otpauth sont renvoyés (`totp_setup_required`) : la 2FA est obligatoire. Limite : 5 tentatives par e-mail et par 15 minutes.",
+      "Vérifie le mot de passe (Argon2id) et renvoie un jeton de défi valable 5 minutes. À la première connexion, le secret TOTP et l'URI otpauth sont renvoyés (`totp_setup_required`) : la 2FA est obligatoire. Avec un `deviceToken` d'appareil de confiance valide (B-13+), la session est ouverte directement (`status: ok`). Limite : 5 tentatives par e-mail et par 15 minutes.",
   })
   @ApiOkResponse({ type: AdminLoginResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_CREDENTIALS' })
@@ -67,7 +77,7 @@ export class AdminAuthController {
   @ApiOperation({
     summary: 'Connexion back-office (étape 2 : code TOTP)',
     description:
-      "Valide le code à 6 chiffres (fenêtre ±1 pas de 30 s) et émet le JWT admin. Le jeton de défi est à usage unique. Lors de l'enrôlement, le premier code valide active la 2FA du compte.",
+      "Valide le code à 6 chiffres (fenêtre ±1 pas de 30 s) et émet le JWT admin. Le jeton de défi est à usage unique. Lors de l'enrôlement, le premier code valide active la 2FA du compte. `rememberDevice: true` ajoute un `deviceToken` (30 jours) qui dispense du TOTP au prochain login.",
   })
   @ApiOkResponse({ type: AdminSessionDto })
   @ApiUnauthorizedResponse({
@@ -110,5 +120,36 @@ export class AdminAuthController {
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
   logout(@CurrentAdmin() admin: AuthenticatedAdmin, @Ip() ip: string): Promise<void> {
     return this.auth.logout(admin, { ip });
+  }
+
+  @AdminRoute()
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('admin')
+  @Get('devices')
+  @ApiOperation({ summary: 'Appareils de confiance du compte courant (actifs, non expirés)' })
+  @ApiOkResponse({ type: [TrustedDeviceDto] })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  listDevices(@CurrentAdmin() admin: AuthenticatedAdmin): Promise<TrustedDeviceDto[]> {
+    return this.devices.list(admin.id);
+  }
+
+  @AdminRoute()
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('admin')
+  @Delete('devices/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Révoquer un appareil de confiance (le prochain login redemande le TOTP)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'DEVICE_NOT_FOUND' })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto })
+  revokeDevice(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAdmin() admin: AuthenticatedAdmin,
+    @Ip() ip: string,
+  ): Promise<void> {
+    return this.devices.revoke(admin, id, ip);
   }
 }

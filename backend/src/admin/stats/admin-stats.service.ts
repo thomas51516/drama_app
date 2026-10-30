@@ -21,6 +21,10 @@ interface ProgressRow {
   started: number;
   completed: number;
 }
+interface EventsRow {
+  paywall_views: number;
+  push_opens: number;
+}
 interface TopRow {
   series_id: string;
   title: string;
@@ -29,7 +33,8 @@ interface TopRow {
 }
 
 /**
- * Tableau de bord v0 (B-11) : agrégats SQL sur `users` et `watch_progress`, mis en cache 5 min.
+ * Tableau de bord v0 (B-11) : agrégats SQL sur `users`, `watch_progress` et `analytics_events`
+ * (S06-BE-03), mis en cache 5 min.
  * Un utilisateur est « actif » s'il a renouvelé sa session ou fait progresser une lecture dans la fenêtre.
  */
 @Injectable()
@@ -51,7 +56,7 @@ export class AdminStatsService {
     const d7 = new Date(now.getTime() - 7 * 86_400_000);
     const d30 = new Date(now.getTime() - 30 * 86_400_000);
 
-    const [active, counts, progress, top] = await Promise.all([
+    const [active, counts, progress, top, events] = await Promise.all([
       this.prisma.$queryRaw<ActiveRow[]>`
         WITH activity AS (
           SELECT u.id,
@@ -84,11 +89,17 @@ export class AdminStatsService {
         GROUP BY e.series_id, s.title
         ORDER BY viewers DESC, completions DESC, s.title ASC
         LIMIT ${TOP_SERIES_LIMIT}`,
+      this.prisma.$queryRaw<EventsRow[]>`
+        SELECT COUNT(*) FILTER (WHERE name = 'paywall_view')::int AS paywall_views,
+               COUNT(*) FILTER (WHERE name = 'push_open')::int    AS push_opens
+        FROM analytics_events
+        WHERE name IN ('paywall_view', 'push_open') AND occurred_at >= ${since}`,
     ]);
 
     const a = active[0] ?? { d1: 0, d7: 0, d30: 0 };
     const c = counts[0] ?? { new_users: 0, registered_users: 0, guest_users: 0 };
     const p = progress[0] ?? { started: 0, completed: 0 };
+    const ev = events[0] ?? { paywall_views: 0, push_opens: 0 };
     const topSeries: TopSeriesStatDto[] = top.map((t) => ({
       seriesId: t.series_id,
       title: t.title,
@@ -103,6 +114,10 @@ export class AdminStatsService {
       episodesStarted: p.started,
       episodesCompleted: p.completed,
       topSeries,
+      paywallViews: ev.paywall_views,
+      // TODO S07 : COUNT(*) FROM unlocks sur la fenêtre quand le déblocage sera livré.
+      unlocks: 0,
+      pushOpens: ev.push_opens,
       days,
       generatedAt: now.toISOString(),
     };

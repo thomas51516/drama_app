@@ -28,7 +28,13 @@ function makeService(lastRun: string | null) {
     invalidateSeries: vi.fn(() => Promise.resolve(1)),
     invalidateHome: vi.fn(() => Promise.resolve(1)),
   };
-  const service = new PublishSchedulerService(prisma as never, redis as never, cache as never);
+  const notifier = { notifyEpisode: vi.fn(() => Promise.resolve({ notified: 0 })) };
+  const service = new PublishSchedulerService(
+    prisma as never,
+    redis as never,
+    cache as never,
+    notifier as never,
+  );
   return { service, prisma, redis, cache, redisStore };
 }
 

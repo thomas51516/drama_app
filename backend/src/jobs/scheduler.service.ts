@@ -1,4 +1,5 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { AdminCampaignsService } from '../admin/campaigns/admin-campaigns.service.js';
 import { AppConfig } from '../config/app-config.js';
 import { RedisService } from '../redis/redis.service.js';
 import { AccountDeletionService } from '../users/account-deletion.service.js';
@@ -28,10 +29,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly redis: RedisService,
     publish: PublishSchedulerService,
     deletion: AccountDeletionService,
+    campaigns: AdminCampaignsService,
   ) {
     this.tasks = [
       { name: 'publish-scheduler', run: (now) => publish.runOnce(now) },
       { name: 'account-anonymiser', run: (now) => deletion.runOnce(now) },
+      { name: 'campaign-scheduler', run: (now) => campaigns.dispatchDue(now) },
     ];
   }
 

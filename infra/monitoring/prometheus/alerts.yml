@@ -1,0 +1,73 @@
+# Règles d'alerte de l'API DRAMA (S05-OPS-01, S06-OPS-01, contrat v1.3).
+# Chargées par monitoring/prometheus.yml (`rule_files`). Les métriques viennent de GET /metrics :
+# drama_http_request_duration_seconds (histogramme par route/statut), drama_transcode_jobs_total,
+# drama_queue_waiting_jobs / drama_queue_oldest_waiting_seconds (files BullMQ `transcode` et `push`).
+groups:
+  - name: drama-api
+    rules:
+      - alert: DramaApiDown
+        expr: up{job="drama-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API DRAMA injoignable"
+          description: "Prometheus ne parvient plus à scraper /metrics depuis 2 minutes ({{ $labels.instance }})."
+
+      - alert: DramaPlaybackLatencyP95High
+        # p95 des routes de lecture (manifeste signé et flux vertical) > 300 ms sur 5 min.
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(drama_http_request_duration_seconds_bucket{route=~"/episodes/:id/play|/feed"}[5m]))
+          ) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence p95 de lecture > 300 ms"
+          description: "p95 de POST /episodes/{id}/play et GET /feed à {{ $value | humanizeDuration }} sur 5 minutes."
+
+      - alert: DramaApiLatencyP95High
+        # Toutes routes confondues (hors webhooks et /metrics), même seuil.
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(drama_http_request_duration_seconds_bucket{route!~"/webhooks/.*|/metrics|unmatched"}[5m]))
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence p95 de l'API > 300 ms"
+          description: "p95 global à {{ $value | humanizeDuration }} sur 10 minutes."
+
+      - alert: DramaApi5xxRateHigh
+        expr: |
+          sum(rate(drama_http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+            / sum(rate(drama_http_request_duration_seconds_count[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taux de réponses 5xx > 1 %"
+          description: "{{ $value | humanizePercentage }} des requêtes échouent en 5xx sur 5 minutes."
+
+      - alert: DramaTranscodeFailures
+        expr: increase(drama_transcode_jobs_total{status="failed"}[30m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transcodage en échec"
+          description: "{{ $value }} job(s) de transcodage en échec sur 30 minutes (fournisseur {{ $labels.provider }}). Voir l'épisode en statut FAILED dans le back-office."
+
+      - alert: DramaQueueBacklog
+        # File BullMQ en retard : le plus ancien job attend depuis plus de 10 min, ou plus de 50 jobs en attente.
+        expr: |
+          drama_queue_oldest_waiting_seconds > 600
+            or drama_queue_waiting_jobs > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "File {{ $labels.queue }} en retard"
+          description: "File BullMQ « {{ $labels.queue }} » : jobs en attente trop nombreux ou trop anciens depuis 5 minutes (worker arrêté ?)."

@@ -64,6 +64,17 @@ export class StatsOverviewDto {
   @ApiProperty({ type: [TopSeriesStatDto], description: '10 séries les plus regardées' })
   topSeries: TopSeriesStatDto[];
 
+  @ApiProperty({ description: 'Affichages du paywall sur la fenêtre (événement `paywall_view`)' })
+  paywallViews: number;
+
+  @ApiProperty({
+    description: 'Déblocages sur la fenêtre (0 tant que la monétisation n’est pas livrée)',
+  })
+  unlocks: number;
+
+  @ApiProperty({ description: 'Ouvertures de notification sur la fenêtre (événement `push_open`)' })
+  pushOpens: number;
+
   @ApiProperty({ description: 'Fenêtre utilisée, en jours', example: 7 })
   days: number;
 

@@ -52,6 +52,21 @@ export const envSchema = z.object({
   TOTP_ENCRYPTION_KEY: z.string().min(32, 'TOTP_ENCRYPTION_KEY must be at least 32 characters'),
   TOTP_ISSUER: z.string().min(1).default('DRAMA back-office'),
 
+  // Appareil de confiance du back-office (B-13+, contrat v1.3).
+  TRUSTED_DEVICE_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+
+  // Notifications push (S06-BE-01, B-10) : `log` (dev) ou `fcm` (Firebase Admin SDK).
+  PUSH_PROVIDER: z.enum(['log', 'fcm']).default('log'),
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
+  FIREBASE_SERVICE_ACCOUNT_FILE: z.string().min(1).optional(),
+  PUSH_DAILY_CAP: z.coerce.number().int().min(1).max(20).default(2),
+  // false = envoi des campagnes en ligne (tests) au lieu de la file BullMQ `push`.
+  PUSH_QUEUE_ENABLED: bool.default(true),
+  PUSH_BATCH_SIZE: z.coerce.number().int().min(10).max(500).default(500),
+
+  // Centre d'aide (S06-BE-02).
+  SUPPORT_CONTACT_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(5),
+
   // Upload direct (S02-BE-04)
   UPLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
 
@@ -89,6 +104,18 @@ const envSchemaWithRules = envSchema.superRefine((env, ctx) => {
       code: 'custom',
       path: ['MEDIA_SIGNING_KEY'],
       message: 'MEDIA_SIGNING_KEY is required when MEDIA_SIGNER=hmac',
+    });
+  }
+  if (
+    env.PUSH_PROVIDER === 'fcm' &&
+    !env.FIREBASE_SERVICE_ACCOUNT_JSON &&
+    !env.FIREBASE_SERVICE_ACCOUNT_FILE
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['FIREBASE_SERVICE_ACCOUNT_JSON'],
+      message:
+        'FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_FILE is required when PUSH_PROVIDER=fcm',
     });
   }
   if (env.SMS_PROVIDER === 'http' && !env.SMS_HTTP_URL) {

@@ -62,14 +62,21 @@ function makeService(initial: AdminAccount | null) {
   const audit = { record: vi.fn(() => Promise.resolve()) };
   const config = new AppConfig(env);
   const jwt = new AdminJwtService(config);
+  const devices = {
+    verify: vi.fn(() => Promise.resolve(null)),
+    issue: vi.fn(() =>
+      Promise.resolve({ token: 'device-token', expiresAt: new Date('2026-11-29T00:00:00Z') }),
+    ),
+  };
   const service = new AdminAuthService(
     prisma as never,
     redis as never,
     jwt,
     config,
     audit as never,
+    devices as never,
   );
-  return { service, prisma, redis, audit, jwt, stored: () => stored };
+  return { service, prisma, redis, audit, jwt, devices, stored: () => stored };
 }
 
 describe('AdminAuthService.login', () => {
@@ -99,7 +106,7 @@ describe('AdminAuthService.login', () => {
     expect(res.status).toBe('totp_setup_required');
     expect(res.secret).toMatch(/^[A-Z2-7]{32}$/);
     expect(res.otpauthUri).toContain(`secret=${res.secret}`);
-    expect(res.challengeToken.split('.')).toHaveLength(3);
+    expect((res.challengeToken as string).split('.')).toHaveLength(3);
     const persisted = stored()?.totpSecret;
     expect(persisted).toBeDefined();
     expect(persisted).not.toContain(res.secret as string);
@@ -121,7 +128,7 @@ describe('AdminAuthService.verifyTotp', () => {
     const code = totpCode(login.secret as string);
 
     const session = await service.verifyTotp(
-      { challengeToken: login.challengeToken, code },
+      { challengeToken: login.challengeToken as string, code },
       { ip: '127.0.0.1' },
     );
     expect(session.expiresIn).toBe(3600);
@@ -142,13 +149,13 @@ describe('AdminAuthService.verifyTotp', () => {
     const { service } = makeService(account());
     const login = await service.login({ email: 'admin@drama.local', password: 'Secret!2026' });
     await expect(
-      service.verifyTotp({ challengeToken: login.challengeToken, code: '000000' }),
+      service.verifyTotp({ challengeToken: login.challengeToken as string, code: '000000' }),
     ).rejects.toMatchObject({ response: { code: expect.stringMatching(/INVALID_TOTP_CODE/) } });
 
     const code = totpCode(login.secret as string);
-    await service.verifyTotp({ challengeToken: login.challengeToken, code });
+    await service.verifyTotp({ challengeToken: login.challengeToken as string, code });
     await expect(
-      service.verifyTotp({ challengeToken: login.challengeToken, code }),
+      service.verifyTotp({ challengeToken: login.challengeToken as string, code }),
     ).rejects.toMatchObject({ response: { code: 'CHALLENGE_USED' } });
 
     await expect(
@@ -175,5 +182,64 @@ describe('AdminAuthService.verifyTotp', () => {
     );
     expect(await service.isRevoked('jti-1')).toBe(true);
     expect(await service.isRevoked('jti-2')).toBe(false);
+  });
+});
+
+describe('AdminAuthService trusted device (B-13+)', () => {
+  it('login with a valid deviceToken opens the session directly (status ok) and audits the method', async () => {
+    const sealed = new SecretBox(env.TOTP_ENCRYPTION_KEY).seal('JBSWY3DPEHPK3PXP');
+    const { service, devices, audit } = makeService(
+      account({ totpSecret: sealed, totpEnabledAt: new Date() }),
+    );
+    devices.verify.mockResolvedValueOnce({ id: 'dev-1' } as never);
+    const res = await service.login({
+      email: 'admin@drama.local',
+      password: 'Secret!2026',
+      deviceToken: 'remembered-device-token',
+    });
+    expect(res.status).toBe('ok');
+    expect(res.accessToken).toEqual(expect.any(String));
+    expect(res.user).toMatchObject({ email: 'admin@drama.local' });
+    expect(res.challengeToken).toBeUndefined();
+    const login = audit.record.mock.calls
+      .map((c) => c[0] as { action: string; newValue?: { method?: string } })
+      .find((e) => e.action === 'admin.login');
+    expect(login?.newValue?.method).toBe('password+device');
+  });
+
+  it('an unknown deviceToken is silently ignored and the TOTP flow applies', async () => {
+    const sealed = new SecretBox(env.TOTP_ENCRYPTION_KEY).seal('JBSWY3DPEHPK3PXP');
+    const { service } = makeService(account({ totpSecret: sealed, totpEnabledAt: new Date() }));
+    const res = await service.login({
+      email: 'admin@drama.local',
+      password: 'Secret!2026',
+      deviceToken: 'garbage-token-value',
+    });
+    expect(res).toEqual({ status: 'totp_required', challengeToken: expect.any(String) });
+  });
+
+  it('a deviceToken never bypasses TOTP enrolment on first login', async () => {
+    const { service, devices } = makeService(account());
+    devices.verify.mockResolvedValue({ id: 'dev-1' } as never);
+    const res = await service.login({
+      email: 'admin@drama.local',
+      password: 'Secret!2026',
+      deviceToken: 'remembered-device-token',
+    });
+    expect(res.status).toBe('totp_setup_required');
+    expect(devices.verify).not.toHaveBeenCalled();
+  });
+
+  it('verifyTotp with rememberDevice issues a device token', async () => {
+    const { service, devices } = makeService(account());
+    const login = await service.login({ email: 'admin@drama.local', password: 'Secret!2026' });
+    const session = await service.verifyTotp({
+      challengeToken: login.challengeToken as string,
+      code: totpCode(login.secret as string),
+      rememberDevice: true,
+    });
+    expect(devices.issue).toHaveBeenCalledWith(expect.any(String), expect.anything());
+    expect(session.deviceToken).toBe('device-token');
+    expect(session.deviceTokenExpiresAt).toBe('2026-11-29T00:00:00.000Z');
   });
 });

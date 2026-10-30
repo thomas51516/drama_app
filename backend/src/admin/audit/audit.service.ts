@@ -12,6 +12,10 @@ export const AUDIT_TARGET_TYPES = [
   'admin_account',
   'upload',
   'user',
+  'admin_trusted_device',
+  'campaign',
+  'faq_entry',
+  'support_ticket',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

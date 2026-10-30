@@ -9,6 +9,7 @@ import { type AuthenticatedAdmin } from '../../common/request-context.js';
 import { type AdminAccount, type Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService, diffChanges } from '../audit/audit.service.js';
+import { TrustedDeviceService } from '../auth/trusted-device.service.js';
 import {
   type AdminAccountDto,
   type AuditLogDto,
@@ -31,6 +32,7 @@ export class AdminAccountsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly devices: TrustedDeviceService,
   ) {}
 
   async list(): Promise<AdminAccountDto[]> {
@@ -92,6 +94,8 @@ export class AdminAccountsService {
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const account = await tx.adminAccount.update({ where: { id }, data });
+      // Un compte désactivé perd ses appareils de confiance (B-13+).
+      if (dto.isActive === false) await this.devices.revokeAll(id, tx);
       const diff = diffChanges(before, account, AUDITED_FIELDS);
       if (diff.changed.length > 0) {
         await this.audit.record(
@@ -112,7 +116,10 @@ export class AdminAccountsService {
     return toAccountDto(updated);
   }
 
-  /** Efface le secret et l'enrôlement : la prochaine connexion renvoie `totp_setup_required`. */
+  /**
+   * Efface le secret et l'enrôlement : la prochaine connexion renvoie `totp_setup_required`.
+   * Révoque aussi tous les appareils de confiance du compte (B-13+).
+   */
   async resetTotp(id: string, admin: AuthenticatedAdmin, ip?: string): Promise<AdminAccountDto> {
     const before = await this.findOrThrow(id);
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -120,6 +127,7 @@ export class AdminAccountsService {
         where: { id },
         data: { totpSecret: null, totpEnabledAt: null },
       });
+      const revokedDevices = await this.devices.revokeAll(id, tx);
       await this.audit.record(
         {
           actor: admin,
@@ -127,7 +135,7 @@ export class AdminAccountsService {
           targetType: 'admin_account',
           targetId: id,
           oldValue: { totpEnrolled: before.totpEnabledAt !== null },
-          newValue: { totpEnrolled: false },
+          newValue: { totpEnrolled: false, revokedDevices },
           ip,
         },
         tx,
@@ -135,6 +143,25 @@ export class AdminAccountsService {
       return account;
     });
     return toAccountDto(updated);
+  }
+
+  /** Révoque tous les appareils de confiance d'un compte (rôle ADMIN). */
+  async revokeDevices(id: string, admin: AuthenticatedAdmin, ip?: string): Promise<void> {
+    await this.findOrThrow(id);
+    await this.prisma.$transaction(async (tx) => {
+      const revokedDevices = await this.devices.revokeAll(id, tx);
+      await this.audit.record(
+        {
+          actor: admin,
+          action: 'admin_account.revoke_devices',
+          targetType: 'admin_account',
+          targetId: id,
+          newValue: { revokedDevices },
+          ip,
+        },
+        tx,
+      );
+    });
   }
 
   async resetPassword(

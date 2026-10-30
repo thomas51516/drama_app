@@ -182,6 +182,51 @@ enum HomeRowType {
   @@map("home_row_type")
 }
 
+/// Résultat d'une remise de push au fournisseur (S06-BE-01).
+enum PushDeliveryStatus {
+  SENT
+  FAILED
+  /// Non envoyé : plafond quotidien atteint, aucun appareil ou préférence désactivée.
+  SKIPPED
+
+  @@map("push_delivery_status")
+}
+
+/// Cible d'une campagne push (B-10).
+enum CampaignSegmentType {
+  ALL
+  COUNTRY
+  SERIES_FOLLOWERS
+  INACTIVE
+
+  @@map("campaign_segment_type")
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+
+  @@map("campaign_status")
+}
+
+enum SupportTicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+
+  @@map("support_ticket_status")
+}
+
+enum SupportMessageAuthor {
+  USER
+  SUPPORT
+
+  @@map("support_message_author")
+}
+
 // -----------------------------------------------------------------------------
 // Utilisateurs finaux
 // -----------------------------------------------------------------------------
@@ -215,16 +260,19 @@ model User {
   createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  wallet        Wallet?
-  ledgerEntries CoinLedgerEntry[]
-  unlocks       Unlock[]
-  purchases     Purchase[]
-  subscriptions Subscription[]
-  watchProgress WatchProgress[]
-  favorites     Favorite[]
-  likes         Like[]
-  identities    UserIdentity[]
-  refreshTokens RefreshToken[]
+  wallet         Wallet?
+  ledgerEntries  CoinLedgerEntry[]
+  unlocks        Unlock[]
+  purchases      Purchase[]
+  subscriptions  Subscription[]
+  watchProgress  WatchProgress[]
+  favorites      Favorite[]
+  likes          Like[]
+  identities     UserIdentity[]
+  refreshTokens  RefreshToken[]
+  pushDevices    PushDevice[]
+  notifications  Notification[]
+  supportTickets SupportTicket[]
 
   @@index([deviceId])
   @@index([createdAt])
@@ -572,8 +620,10 @@ model AdminAccount {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
+  refreshTokens  RefreshToken[]
+  auditLogs      AuditLog[]
+  trustedDevices AdminTrustedDevice[]
+  campaigns      Campaign[]
 
   @@map("admin_accounts")
 }
@@ -624,4 +674,197 @@ model AuditLog {
   @@index([action, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+/// Appareil de confiance du back-office (B-13+, contrat v1.3) : jeton aléatoire 256 bits remis au
+/// navigateur, stocké haché ; permet de sauter le TOTP pendant 30 jours. Révocable.
+model AdminTrustedDevice {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  adminId    String    @map("admin_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  /// Libellé dérivé du User-Agent (navigateur, système).
+  label      String    @db.VarChar(200)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  admin AdminAccount @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_trusted_devices")
+}
+
+// -----------------------------------------------------------------------------
+// Notifications push et campagnes (M-54, S06-BE-01, B-10)
+// -----------------------------------------------------------------------------
+
+/// Jeton FCM d'un appareil, lié à l'utilisateur courant (dernier connecté sur l'appareil).
+model PushDevice {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  token      String   @unique @db.VarChar(512)
+  platform   String   @db.VarChar(16)
+  locale     String?  @db.VarChar(16)
+  appVersion String?  @map("app_version") @db.VarChar(40)
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_devices")
+}
+
+/// Historique in-app des notifications d'un utilisateur (`GET /me/notifications`).
+model Notification {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  /// `new_episode`, `support_reply`, `campaign`, `offer`, `checkin_reminder`.
+  type       String    @db.VarChar(40)
+  title      String    @db.VarChar(200)
+  body       String    @db.VarChar(1000)
+  /// Charge utile de routage (`{ seriesId, episodeId }`, `{ ticketId }`, `{ deepLink }`).
+  data       Json?
+  campaignId String?   @map("campaign_id") @db.Uuid
+  sentAt     DateTime  @default(now()) @map("sent_at") @db.Timestamptz(3)
+  readAt     DateTime? @map("read_at") @db.Timestamptz(3)
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign   Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  deliveries PushDelivery[]
+
+  @@index([userId, sentAt(sort: Desc)])
+  @@index([campaignId])
+  @@map("notifications")
+}
+
+/// Résultat renvoyé par le fournisseur de push pour un appareil (journal technique).
+model PushDelivery {
+  id                String             @id @default(uuid(7)) @db.Uuid
+  notificationId    String?            @map("notification_id") @db.Uuid
+  userId            String?            @map("user_id") @db.Uuid
+  campaignId        String?            @map("campaign_id") @db.Uuid
+  /// Jeton d'appareil visé (tronqué à 512).
+  token             String?            @db.VarChar(512)
+  provider          String             @db.VarChar(16)
+  status            PushDeliveryStatus
+  providerMessageId String?            @map("provider_message_id") @db.VarChar(200)
+  error             String?            @db.VarChar(500)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  notification Notification? @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt])
+  @@map("push_deliveries")
+}
+
+/// Campagne push ciblée (B-10) : segment, envoi immédiat ou programmé, compteurs.
+model Campaign {
+  id             String              @id @default(uuid(7)) @db.Uuid
+  title          String              @db.VarChar(200)
+  body           String              @db.VarChar(1000)
+  deepLink       String?             @map("deep_link") @db.VarChar(500)
+  segmentType    CampaignSegmentType @map("segment_type")
+  /// Segment COUNTRY : pays ISO 3166-1 alpha-2.
+  countries      String[]            @default([])
+  /// Segment SERIES_FOLLOWERS : série dont les favoris sont ciblés.
+  seriesId       String?             @map("series_id") @db.Uuid
+  /// Segment INACTIVE : sans activité depuis N jours.
+  inactiveDays   Int?                @map("inactive_days")
+  scheduledAt    DateTime?           @map("scheduled_at") @db.Timestamptz(3)
+  status         CampaignStatus      @default(DRAFT)
+  audienceCount  Int                 @default(0) @map("audience_count")
+  sentCount      Int                 @default(0) @map("sent_count")
+  createdById    String?             @map("created_by_id") @db.Uuid
+  createdByLabel String?             @map("created_by_label") @db.VarChar(120)
+  sentAt         DateTime?           @map("sent_at") @db.Timestamptz(3)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdBy     AdminAccount?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  notifications Notification[]
+
+  @@index([status, scheduledAt])
+  @@index([createdAt(sort: Desc)])
+  @@map("campaigns")
+}
+
+// -----------------------------------------------------------------------------
+// Centre d'aide et support (M-53, S06-BE-02)
+// -----------------------------------------------------------------------------
+
+/// Entrée de FAQ ; `question` et `answer` sont des JSON `{ fr, en?, es?, pt? }` (repli fr).
+model FaqEntry {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  category    String   @db.VarChar(40)
+  question    Json
+  answer      Json
+  position    Int      @default(0)
+  isPublished Boolean  @default(true) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isPublished, position])
+  @@map("faq_entries")
+}
+
+model SupportTicket {
+  id        String              @id @default(uuid(7)) @db.Uuid
+  userId    String              @map("user_id") @db.Uuid
+  category  String              @db.VarChar(40)
+  subject   String              @db.VarChar(200)
+  /// Adresse de réponse facultative saisie dans le formulaire.
+  email     String?             @db.VarChar(320)
+  status    SupportTicketStatus @default(OPEN)
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([status, updatedAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id        String               @id @default(uuid(7)) @db.Uuid
+  ticketId  String               @map("ticket_id") @db.Uuid
+  author    SupportMessageAuthor
+  /// Compte interne auteur d'une réponse du support.
+  adminId   String?              @map("admin_id") @db.Uuid
+  body      String
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
+}
+
+// -----------------------------------------------------------------------------
+// Événements d'analyse côté serveur (§13, S06-BE-03)
+// -----------------------------------------------------------------------------
+
+/// Événement du plan de marquage reçu par `POST /events`. Sans clé étrangère : la table est en
+/// écriture seule et survit à l'anonymisation des comptes.
+model AnalyticsEvent {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  sessionId  String?  @map("session_id") @db.VarChar(64)
+  name       String   @db.VarChar(40)
+  params     Json
+  country    String?  @db.Char(2)
+  appVersion String?  @map("app_version") @db.VarChar(40)
+  /// Horodatage côté appareil.
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(3)
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz(3)
+
+  @@index([name, occurredAt])
+  @@index([userId, occurredAt])
+  @@map("analytics_events")
 }

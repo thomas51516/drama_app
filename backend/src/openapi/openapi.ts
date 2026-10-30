@@ -13,8 +13,11 @@ import { ApiErrorDto } from '../common/dto/api-error.dto.js';
  * connexion Google / OTP / e-mail et rattachement du compte invité (S05-BE-01 à 03), `/me` et
  * suppression différée (S05-BE-04), favoris, « J'aime » et recherche (S05-BE-05, 06), publication
  * programmée (B-04) et tableau de bord v0 (B-11).
+ * v1.3 (sprint 5, contrat v1.3) : appareils de confiance du back-office (B-13+), notifications push,
+ * historique in-app et campagnes (M-54, S06-BE-01, B-10), centre d'aide et support (M-53, S06-BE-02),
+ * événements d'analyse (S06-BE-03) et compléments du tableau de bord.
  */
-export const OPENAPI_VERSION = '1.2.0';
+export const OPENAPI_VERSION = '1.3.0';
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
@@ -29,7 +32,9 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         '',
         '**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN.',
         '',
-        '**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.',
+        '**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).',
+        '',
+        '**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.',
         '',
         '**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).',
         '',
@@ -68,7 +73,12 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('wallet', 'Portefeuille et historique (M-30)')
     .addTag('billing', 'Google Play Billing et mobile money (§10)')
     .addTag('rewards', 'Check-in et tâches (M-40, M-41)')
-    .addTag('users', 'Profil, suppression différée, favoris et « J’aime » (M-16, M-52)')
+    .addTag(
+      'users',
+      'Profil, suppression différée, favoris, « J’aime », appareils push et notifications (M-16, M-52, M-54)',
+    )
+    .addTag('help', 'Centre d’aide : FAQ, contact et suivi des demandes (M-53)')
+    .addTag('analytics', 'Événements d’analyse côté serveur (§13)')
     .addTag('webhooks', 'Rappels serveur à serveur (signature, pas de JWT)')
     .addTag('admin-auth', 'Back-office : connexion 2FA (B-13)')
     .addTag('admin-series', 'Back-office : séries (B-01)')
@@ -78,6 +88,8 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('admin-accounts', 'Back-office : comptes internes, rôles et journal d’audit (B-13)')
     .addTag('admin-schedule', 'Back-office : calendrier des publications programmées (B-04)')
     .addTag('admin-stats', 'Back-office : tableau de bord v0 (B-11)')
+    .addTag('admin-campaigns', 'Back-office : campagnes push ciblées (B-10)')
+    .addTag('admin-help', 'Back-office : FAQ et boîte de réception du support (B-03bis)')
     .build();
 
   return SwaggerModule.createDocument(app, config, {

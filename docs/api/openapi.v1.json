@@ -1,6 +1,194 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/me/devices/push": {
+      "put": {
+        "operationId": "registerDevice",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushDeviceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enregistrer le jeton FCM de l’appareil (upsert par jeton, lié au compte courant)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/devices/push/{token}": {
+      "delete": {
+        "operationId": "removeDevice",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Oublier un jeton FCM (déconnexion, désinstallation)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/notifications": {
+      "get": {
+        "operationId": "listNotifications",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsPageDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historique in-app des notifications, de la plus récente à la plus ancienne",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/notifications/{id}/read": {
+      "post": {
+        "operationId": "markRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOTIFICATION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Marquer une notification comme lue (idempotent)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "description": "Vérifie PostgreSQL et Redis. Renvoie 503 si un composant est indisponible.",
@@ -2347,33 +2535,361 @@
         ]
       }
     },
-    "/webhooks/transcode/{provider}": {
-      "post": {
-        "description": "Passe l’épisode à READY ou FAILED. Cible par `episodeId`, `externalId` ou `sourceKey`. Signature : `X-Transcode-Signature: sha256=<hex HMAC-SHA256(secret, [timestamp \".\"] corps brut)>` ; `X-Transcode-Timestamp` (secondes epoch, optionnel, tolérance ±5 min). Idempotent.",
-        "operationId": "handle",
+    "/help/faq": {
+      "get": {
+        "description": "`lang` prime sur `Accept-Language`. Mise en cache 5 min par langue.",
+        "operationId": "publicFaq",
         "parameters": [
           {
-            "name": "provider",
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "description": "fr, en, es ou pt (sinon Accept-Language, repli fr)",
+            "schema": {
+              "example": "fr",
+              "type": "string"
+            }
+          },
+          {
+            "name": "accept-language",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaqPublicDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "FAQ publiée, par catégorie, dans la langue demandée (repli fr)",
+        "tags": [
+          "help"
+        ]
+      }
+    },
+    "/help/contact": {
+      "post": {
+        "description": "Crée un ticket rattaché au compte courant. Si `email` est fourni, une confirmation est envoyée (journalisée en dev). La réponse du support arrive dans `GET /me/notifications` (`support_reply`) et `GET /help/tickets`.",
+        "operationId": "contact",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Envoyer une demande au support (5 par jour et par utilisateur)",
+        "tags": [
+          "help"
+        ]
+      }
+    },
+    "/help/tickets": {
+      "get": {
+        "operationId": "myTickets",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "ANSWERED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mes demandes au support, avec les réponses",
+        "tags": [
+          "help"
+        ]
+      }
+    },
+    "/admin/faq": {
+      "get": {
+        "operationId": "list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FaqEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Toutes les entrées de FAQ (publiées ou non), dans l’ordre",
+        "tags": [
+          "admin-help"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFaqEntryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaqEntryDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer une entrée (`fr` obligatoire, autres langues facultatives)",
+        "tags": [
+          "admin-help"
+        ]
+      }
+    },
+    "/admin/faq/order": {
+      "put": {
+        "operationId": "reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderFaqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FaqEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Réordonner (identifiants dans le nouvel ordre)",
+        "tags": [
+          "admin-help"
+        ]
+      }
+    },
+    "/admin/faq/{id}": {
+      "patch": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "example": "mux",
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-transcode-signature",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-transcode-timestamp",
-            "required": false,
-            "in": "header",
-            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
@@ -2383,24 +2899,34 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TranscodeWebhookDto"
+                "$ref": "#/components/schemas/UpdateFaqEntryDto"
               }
             }
           }
         },
         "responses": {
-          "202": {
+          "200": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TranscodeWebhookAckDto"
+                  "$ref": "#/components/schemas/FaqEntryDto"
                 }
               }
             }
           },
           "401": {
-            "description": "INVALID_WEBHOOK_SIGNATURE",
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
             "content": {
               "application/json": {
                 "schema": {
@@ -2410,7 +2936,7 @@
             }
           },
           "404": {
-            "description": "EPISODE_NOT_FOUND",
+            "description": "FAQ_ENTRY_NOT_FOUND",
             "content": {
               "application/json": {
                 "schema": {
@@ -2420,15 +2946,371 @@
             }
           }
         },
-        "summary": "Fin de transcodage (service géré)",
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une entrée",
         "tags": [
-          "webhooks"
+          "admin-help"
+        ]
+      },
+      "delete": {
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "FAQ_ENTRY_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer une entrée",
+        "tags": [
+          "admin-help"
+        ]
+      }
+    },
+    "/admin/support/tickets": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "ANSWERED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Tickets (filtre statut), du plus récemment mis à jour au plus ancien",
+        "tags": [
+          "admin-help"
+        ]
+      }
+    },
+    "/admin/support/tickets/{id}": {
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TICKET_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Détail d’un ticket avec le fil des messages",
+        "tags": [
+          "admin-help"
+        ]
+      }
+    },
+    "/admin/support/tickets/{id}/reply": {
+      "post": {
+        "operationId": "reply",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyTicketDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TICKET_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Répondre (statut ANSWERED, notification in-app `support_reply` + push)",
+        "tags": [
+          "admin-help"
+        ]
+      }
+    },
+    "/admin/support/tickets/{id}/close": {
+      "post": {
+        "operationId": "close",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TICKET_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Clore un ticket",
+        "tags": [
+          "admin-help"
         ]
       }
     },
     "/admin/auth/login": {
       "post": {
-        "description": "Vérifie le mot de passe (Argon2id) et renvoie un jeton de défi valable 5 minutes. À la première connexion, le secret TOTP et l'URI otpauth sont renvoyés (`totp_setup_required`) : la 2FA est obligatoire. Limite : 5 tentatives par e-mail et par 15 minutes.",
+        "description": "Vérifie le mot de passe (Argon2id) et renvoie un jeton de défi valable 5 minutes. À la première connexion, le secret TOTP et l'URI otpauth sont renvoyés (`totp_setup_required`) : la 2FA est obligatoire. Avec un `deviceToken` d'appareil de confiance valide (B-13+), la session est ouverte directement (`status: ok`). Limite : 5 tentatives par e-mail et par 15 minutes.",
         "operationId": "login",
         "parameters": [],
         "requestBody": {
@@ -2491,7 +3373,7 @@
     },
     "/admin/auth/totp/verify": {
       "post": {
-        "description": "Valide le code à 6 chiffres (fenêtre ±1 pas de 30 s) et émet le JWT admin. Le jeton de défi est à usage unique. Lors de l'enrôlement, le premier code valide active la 2FA du compte.",
+        "description": "Valide le code à 6 chiffres (fenêtre ±1 pas de 30 s) et émet le JWT admin. Le jeton de défi est à usage unique. Lors de l'enrôlement, le premier code valide active la 2FA du compte. `rememberDevice: true` ajoute un `deviceToken` (30 jours) qui dispense du TOTP au prochain login.",
         "operationId": "verify",
         "parameters": [
           {
@@ -2616,6 +3498,251 @@
         "summary": "Déconnexion",
         "tags": [
           "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/devices": {
+      "get": {
+        "operationId": "listDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrustedDeviceDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Appareils de confiance du compte courant (actifs, non expirés)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/devices/{id}": {
+      "delete": {
+        "operationId": "revokeDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DEVICE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Révoquer un appareil de confiance (le prochain login redemande le TOTP)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/events": {
+      "post": {
+        "description": "Noms limités au plan de marquage du §13 (`app_open`, `series_view`, `episode_start`, `episode_complete`, `paywall_view`, `unlock`, `purchase`, `subscription_start`, `ad_reward`, `checkin`, `push_open`, `login`, `signup`, `share`, `search`) ; `params` ≤ 2 Ko. Le jeton utilisateur est facultatif (événements avant la session invité) ; `X-Country` renseigne le pays.",
+        "operationId": "post",
+        "parameters": [
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "ISO 3166-1 alpha-2",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostEventsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostEventsResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | EVENT_PARAMS_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Envoyer un lot d’événements d’analyse (50 max)",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/webhooks/transcode/{provider}": {
+      "post": {
+        "description": "Passe l’épisode à READY ou FAILED. Cible par `episodeId`, `externalId` ou `sourceKey`. Signature : `X-Transcode-Signature: sha256=<hex HMAC-SHA256(secret, [timestamp \".\"] corps brut)>` ; `X-Transcode-Timestamp` (secondes epoch, optionnel, tolérance ±5 min). Idempotent.",
+        "operationId": "handle",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "mux",
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-transcode-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-transcode-timestamp",
+            "required": false,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscodeWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscodeWebhookAckDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_WEBHOOK_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Fin de transcodage (service géré)",
+        "tags": [
+          "webhooks"
         ]
       }
     },
@@ -5079,6 +6206,66 @@
         ]
       }
     },
+    "/admin/accounts/{id}/revoke-devices": {
+      "post": {
+        "operationId": "revokeDevices",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE | ADMIN_SELF_LOCKOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ADMIN_ACCOUNT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Révoquer tous les appareils de confiance d'un compte (TOTP redemandé partout)",
+        "tags": [
+          "admin-accounts"
+        ]
+      }
+    },
     "/admin/audit-logs": {
       "get": {
         "description": "`action` accepte une valeur exacte (`series.update`) ou un préfixe terminé par un point (`series.`). Tri antichronologique.",
@@ -5139,7 +6326,11 @@
                 "home_row",
                 "admin_account",
                 "upload",
-                "user"
+                "user",
+                "admin_trusted_device",
+                "campaign",
+                "faq_entry",
+                "support_ticket"
               ]
             }
           },
@@ -5335,12 +6526,604 @@
           "admin-stats"
         ]
       }
+    },
+    "/admin/campaigns": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "SCHEDULED",
+                "SENDING",
+                "SENT",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Lister les campagnes (filtre statut, antichronologique)",
+        "tags": [
+          "admin-campaigns"
+        ]
+      },
+      "post": {
+        "description": "Segments : `ALL`, `COUNTRY` (`countries`), `SERIES_FOLLOWERS` (`seriesId`, favoris), `INACTIVE` (`inactiveDays`). L'audience exclut les comptes sans appareil et ceux ayant désactivé les « offres ».",
+        "operationId": "create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | SEGMENT_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer une campagne (brouillon)",
+        "tags": [
+          "admin-campaigns"
+        ]
+      }
+    },
+    "/admin/campaigns/{id}": {
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CAMPAIGN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Détail d’une campagne",
+        "tags": [
+          "admin-campaigns"
+        ]
+      },
+      "patch": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CAMPAIGN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CAMPAIGN_NOT_EDITABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une campagne (brouillon ou programmée)",
+        "tags": [
+          "admin-campaigns"
+        ]
+      },
+      "delete": {
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CAMPAIGN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CAMPAIGN_NOT_DRAFT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer un brouillon",
+        "tags": [
+          "admin-campaigns"
+        ]
+      }
+    },
+    "/admin/campaigns/{id}/estimate": {
+      "post": {
+        "operationId": "estimate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignEstimateDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CAMPAIGN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Estimer l’audience actuelle du segment",
+        "tags": [
+          "admin-campaigns"
+        ]
+      }
+    },
+    "/admin/campaigns/{id}/send": {
+      "post": {
+        "description": "Envoi par lots de 500 via la file BullMQ `push`, préférences « offres » et plafond quotidien (2 push par jour) respectés. Statut `SENDING` puis `SENT`, ou `SCHEDULED` jusqu’à la date.",
+        "operationId": "send",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CAMPAIGN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CAMPAIGN_NOT_SENDABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Envoyer (immédiatement, ou à `scheduledAt` si la date est future)",
+        "tags": [
+          "admin-campaigns"
+        ]
+      }
+    },
+    "/admin/campaigns/{id}/cancel": {
+      "post": {
+        "operationId": "cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CAMPAIGN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CAMPAIGN_ALREADY_SENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Annuler (brouillon, programmée ou en cours : arrêt au lot suivant)",
+        "tags": [
+          "admin-campaigns"
+        ]
+      }
     }
   },
   "info": {
     "title": "DRAMA API",
-    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
-    "version": "1.2.0",
+    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).\n\n**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
+    "version": "1.3.0",
     "contact": {
       "name": "Équipe backend DRAMA",
       "url": "",
@@ -5382,7 +7165,15 @@
     },
     {
       "name": "users",
-      "description": "Profil, suppression différée, favoris et « J’aime » (M-16, M-52)"
+      "description": "Profil, suppression différée, favoris, « J’aime », appareils push et notifications (M-16, M-52, M-54)"
+    },
+    {
+      "name": "help",
+      "description": "Centre d’aide : FAQ, contact et suivi des demandes (M-53)"
+    },
+    {
+      "name": "analytics",
+      "description": "Événements d’analyse côté serveur (§13)"
     },
     {
       "name": "webhooks",
@@ -5419,6 +7210,14 @@
     {
       "name": "admin-stats",
       "description": "Back-office : tableau de bord v0 (B-11)"
+    },
+    {
+      "name": "admin-campaigns",
+      "description": "Back-office : campagnes push ciblées (B-10)"
+    },
+    {
+      "name": "admin-help",
+      "description": "Back-office : FAQ et boîte de réception du support (B-03bis)"
     }
   ],
   "servers": [
@@ -5447,6 +7246,166 @@
       }
     },
     "schemas": {
+      "ApiErrorDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 403
+          },
+          "code": {
+            "type": "string",
+            "description": "Code stable destiné au client (à localiser côté app).",
+            "example": "EPISODE_LOCKED"
+          },
+          "message": {
+            "type": "string",
+            "example": "This episode must be unlocked first"
+          },
+          "details": {
+            "type": "object",
+            "description": "Détails complémentaires (erreurs de validation, coût en pièces, etc.).",
+            "additionalProperties": true
+          },
+          "path": {
+            "type": "string",
+            "example": "/episodes/0192f1f0-8a5b-7c3d-9e1f-abcdefabcdef/play"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-10-28T10:00:00.000Z"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Identifiant de corrélation (en-tête x-request-id)."
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ]
+      },
+      "RegisterPushDeviceDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Jeton FCM de l’appareil",
+            "maxLength": 512
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android"
+            ],
+            "example": "android"
+          },
+          "locale": {
+            "type": "string",
+            "example": "fr-FR",
+            "maxLength": 16
+          },
+          "appVersion": {
+            "type": "string",
+            "example": "1.4.0",
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "token",
+          "platform"
+        ]
+      },
+      "NotificationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "new_episode",
+              "support_reply",
+              "campaign",
+              "offer",
+              "checkin_reminder"
+            ],
+            "example": "new_episode"
+          },
+          "title": {
+            "type": "string",
+            "example": "Nouvel épisode de Le Secret du Lagon"
+          },
+          "body": {
+            "type": "string",
+            "example": "L’épisode 6 est disponible."
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "description": "Routage : `{ seriesId, episodeId }`, `{ ticketId }` ou `{ deepLink }`",
+            "example": {
+              "seriesId": "0192…",
+              "episodeId": "0192…"
+            }
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "body",
+          "data",
+          "sentAt",
+          "readAt"
+        ]
+      },
+      "NotificationsPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "De la plus récente à la plus ancienne",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "unreadCount": {
+            "type": "number",
+            "description": "Notifications non lues (toutes pages)"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "unreadCount"
+        ]
+      },
       "ComponentHealthDto": {
         "type": "object",
         "properties": {
@@ -5678,48 +7637,6 @@
         "required": [
           "user",
           "tokens"
-        ]
-      },
-      "ApiErrorDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 403
-          },
-          "code": {
-            "type": "string",
-            "description": "Code stable destiné au client (à localiser côté app).",
-            "example": "EPISODE_LOCKED"
-          },
-          "message": {
-            "type": "string",
-            "example": "This episode must be unlocked first"
-          },
-          "details": {
-            "type": "object",
-            "description": "Détails complémentaires (erreurs de validation, coût en pièces, etc.).",
-            "additionalProperties": true
-          },
-          "path": {
-            "type": "string",
-            "example": "/episodes/0192f1f0-8a5b-7c3d-9e1f-abcdefabcdef/play"
-          },
-          "timestamp": {
-            "type": "string",
-            "example": "2026-10-28T10:00:00.000Z"
-          },
-          "requestId": {
-            "type": "string",
-            "description": "Identifiant de corrélation (en-tête x-request-id)."
-          }
-        },
-        "required": [
-          "statusCode",
-          "code",
-          "message",
-          "path",
-          "timestamp"
         ]
       },
       "RefreshTokenDto": {
@@ -7470,6 +9387,678 @@
           "liked"
         ]
       },
+      "FaqPublicEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "question": {
+            "type": "string",
+            "example": "Comment obtenir des pièces ?"
+          },
+          "answer": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "answer"
+        ]
+      },
+      "FaqCategoryDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "account",
+              "coins",
+              "vip",
+              "playback",
+              "payment",
+              "content",
+              "other"
+            ],
+            "example": "coins"
+          },
+          "title": {
+            "type": "string",
+            "description": "Libellé dans la langue demandée",
+            "example": "Pièces"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaqPublicEntryDto"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "entries"
+        ]
+      },
+      "FaqPublicDto": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaqCategoryDto"
+            }
+          }
+        },
+        "required": [
+          "categories"
+        ]
+      },
+      "ContactDto": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "maxLength": 200,
+            "example": "Pièces non créditées"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "email": {
+            "type": "string",
+            "description": "Adresse de réponse (confirmation envoyée si fournie)"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "account",
+              "coins",
+              "vip",
+              "playback",
+              "payment",
+              "content",
+              "other"
+            ]
+          }
+        },
+        "required": [
+          "subject",
+          "message",
+          "category"
+        ]
+      },
+      "ContactResultDto": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "ticketId"
+        ]
+      },
+      "TicketMessageDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "enum": [
+              "user",
+              "support"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "from",
+          "body",
+          "at"
+        ]
+      },
+      "TicketDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userLabel": {
+            "type": "string",
+            "description": "Nom affiché, e-mail ou téléphone du compte",
+            "example": "Awa"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "account",
+              "coins",
+              "vip",
+              "playback",
+              "payment",
+              "content",
+              "other"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "description": "Adresse de réponse saisie"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ANSWERED",
+              "CLOSED"
+            ]
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketMessageDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "userLabel",
+          "category",
+          "subject",
+          "email",
+          "status",
+          "messages",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TicketListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Du plus récemment mis à jour au plus ancien",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "LocalizedTextDto": {
+        "type": "object",
+        "properties": {
+          "fr": {
+            "type": "string",
+            "description": "Français (obligatoire)",
+            "maxLength": 4000
+          },
+          "en": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "es": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "pt": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "fr"
+        ]
+      },
+      "FaqEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "account",
+              "coins",
+              "vip",
+              "playback",
+              "payment",
+              "content",
+              "other"
+            ]
+          },
+          "question": {
+            "$ref": "#/components/schemas/LocalizedTextDto"
+          },
+          "answer": {
+            "$ref": "#/components/schemas/LocalizedTextDto"
+          },
+          "position": {
+            "type": "number"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "question",
+          "answer",
+          "position",
+          "isPublished",
+          "updatedAt"
+        ]
+      },
+      "CreateFaqEntryDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "account",
+              "coins",
+              "vip",
+              "playback",
+              "payment",
+              "content",
+              "other"
+            ]
+          },
+          "question": {
+            "$ref": "#/components/schemas/LocalizedTextDto"
+          },
+          "answer": {
+            "$ref": "#/components/schemas/LocalizedTextDto"
+          },
+          "position": {
+            "type": "number",
+            "default": "fin de liste",
+            "minimum": 0
+          },
+          "isPublished": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "category",
+          "question",
+          "answer"
+        ]
+      },
+      "ReorderFaqDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "Identifiants dans le nouvel ordre",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "UpdateFaqEntryDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "account",
+              "coins",
+              "vip",
+              "playback",
+              "payment",
+              "content",
+              "other"
+            ]
+          },
+          "question": {
+            "$ref": "#/components/schemas/LocalizedTextDto"
+          },
+          "answer": {
+            "$ref": "#/components/schemas/LocalizedTextDto"
+          },
+          "position": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isPublished": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReplyTicketDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AdminLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@drama.local"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 200
+          },
+          "deviceToken": {
+            "type": "string",
+            "description": "Jeton d'appareil de confiance (cookie `drama_admin_device`). S'il est valide pour ce compte et que la 2FA est enrôlée, la session est ouverte sans TOTP (`status: ok`). Un jeton invalide est ignoré."
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AdminUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@drama.local"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Administrateur"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "EDITOR",
+              "MONETIZATION",
+              "SUPPORT",
+              "ADMIN"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role"
+        ]
+      },
+      "AdminLoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "totp_required",
+              "totp_setup_required"
+            ],
+            "description": "`totp_setup_required` à la première connexion : afficher le QR code (`otpauthUri`) puis appeler /totp/verify avec le premier code. `ok` : appareil de confiance reconnu, la session est ouverte directement (`accessToken`, `expiresIn`, `user`)."
+          },
+          "challengeToken": {
+            "type": "string",
+            "description": "À renvoyer tel quel à /admin/auth/totp/verify. Expire en 5 minutes. Absent si `status: ok`."
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT admin (uniquement si `status: ok`)."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Durée de vie en secondes (uniquement si `status: ok`)."
+          },
+          "user": {
+            "description": "Uniquement si `status: ok`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserDto"
+              }
+            ]
+          },
+          "secret": {
+            "type": "string",
+            "description": "Secret TOTP base32 (uniquement si `totp_setup_required`).",
+            "example": "JBSWY3DPEHPK3PXP"
+          },
+          "otpauthUri": {
+            "type": "string",
+            "description": "URI otpauth:// à encoder en QR code (uniquement si `totp_setup_required`).",
+            "example": "otpauth://totp/DRAMA%20back-office%3Aadmin%40drama.local?secret=JBSWY3DPEHPK3PXP&issuer=DRAMA+back-office&algorithm=SHA1&digits=6&period=30"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "AdminTotpVerifyDto": {
+        "type": "object",
+        "properties": {
+          "challengeToken": {
+            "type": "string",
+            "description": "Jeton de défi renvoyé par /admin/auth/login (5 min)."
+          },
+          "code": {
+            "type": "string",
+            "description": "Code TOTP à 6 chiffres (fenêtre ±1 pas de 30 s).",
+            "example": "123456"
+          },
+          "rememberDevice": {
+            "type": "boolean",
+            "description": "Se souvenir de cet appareil (30 jours) : la réponse ajoute `deviceToken` et `deviceTokenExpiresAt`.",
+            "default": false
+          }
+        },
+        "required": [
+          "challengeToken",
+          "code"
+        ]
+      },
+      "AdminSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT admin (`aud: admin`), à présenter dans `Authorization: Bearer`."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Durée de vie en secondes.",
+            "example": 28800
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminUserDto"
+          },
+          "deviceToken": {
+            "type": "string",
+            "description": "Jeton d'appareil de confiance (aléatoire 256 bits, 30 jours), uniquement si `rememberDevice` était vrai. À stocker dans le cookie `drama_admin_device` et à renvoyer dans `deviceToken` au login."
+          },
+          "deviceTokenExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "TrustedDeviceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "example": "Chrome sur Linux"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "createdAt",
+          "lastUsedAt",
+          "expiresAt"
+        ]
+      },
+      "AnalyticsEventInputDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "app_open",
+              "series_view",
+              "episode_start",
+              "episode_complete",
+              "paywall_view",
+              "unlock",
+              "purchase",
+              "subscription_start",
+              "ad_reward",
+              "checkin",
+              "push_open",
+              "login",
+              "signup",
+              "share",
+              "search"
+            ],
+            "example": "episode_start"
+          },
+          "params": {
+            "type": "object",
+            "description": "Paramètres libres (objet JSON, 2048 octets max)",
+            "example": {
+              "seriesId": "0192…",
+              "episodeNumber": 3
+            }
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Horodatage côté appareil"
+          }
+        },
+        "required": [
+          "name",
+          "at"
+        ]
+      },
+      "PostEventsDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsEventInputDto"
+            }
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Identifiant de session de l’app"
+          },
+          "appVersion": {
+            "type": "string",
+            "maxLength": 40,
+            "example": "1.4.0"
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "PostEventsResultDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "number",
+            "description": "Événements enregistrés"
+          }
+        },
+        "required": [
+          "accepted"
+        ]
+      },
       "TranscodeWebhookDto": {
         "type": "object",
         "properties": {
@@ -7543,127 +10132,6 @@
           "accepted",
           "episodeId",
           "transcodeStatus"
-        ]
-      },
-      "AdminLoginDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "example": "admin@drama.local"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 200
-          }
-        },
-        "required": [
-          "email",
-          "password"
-        ]
-      },
-      "AdminLoginResponseDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "totp_required",
-              "totp_setup_required"
-            ],
-            "description": "`totp_setup_required` à la première connexion : afficher le QR code (`otpauthUri`) puis appeler /totp/verify avec le premier code."
-          },
-          "challengeToken": {
-            "type": "string",
-            "description": "À renvoyer tel quel à /admin/auth/totp/verify. Expire en 5 minutes."
-          },
-          "secret": {
-            "type": "string",
-            "description": "Secret TOTP base32 (uniquement si `totp_setup_required`).",
-            "example": "JBSWY3DPEHPK3PXP"
-          },
-          "otpauthUri": {
-            "type": "string",
-            "description": "URI otpauth:// à encoder en QR code (uniquement si `totp_setup_required`).",
-            "example": "otpauth://totp/DRAMA%20back-office%3Aadmin%40drama.local?secret=JBSWY3DPEHPK3PXP&issuer=DRAMA+back-office&algorithm=SHA1&digits=6&period=30"
-          }
-        },
-        "required": [
-          "status",
-          "challengeToken"
-        ]
-      },
-      "AdminTotpVerifyDto": {
-        "type": "object",
-        "properties": {
-          "challengeToken": {
-            "type": "string",
-            "description": "Jeton de défi renvoyé par /admin/auth/login (5 min)."
-          },
-          "code": {
-            "type": "string",
-            "description": "Code TOTP à 6 chiffres (fenêtre ±1 pas de 30 s).",
-            "example": "123456"
-          }
-        },
-        "required": [
-          "challengeToken",
-          "code"
-        ]
-      },
-      "AdminUserDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "email": {
-            "type": "string",
-            "example": "admin@drama.local"
-          },
-          "displayName": {
-            "type": "string",
-            "example": "Administrateur"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "EDITOR",
-              "MONETIZATION",
-              "SUPPORT",
-              "ADMIN"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "displayName",
-          "role"
-        ]
-      },
-      "AdminSessionDto": {
-        "type": "object",
-        "properties": {
-          "accessToken": {
-            "type": "string",
-            "description": "JWT admin (`aud: admin`), à présenter dans `Authorization: Bearer`."
-          },
-          "expiresIn": {
-            "type": "number",
-            "description": "Durée de vie en secondes.",
-            "example": 28800
-          },
-          "user": {
-            "$ref": "#/components/schemas/AdminUserDto"
-          }
-        },
-        "required": [
-          "accessToken",
-          "expiresIn",
-          "user"
         ]
       },
       "AdminSeriesDto": {
@@ -8890,7 +11358,11 @@
               "home_row",
               "admin_account",
               "upload",
-              "user"
+              "user",
+              "admin_trusted_device",
+              "campaign",
+              "faq_entry",
+              "support_ticket"
             ]
           },
           "targetId": {
@@ -9146,6 +11618,18 @@
               "$ref": "#/components/schemas/TopSeriesStatDto"
             }
           },
+          "paywallViews": {
+            "type": "number",
+            "description": "Affichages du paywall sur la fenêtre (événement `paywall_view`)"
+          },
+          "unlocks": {
+            "type": "number",
+            "description": "Déblocages sur la fenêtre (0 tant que la monétisation n’est pas livrée)"
+          },
+          "pushOpens": {
+            "type": "number",
+            "description": "Ouvertures de notification sur la fenêtre (événement `push_open`)"
+          },
           "days": {
             "type": "number",
             "description": "Fenêtre utilisée, en jours",
@@ -9165,8 +11649,224 @@
           "episodesStarted",
           "episodesCompleted",
           "topSeries",
+          "paywallViews",
+          "unlocks",
+          "pushOpens",
           "days",
           "generatedAt"
+        ]
+      },
+      "CampaignSegmentDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "COUNTRY",
+              "SERIES_FOLLOWERS",
+              "INACTIVE"
+            ]
+          },
+          "countries": {
+            "description": "Segment COUNTRY : pays ISO 3166-1 alpha-2",
+            "example": [
+              "TG",
+              "CI"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Segment SERIES_FOLLOWERS : série suivie"
+          },
+          "inactiveDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Segment INACTIVE : sans session ni lecture depuis N jours"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "CampaignDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "deepLink": {
+            "type": "string",
+            "nullable": true
+          },
+          "segment": {
+            "$ref": "#/components/schemas/CampaignSegmentDto"
+          },
+          "scheduledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SCHEDULED",
+              "SENDING",
+              "SENT",
+              "CANCELLED"
+            ]
+          },
+          "audienceCount": {
+            "type": "number",
+            "description": "Audience estimée (brouillon) puis réellement parcourue (envoi)"
+          },
+          "sentCount": {
+            "type": "number",
+            "description": "Utilisateurs ayant reçu au moins un push"
+          },
+          "createdBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "E-mail du compte créateur"
+          },
+          "sentAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "body",
+          "deepLink",
+          "segment",
+          "scheduledAt",
+          "status",
+          "audienceCount",
+          "sentCount",
+          "createdBy",
+          "sentAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CampaignListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "CreateCampaignDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "example": "Nouvelle saison ce week-end"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "deepLink": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "drama://series/0192…"
+          },
+          "segment": {
+            "$ref": "#/components/schemas/CampaignSegmentDto"
+          },
+          "scheduledAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Envoi programmé (appliqué par `POST /send`) ; absent = envoi immédiat au `send`"
+          }
+        },
+        "required": [
+          "title",
+          "body",
+          "segment"
+        ]
+      },
+      "UpdateCampaignDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "deepLink": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "segment": {
+            "$ref": "#/components/schemas/CampaignSegmentDto"
+          },
+          "scheduledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        }
+      },
+      "CampaignEstimateDto": {
+        "type": "object",
+        "properties": {
+          "audienceCount": {
+            "type": "number",
+            "description": "Utilisateurs actifs avec appareil, préférence « offres » active"
+          }
+        },
+        "required": [
+          "audienceCount"
         ]
       }
     }

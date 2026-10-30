@@ -543,14 +543,14 @@ describe('Sprint 4 public + admin API (e2e)', () => {
     await asAdmin(api().get('/admin/stats/overview?days=400')).expect(400);
   });
 
-  it('OpenAPI 1.2.0 documents the new routes', async () => {
+  it('OpenAPI documents the sprint 4 routes (version >= 1.2.0)', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     const docApp = moduleRef.createNestApplication({ logger: false });
     const { setupSwagger } = await import('../src/openapi/openapi.js');
     setupSwagger(docApp);
     await docApp.init();
     const res = await request(docApp.getHttpServer()).get('/docs-json').expect(200);
-    expect(res.body.info.version).toBe('1.2.0');
+    expect(res.body.info.version >= '1.2.0').toBe(true);
     expect(Object.keys(res.body.paths)).toEqual(
       expect.arrayContaining([
         '/auth/google',

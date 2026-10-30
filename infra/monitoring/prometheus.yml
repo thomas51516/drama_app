@@ -5,6 +5,11 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# Règles d'alerte (S06-OPS-01) : montées dans le conteneur par docker-compose.monitoring.yml.
+# Sans Alertmanager, elles sont visibles dans l'onglet « Alerts » de Prometheus (http://localhost:9090/alerts).
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 scrape_configs:
   - job_name: drama-api
     metrics_path: /metrics

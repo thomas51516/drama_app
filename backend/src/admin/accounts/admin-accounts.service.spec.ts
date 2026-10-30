@@ -67,8 +67,9 @@ function makeService(accounts: AdminAccount[]) {
     $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({ adminAccount: api })),
   };
   const audit = { record: vi.fn(() => Promise.resolve()) };
-  const service = new AdminAccountsService(prisma as never, audit as never);
-  return { service, prisma, audit, api };
+  const devices = { revokeAll: vi.fn(() => Promise.resolve(1)) };
+  const service = new AdminAccountsService(prisma as never, audit as never, devices as never);
+  return { service, prisma, audit, api, devices };
 }
 
 describe('AdminAccountsService guards', () => {

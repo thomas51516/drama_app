@@ -72,6 +72,11 @@ export class CatalogCacheService {
     return includeHome ? deleted + (await this.invalidateHome()) : deleted;
   }
 
+  /** Toute famille de clés sous le préfixe commun (ex. `help:faq:`). */
+  invalidateByPrefix(prefix: string): Promise<number> {
+    return this.deleteByPattern(`${PREFIX}:${prefix}*`);
+  }
+
   async invalidateAll(): Promise<number> {
     return this.deleteByPattern(`${PREFIX}:*`);
   }

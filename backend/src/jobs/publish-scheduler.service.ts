@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CatalogCacheService } from '../cache/catalog-cache.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NewEpisodeNotifier } from '../push/new-episode-notifier.service.js';
 import { RedisService } from '../redis/redis.service.js';
 
 export const PUBLISH_LAST_RUN_KEY = 'schedule:publish:last_run';
@@ -15,8 +16,8 @@ export interface PublishFlip {
 /**
  * Publication programmée (B-04) : chaque minute, repère les séries et épisodes dont `publishedAt`
  * vient d'être atteint depuis le dernier passage, invalide le cache du catalogue pour qu'ils
- * apparaissent immédiatement et journalise ce qui devient visible.
- * TODO M-54 : notifications push « nouvel épisode d'une série suivie » à brancher ici.
+ * apparaissent immédiatement, journalise ce qui devient visible et déclenche les notifications
+ * « nouvel épisode d'une série suivie » (M-54).
  */
 @Injectable()
 export class PublishSchedulerService {
@@ -26,6 +27,7 @@ export class PublishSchedulerService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly cache: CatalogCacheService,
+    private readonly notifier: NewEpisodeNotifier,
   ) {}
 
   async runOnce(now = new Date()): Promise<PublishFlip> {
@@ -33,6 +35,13 @@ export class PublishSchedulerService {
     const flip = await this.findBecameVisible(since, now);
     await this.applyFlip(flip);
     await this.saveLastRun(now);
+    for (const episodeId of flip.episodeIds) {
+      try {
+        await this.notifier.notifyEpisode(episodeId, now);
+      } catch (err) {
+        this.logger.warn(`New-episode push failed for ${episodeId}: ${(err as Error).message}`);
+      }
+    }
     return flip;
   }
 

@@ -22,6 +22,36 @@ services:
       timeout: 5s
       retries: 10
 
+  # Sauvegarde quotidienne de PostgreSQL (S05-OPS-01) : pg_dump -Fc compressé dans le volume
+  # `postgres-backups`, rétention BACKUP_RETENTION_DAYS (14 jours). Première sauvegarde au démarrage,
+  # puis toutes les BACKUP_INTERVAL_SECONDS (24 h). Scripts hôte : infra/scripts/backup.sh et restore.sh.
+  postgres-backup:
+    image: postgres:16-alpine
+    container_name: drama-postgres-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-drama}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-drama}
+      PGDATABASE: ${POSTGRES_DB:-drama}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - postgres-backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/drama-backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          sh /usr/local/bin/drama-backup.sh "$$BACKUP_DIR" || echo "[backup] échec $$(date -u +%FT%TZ)"
+          sleep "$$BACKUP_INTERVAL_SECONDS"
+        done
+
   redis:
     image: redis:7-alpine
     container_name: drama-redis
@@ -90,5 +120,6 @@ services:
 
 volumes:
   postgres-data:
+  postgres-backups:
   redis-data:
   minio-data:

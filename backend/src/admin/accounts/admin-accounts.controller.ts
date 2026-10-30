@@ -130,6 +130,22 @@ export class AdminAccountsController {
     return this.accounts.resetPassword(id, dto, admin, ip);
   }
 
+  @Post('accounts/:id/revoke-devices')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: "Révoquer tous les appareils de confiance d'un compte (TOTP redemandé partout)",
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse({ type: ApiErrorDto, description: 'ADMIN_ACCOUNT_NOT_FOUND' })
+  revokeDevices(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAdmin() admin: AuthenticatedAdmin,
+    @Ip() ip: string,
+  ): Promise<void> {
+    return this.accounts.revokeDevices(id, admin, ip);
+  }
+
   @Get('audit-logs')
   @ApiOperation({
     summary: "Journal d'audit (paginé, filtres auteur / action / cible / période)",

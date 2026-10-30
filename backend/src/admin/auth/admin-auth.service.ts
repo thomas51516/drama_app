@@ -32,6 +32,7 @@ import {
   type AdminTotpVerifyDto,
   type AdminUserDto,
 } from './dto/admin-auth.dto.js';
+import { TrustedDeviceService } from './trusted-device.service.js';
 
 const REVOKED_KEY = (jti: string): string => `admin:revoked:${jti}`;
 const CHALLENGE_KEY = (jti: string): string => `admin:challenge:${jti}`;
@@ -52,6 +53,7 @@ export class AdminAuthService {
     private readonly jwt: AdminJwtService,
     private readonly config: AppConfig,
     private readonly audit: AuditService,
+    private readonly devices: TrustedDeviceService,
   ) {
     this.box = new SecretBox(config.admin.totpEncryptionKey);
     this.dummyHash = argon2.hash(randomUUID(), { type: argon2.argon2id });
@@ -74,6 +76,16 @@ export class AdminAuthService {
 
     const jti = randomUUID();
     if (account.totpEnabledAt && account.totpSecret) {
+      // Appareil de confiance (B-13+) : un jeton valide pour ce compte dispense du TOTP.
+      const device = dto.deviceToken
+        ? await this.devices.verify(account.id, dto.deviceToken)
+        : null;
+      if (device) {
+        const session = await this.openSession(account, meta, 'password+device', {
+          deviceId: device.id,
+        });
+        return { status: 'ok', ...session };
+      }
       const challengeToken = await this.signChallenge({ sub: account.id, jti, setup: false });
       return { status: 'totp_required', challengeToken };
     }
@@ -142,34 +154,51 @@ export class AdminAuthService {
       });
     }
 
-    const now = new Date();
-    const updated = await this.prisma.adminAccount.update({
-      where: { id: account.id },
-      data: { lastLoginAt: now, ...(challenge.setup ? { totpEnabledAt: now } : {}) },
-    });
-    const actor = { id: account.id, email: account.email };
     if (challenge.setup) {
+      await this.prisma.adminAccount.update({
+        where: { id: account.id },
+        data: { totpEnabledAt: new Date() },
+      });
       await this.audit.record({
-        actor,
+        actor: { id: account.id, email: account.email },
         action: 'admin.totp_enrolled',
         targetType: 'admin_account',
         targetId: account.id,
         ip: meta.ip,
       });
     }
+    const session = await this.openSession(account, meta, 'password+totp');
+    if (!dto.rememberDevice) return session;
+    const device = await this.devices.issue(account.id, meta);
+    return {
+      ...session,
+      deviceToken: device.token,
+      deviceTokenExpiresAt: device.expiresAt.toISOString(),
+    };
+  }
+
+  /** Session admin : `lastLoginAt`, entrée d'audit `admin.login`, JWT d'accès. */
+  private async openSession(
+    account: AdminAccount,
+    meta: AdminClientMeta,
+    method: 'password+totp' | 'password+device',
+    extra: Record<string, unknown> = {},
+  ): Promise<AdminSessionDto> {
+    const updated = await this.prisma.adminAccount.update({
+      where: { id: account.id },
+      data: { lastLoginAt: new Date() },
+    });
     await this.audit.record({
-      actor,
+      actor: { id: account.id, email: account.email },
       action: 'admin.login',
       targetType: 'admin_account',
       targetId: account.id,
-      newValue: { method: 'password+totp', userAgent: meta.userAgent?.slice(0, 200) },
+      newValue: { method, userAgent: meta.userAgent?.slice(0, 200), ...extra },
       ip: meta.ip,
     });
-
-    const jti = randomUUID();
     const payload: AdminAccessPayload = {
       sub: updated.id,
-      jti,
+      jti: randomUUID(),
       email: updated.email,
       role: updated.role,
     };
