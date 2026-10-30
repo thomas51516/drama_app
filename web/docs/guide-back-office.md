@@ -214,6 +214,22 @@ comptes et des lectures, mis en cache 5 minutes et **actualisés automatiquement
 Les revenus par source, la rétention par épisode et la conversion au paywall arriveront avec la
 monétisation.
 
+### Réconciliation des recharges
+
+Sous-entrée **Réconciliation des recharges** du menu Tableaux de bord, réservée aux rôles
+Monétisation et Administrateur. Pour un **jour civil** (heure de Lomé, sélecteur avec flèches
+précédent/suivant et bouton « Aujourd'hui », jamais de date future) :
+
+- Quatre compteurs : **commandes** créées côté mobile money, **payées** (confirmées par
+  l'opérateur), **créditées** (pièces effectivement ajoutées au portefeuille) et **écarts**. Un
+  bandeau vert confirme que tout concorde ; un bandeau orange signale des écarts à traiter.
+- Le **tableau des écarts** liste, pour chaque commande en cause, l'utilisateur, le pack, le
+  montant, le statut côté opérateur, les pièces créditées/attendues et la raison (payée non
+  créditée, créditée sans paiement, montant ou pièces différents, crédit en double…). La tâche
+  quotidienne du serveur journalise les mêmes écarts.
+- **Exporter les écarts (CSV)** télécharge le tableau du jour pour l'envoyer à la comptabilité ou à
+  l'agrégateur mobile money.
+
 ## Comptes internes et journal d'audit
 
 Menu **Administration**, réservé aux administrateurs.
@@ -292,13 +308,52 @@ dollar à défaut), le **prix affiché**, les **pièces + bonus** et le prix par
 complète du pays telle que l'application la liste. Un avertissement signale un repli sur le dollar
 (pas de prix dans la devise du pays) ou un pack qui ne s'affichera pas (aucun prix).
 
-## Récompenses (check-in)
+## Offres et promos
 
-Menu **Récompenses**, rôles Monétisation et Administrateur. L'onglet **Check-in** fixe le barème
-des **7 jours consécutifs** : pièces bonus offertes chaque jour, **total sur 7 jours** affiché en
-direct, et l'option **« Un jour manqué remet la série à zéro »** (décochée : l'utilisateur reprend
-où il s'était arrêté). L'aperçu téléphone montre le rendu dans l'application. L'onglet **Tâches**
-arrive au sprint 8.
+Menu **Offres et promos**, rôles Monétisation et Administrateur. Chaque enregistrement est tracé
+dans le journal d'audit.
+
+### Offre de bienvenue
+
+Un seul réglage : bonus en **pourcentage** sur le **premier achat** d'un compte (tous packs ou un
+pack précis), pendant un nombre d'**heures après l'inscription** (ex. 48 h). Le serveur applique le
+bonus automatiquement au moment du crédit, aussi bien pour un paiement Google Play que pour une
+recharge mobile money ; l'aperçu montre l'exemple sur un pack donné.
+
+### Offres limitées
+
+Table des offres en cours : titre, **pack** concerné, **bonus en %**, période de diffusion (saisie
+en **heure de Lomé**, vide pour le début = tout de suite) et état (**En cours** / Programmée /
+Terminée / Désactivée). « Nouvelle offre » crée une promotion ; l'interrupteur **Actif** la retire
+sans la supprimer. Une offre déjà passée reste visible pour l'historique.
+
+### Codes promo
+
+Table des codes : **code**, **pièces offertes**, **limite d'utilisations** (globale et par
+utilisateur), période de validité facultative et état. « Nouveau code » propose un **générateur**
+(préfixe facultatif + suite de lettres et chiffres sans caractères ambigus comme O/0 ou I/1) ou un
+code saisi à la main ; **le code ne peut plus être modifié après création**. Le bouton
+**Utilisations** ouvre la liste des comptes qui ont déjà utilisé le code, avec la date. Il n'existe
+pas de suppression : désactivez un code pour qu'il ne soit plus accepté.
+
+## Récompenses (check-in et tâches)
+
+Menu **Récompenses**, rôles Monétisation et Administrateur.
+
+### Check-in
+
+Barème des **7 jours consécutifs** : pièces bonus offertes chaque jour, **total sur 7 jours**
+affiché en direct, et l'option **« Un jour manqué remet la série à zéro »** (décochée :
+l'utilisateur reprend où il s'était arrêté). L'aperçu téléphone montre le rendu dans l'application.
+
+### Tâches
+
+Six tâches à **clés fixes** (regarder 3 épisodes dans la journée, 10 dans la semaine, activer les
+notifications, partager une série, compléter son profil, ajouter un favori) : le titre et la
+description affichés dans l'application sont gérés par le serveur, vous réglez seulement les
+**pièces offertes**, l'**objectif** (nombre à atteindre) et l'état **Actif**. Le bandeau « Potentiel
+hebdomadaire » indique ce qu'un utilisateur assidu peut gagner sur 7 jours avec les tâches
+actives.
 
 ## Utilisateurs (support)
 

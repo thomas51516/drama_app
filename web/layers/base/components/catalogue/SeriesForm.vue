@@ -144,6 +144,7 @@ function pickMonetization(input: AdminSeriesUpdateInput): AdminSeriesUpdateInput
   const picked: AdminSeriesUpdateInput = {}
   if (input.freeEpisodeCount !== undefined) picked.freeEpisodeCount = input.freeEpisodeCount
   if (input.coinCostPerEpisode !== undefined) picked.coinCostPerEpisode = input.coinCostPerEpisode
+  if (input.adUnlockEnabled !== undefined) picked.adUnlockEnabled = input.adUnlockEnabled
   return picked
 }
 
@@ -350,6 +351,20 @@ defineExpose({ isDirty, submit })
           <small v-if="errorMessage('coinCostPerEpisode')" class="text-red-600">
             {{ errorMessage('coinCostPerEpisode') }}
           </small>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <ToggleSwitch
+          v-model="values.adUnlockEnabled"
+          input-id="series-ad-unlock"
+          :disabled="monetizationDisabled"
+          data-testid="series-ad-unlock"
+        />
+        <div>
+          <label for="series-ad-unlock" class="text-sm font-medium">{{
+            t('series.form.adUnlockEnabled')
+          }}</label>
+          <p class="text-xs text-muted-color">{{ t('series.form.adUnlockHint') }}</p>
         </div>
       </div>
     </fieldset>

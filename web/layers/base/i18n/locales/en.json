@@ -1382,5 +1382,244 @@
       "validation": "Data refused by the server: check the amount, the bucket and the reason.",
       "conflict": "The operation conflicts with the current state of the account: reload the page."
     }
+  },
+  "recharge": {
+    "brand": "DRAMA Top-up",
+    "mockBanner": "Demo mode: fake data, simulated payment.",
+    "language": "Language",
+    "country": "Country",
+    "coins": "coin | coins",
+    "nav": {
+      "label": "Navigation",
+      "home": "Home",
+      "packs": "Packs",
+      "history": "History",
+      "account": "Account",
+      "signIn": "Sign in"
+    },
+    "footer": {
+      "copyright": "© {year} DRAMA",
+      "country": "Country: {country}",
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "support": "Support"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "FAILED": "Failed",
+      "EXPIRED": "Expired"
+    },
+    "errors": {
+      "notFound": "Page not found",
+      "fatal": "This page hit an error"
+    },
+    "home": {
+      "pageTitle": "Mobile money top-up — DRAMA",
+      "title": "Top up your coins with mobile money",
+      "subtitle": "Same account as the DRAMA app: coins are credited as soon as the payment is confirmed.",
+      "operators": "Currency: {currency}. Operators: {operators}.",
+      "ctaSignIn": "Sign in",
+      "ctaPacks": "See the packs",
+      "howTitle": "How it works",
+      "steps": {
+        "signIn": {
+          "title": "Sign in",
+          "text": "With the phone, e-mail or Google account used in the app."
+        },
+        "pick": {
+          "title": "Pick a pack",
+          "text": "Local prices, bonuses and offers shown."
+        },
+        "pay": {
+          "title": "Pay with mobile money",
+          "text": "You are redirected to the operator’s secure payment page."
+        },
+        "credited": {
+          "title": "Coins credited",
+          "text": "The server credits your account on confirmation; the balance shows in the app."
+        }
+      },
+      "sameAccountTitle": "One account, one balance",
+      "sameAccountText": "Coins bought here appear immediately in the DRAMA app, on the same account."
+    },
+    "login": {
+      "pageTitle": "Sign in — DRAMA Top-up",
+      "title": "Sign in",
+      "subtitle": "Use the same account as in the app.",
+      "method": "Sign-in method",
+      "methodPhone": "Phone",
+      "methodEmail": "E-mail",
+      "phone": "Phone number",
+      "phoneHint": "International format with the dial code (e.g. +228 90 12 34 56).",
+      "sendCode": "Get a code by SMS",
+      "codeSent": "Code sent to {phone}.",
+      "codeSentTo": "A 6-digit code was sent to {phone}.",
+      "changePhone": "Change number",
+      "code": "Code received by SMS",
+      "verify": "Verify",
+      "resend": "Resend code",
+      "resendIn": "Resend in {seconds} s",
+      "mockOtp": "Demo mode: the code is {code}.",
+      "email": "E-mail address",
+      "password": "Password",
+      "passwordHint": "At least {min} characters.",
+      "signIn": "Sign in",
+      "register": "Create an account",
+      "mockHint": "Demo account:",
+      "or": "or"
+    },
+    "authErrors": {
+      "invalidCredentials": "Wrong e-mail or password.",
+      "emailTaken": "An account already uses this e-mail: sign in.",
+      "otpInvalid": "Wrong code. Check the SMS and try again.",
+      "otpExpired": "The code expired: request a new one.",
+      "otpTooSoon": "Please wait before requesting another code.",
+      "otpIncomplete": "Enter the 6 digits of the code.",
+      "blocked": "This account is blocked. Contact support.",
+      "rateLimited": "Too many attempts. Try again in a few minutes.",
+      "googleDisabled": "Google sign-in is not available.",
+      "smsFailed": "The SMS could not be sent. Try again.",
+      "validation": "Check the information entered.",
+      "phone": "Invalid number: use the international format (+228…).",
+      "network": "The server is unreachable. Check your connection.",
+      "generic": "Something went wrong. Try again."
+    },
+    "packs": {
+      "pageTitle": "Coin packs — DRAMA Top-up",
+      "title": "Coin packs",
+      "subtitle": "Prices in local currency. Bonus coins expire, purchased coins do not.",
+      "bonus": "bonus",
+      "total": "total {total}",
+      "bestValue": "Best value",
+      "buy": "Top up",
+      "welcomeBadge": "Welcome +{percent} %",
+      "limitedBadge": "Offer +{percent} %",
+      "welcomeUntil": "Welcome bonus on your first purchase, until {date}.",
+      "limitedUntil": "{title} — until {date}.",
+      "welcomeBanner": "Welcome offer: +{percent} % bonus coins on your first purchase.",
+      "fallbackCurrency": "No price in this country’s currency: prices are shown in {currency}.",
+      "signInToBuy": "Sign in to top up.",
+      "loadError": "Could not load the packs.",
+      "empty": "No pack available for this country.",
+      "orderFailed": "Could not create the order",
+      "priceNote": "Prices in {currency}, taxes included (e.g. {example})."
+    },
+    "pay": {
+      "pageTitle": "Payment — DRAMA Top-up",
+      "title": "Payment",
+      "order": "Order {id}",
+      "pack": "Pack",
+      "coins": "Coins",
+      "amount": "Amount",
+      "expires": "Pay before {date}.",
+      "payNow": "Pay with mobile money",
+      "providerHint": "You will be redirected to the operator’s payment page, then brought back here.",
+      "alreadyPaid": "I already paid: check",
+      "noPaymentUrl": "Payment link unavailable: start again from the packs.",
+      "waiting": "Confirming your payment…",
+      "waitingHint": "We check with the operator every few seconds. You can keep this page open.",
+      "backToProvider": "Back to the payment page",
+      "timeout": "Payment still pending",
+      "timeoutHint": "The operator has not confirmed yet. Coins are credited automatically on receipt; you can come back later through the history.",
+      "checkAgain": "Check again",
+      "paidTitle": "Payment confirmed",
+      "paidText": "{coins} coins were credited to your account.",
+      "balance": "New balance: {total} coins.",
+      "creditedAt": "Credited on {date}.",
+      "again": "Top up again",
+      "failedTitle": "Payment declined",
+      "failedText": "The operator declined or cancelled the payment. No coins were taken.",
+      "expiredTitle": "Order expired",
+      "expiredText": "The payment deadline has passed. Create a new order.",
+      "retry": "Try again",
+      "loadError": "Order not found or not accessible."
+    },
+    "history": {
+      "pageTitle": "History — DRAMA Top-up",
+      "title": "Top-up history",
+      "subtitle": "{count} order | {count} orders",
+      "loadError": "Could not load the history.",
+      "empty": "No top-up yet.",
+      "loadMore": "Load more",
+      "credited": "credited"
+    },
+    "account": {
+      "pageTitle": "My account — DRAMA Top-up",
+      "title": "My account",
+      "subtitle": "Coin balance and preferences of the top-up site.",
+      "balance": "Coin balance",
+      "purchased": "Purchased",
+      "bonus": "Bonus",
+      "expiring": "{amount} bonus coins expire on {date}",
+      "negative": "Negative balance after a refund: unlocks are blocked until it is settled.",
+      "walletError": "Balance unavailable right now.",
+      "topUp": "Top up",
+      "profile": "Profile",
+      "providers": "Sign-in",
+      "accountCountry": "Account country",
+      "preferences": "Preferences",
+      "countryHint": "Sets the currency and the operators offered on this site.",
+      "logout": "Sign out"
+    },
+    "legal": {
+      "termsTitle": "Terms of sale",
+      "privacyTitle": "Privacy policy",
+      "placeholder": "Provisional text: the final version will be provided by the client’s counsel before launch (specification §14).",
+      "terms": {
+        "object": {
+          "title": "Purpose",
+          "text": "Sale of virtual coins usable only in the DRAMA app to unlock episodes."
+        },
+        "coins": {
+          "title": "Coins",
+          "text": "Coins have no monetary value and cannot be transferred or refunded in cash; bonus coins have a validity period."
+        },
+        "payment": {
+          "title": "Payment",
+          "text": "Payment by mobile money through an approved aggregator; coins are credited after the payment is confirmed."
+        },
+        "refund": {
+          "title": "Refund",
+          "text": "If the operator refunds a payment, the corresponding coins are debited; a negative balance blocks unlocks."
+        },
+        "contact": {
+          "title": "Contact",
+          "text": "Support: support{'@'}drama.app."
+        }
+      },
+      "privacy": {
+        "data": {
+          "title": "Data collected",
+          "text": "Account id, phone or e-mail, country, top-up history."
+        },
+        "purpose": {
+          "title": "Purposes",
+          "text": "Order fulfilment, fraud prevention, accounting obligations."
+        },
+        "retention": {
+          "title": "Retention",
+          "text": "Legal retention of accounting records; account deletion within 30 days on request."
+        },
+        "rights": {
+          "title": "Your rights",
+          "text": "Access, rectification and deletion from the app or through support."
+        },
+        "cookies": {
+          "title": "Cookies",
+          "text": "Strictly necessary cookies only: session, country and language."
+        }
+      }
+    },
+    "mockPayment": {
+      "badge": "Simulated payment page",
+      "title": "Mobile money operator (simulation)",
+      "hint": "In demo mode this page replaces the aggregator’s. Choose the outcome of the payment.",
+      "pay": "Pay",
+      "fail": "Fail",
+      "back": "Back to the order",
+      "failed": "Simulation failed",
+      "notMock": "This page only exists in demo mode."
+    }
   }
 }

@@ -14,6 +14,15 @@ export interface BackofficeModule {
   roles?: readonly AdminRole[]
   /** Sidebar badge fed by a store (`supportInbox` = open tickets). */
   badge?: 'supportInbox'
+  /** Secondary pages listed under the module in the sidebar (own role gating). */
+  children?: readonly BackofficeSubpage[]
+}
+
+export interface BackofficeSubpage {
+  key: string
+  labelKey: string
+  path: string
+  roles?: readonly AdminRole[]
 }
 
 export const backofficeModules: readonly BackofficeModule[] = [
@@ -69,7 +78,14 @@ export const backofficeModules: readonly BackofficeModule[] = [
     icon: 'pi pi-wallet',
     roles: ['MONETIZATION', 'ADMIN'],
   },
-  { key: 'offers', ticket: 'B-07', labelKey: 'nav.offers', path: '/offers', icon: 'pi pi-tag' },
+  {
+    key: 'offers',
+    ticket: 'B-07',
+    labelKey: 'nav.offers',
+    path: '/offers',
+    icon: 'pi pi-tag',
+    roles: ['MONETIZATION', 'ADMIN'],
+  },
   {
     key: 'rewards',
     ticket: 'B-08',
@@ -100,6 +116,14 @@ export const backofficeModules: readonly BackofficeModule[] = [
     labelKey: 'nav.dashboards',
     path: '/dashboard',
     icon: 'pi pi-chart-bar',
+    children: [
+      {
+        key: 'topupReconciliation',
+        labelKey: 'nav.topupReconciliation',
+        path: '/topup-reconciliation',
+        roles: ['MONETIZATION', 'ADMIN'],
+      },
+    ],
   },
   {
     key: 'rights',
@@ -119,6 +143,17 @@ export const backofficeModules: readonly BackofficeModule[] = [
 
 export function findModuleByPath(path: string): BackofficeModule | undefined {
   return backofficeModules.find((module) => module.path === path)
+}
+
+/** The sub-page registered at `path` (e.g. `/topup-reconciliation`) with its parent module. */
+export function findSubpageByPath(
+  path: string,
+): { module: BackofficeModule; subpage: BackofficeSubpage } | undefined {
+  for (const module of backofficeModules) {
+    const subpage = module.children?.find((child) => child.path === path)
+    if (subpage) return { module, subpage }
+  }
+  return undefined
 }
 
 /** True when `role` may open the module (no `roles` = everyone). */

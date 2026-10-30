@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { canManageMonetization } from '#base/utils/monetization'
 
-/** B-08 — rewards: the check-in scale (M-40) now, tasks in sprint 8. MONETIZATION and ADMIN. */
+/** B-08 — rewards: the check-in scale (M-40) and the reward tasks (M-41). MONETIZATION and ADMIN. */
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -36,24 +36,17 @@ watch(tab, (value) => {
           }}</Tab
         >
         <Tab value="tasks"
-          ><i class="pi pi-check-square mr-2" aria-hidden="true" />{{ t('rewards.tabs.tasks') }}
-          <Tag :value="t('rewards.tasks.placeholder')" severity="secondary" class="ml-2" />
-        </Tab>
+          ><i class="pi pi-check-square mr-2" aria-hidden="true" />{{
+            t('rewards.tabs.tasks')
+          }}</Tab
+        >
       </TabList>
       <TabPanels class="!px-0">
         <TabPanel value="checkin">
           <RewardsCheckinScaleEditor />
         </TabPanel>
         <TabPanel value="tasks">
-          <section
-            class="mx-auto max-w-xl rounded-lg border border-dashed border-surface-300 bg-surface-0 p-10 text-center"
-            data-testid="tasks-placeholder"
-          >
-            <i class="pi pi-check-square text-4xl text-muted-color" aria-hidden="true" />
-            <h2 class="mt-4 text-xl font-semibold">{{ t('rewards.tasks.title') }}</h2>
-            <p class="mt-2 font-medium text-primary">{{ t('rewards.tasks.placeholder') }}</p>
-            <p class="mt-2 text-sm text-muted-color">{{ t('rewards.tasks.hint') }}</p>
-          </section>
+          <RewardsTasksPanel />
         </TabPanel>
       </TabPanels>
     </Tabs>

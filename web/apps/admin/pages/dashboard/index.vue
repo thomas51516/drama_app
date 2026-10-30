@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { StatsOverview, StatsPeriod } from '#base/types/api'
 import { STATS_PERIODS } from '#base/types/api'
 import { ApiError } from '#base/utils/api-error'
+import { canManageMonetization } from '#base/utils/monetization'
 import { createPoller } from '#base/utils/polling'
 import {
   deriveTiles,
@@ -89,6 +90,10 @@ onBeforeUnmount(() => poller.stop())
 const periodOptions = computed(() =>
   STATS_PERIODS.map((value) => ({ value, label: t(`dashboard.period.${value}`) })),
 )
+
+/** B-11: the top-up reconciliation lives under the dashboard menu (MONETIZATION, ADMIN). */
+const auth = useAuthStore()
+const canReconcile = computed(() => canManageMonetization(auth.user?.role))
 </script>
 
 <template>
@@ -99,6 +104,15 @@ const periodOptions = computed(() =>
       :crumbs="[{ label: t('dashboard.title') }]"
     >
       <template #actions>
+        <NuxtLink v-if="canReconcile" to="/topup-reconciliation">
+          <Button
+            icon="pi pi-sync"
+            :label="t('nav.topupReconciliation')"
+            severity="secondary"
+            outlined
+            data-testid="open-reconciliation"
+          />
+        </NuxtLink>
         <SelectButton
           v-model="period"
           :options="periodOptions"

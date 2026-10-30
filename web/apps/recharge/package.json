@@ -1,0 +1,21 @@
+{
+  "name": "@drama/recharge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DRAMA — site de recharge mobile money (SSR, mobile d'abord)",
+  "type": "module",
+  "scripts": {
+    "prepare": "nuxt prepare",
+    "dev": "nuxt dev --port 3200",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@drama/web-base": "0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vue-tsc": "^3.3.13"
+  }
+}

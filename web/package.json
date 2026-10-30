@@ -13,14 +13,17 @@
     "apps/*"
   ],
   "scripts": {
-    "prepare": "npm run prepare -w @drama/admin",
+    "prepare": "npm run prepare -w @drama/admin && npm run prepare -w @drama/recharge",
     "dev:admin": "npm run dev -w @drama/admin",
     "build:admin": "npm run build -w @drama/admin",
     "preview:admin": "npm run preview -w @drama/admin",
+    "dev:recharge": "npm run dev -w @drama/recharge",
+    "build:recharge": "npm run build -w @drama/recharge",
+    "preview:recharge": "npm run preview -w @drama/recharge",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint --fix . && prettier --write .",
     "format": "prettier --write .",
-    "typecheck": "npm run typecheck -w @drama/admin",
+    "typecheck": "npm run typecheck -w @drama/admin && npm run typecheck -w @drama/recharge",
     "test": "vitest run",
     "test:watch": "vitest"
   },

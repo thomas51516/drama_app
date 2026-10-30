@@ -64,6 +64,24 @@ import type {
   TotpVerifyRequest,
   TotpVerifyResponse,
   TrustedDevice,
+  LimitedOffer,
+  LimitedOfferInput,
+  OtpRequestResponse,
+  PromoCode,
+  PromoCodeInput,
+  PromoRedemption,
+  PublicAuthSession,
+  PublicOffers,
+  PublicShop,
+  RewardTaskAdmin,
+  RewardTaskInput,
+  TopupOrder,
+  TopupOrderCreated,
+  TopupOrderCreateInput,
+  TopupOrderStatus,
+  TopupReconciliation,
+  TopupReconciliationMismatch,
+  WelcomeOffer,
 } from '../types/api'
 import {
   ADMIN_ROLES,
@@ -101,15 +119,40 @@ import faqFixture from './faq.json'
 import ticketsFixture from './tickets.json'
 import monetizationFixture from './monetization.json'
 import usersFixture from './users.json'
+import offersFixture from './offers.json'
+import topupFixture from './topup.json'
 import {
+  currencyForCountry,
   isCurrency,
   isValidSku,
   isVipPeriod,
+  priceFor,
   samePrices,
   sortVipPlans,
   validateSettings,
 } from '../utils/monetization'
-import { normalizeCheckinDays, validateCheckinScale, hasCheckinErrors } from '../utils/rewards'
+import {
+  normalizeCheckinDays,
+  validateCheckinScale,
+  hasCheckinErrors,
+  sortTasks,
+  validateTaskForm,
+} from '../utils/rewards'
+import {
+  bonusFromPercent,
+  isValidPromoCode,
+  normalizePromoCode,
+  publicOffersFrom,
+  sortLimitedOffers,
+  sortPromoCodes,
+  validateLimitedOffer,
+  validatePromoCode,
+  validateWelcomeOffer,
+  welcomeToForm,
+} from '../utils/offers'
+import { isReconciliationDate } from '../utils/reconciliation'
+import { isValidEmail, normalizePhone, PASSWORD_MIN } from '../utils/topup'
+import { dateKey } from '../utils/schedule'
 import { ADJUSTMENT_REASON_MIN, sortLedger } from '../utils/users'
 import { isStatsPeriod } from '../utils/stats'
 import {
@@ -156,6 +199,12 @@ import { mockAssetUrlFor, mockUploadUrlFor, registerMockAsset } from './assets'
  * Contract v1.4 (sprint 6): monetization settings, coin packs and VIP plans (B-06), the
  * check-in scale (B-08) and end users with a wallet projected from an in-memory ledger (B-09):
  * a manual adjustment appends an ADJUSTMENT line, blocking changes the status.
+ *
+ * Contract v1.5 (sprint 7): reward tasks (B-08), welcome / limited offers and promo codes with
+ * their redemptions (B-07), the top-up reconciliation (B-11) and the public routes the recharge
+ * site uses (OTP / e-mail sessions with refresh rotation, `/me`, `/wallet`, `/shop`, `/offers`,
+ * `/topup/orders`). The fake payment page is a route of the recharge app in mock mode
+ * (`/mock-payment/{orderId}`) which calls the mock-only `POST /topup/orders/{id}/mock-pay`.
  */
 
 export type MockMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -165,12 +214,16 @@ export interface MockRequest {
   path: string
   body?: unknown
   token?: string | null
+  headers?: Record<string, string>
 }
 
 interface MockContext extends MockRequest {
   params: Record<string, string>
   query: URLSearchParams
+  /** Back-office account of the token, when it is an admin token. */
   user: AdminUser | null
+  /** End user of the token, when it is a public session token (recharge site). */
+  appUser: MockUser | null
 }
 
 type Handler = (context: MockContext) => unknown
@@ -194,7 +247,17 @@ const SAMPLE_COUNT = 3
 const SAMPLE_BASE = 'hls/samples'
 const SAMPLE_THUMBNAIL_BASE = 'http://localhost:9000/drama-media/hls/samples'
 
-const authRoutes = new Set(['/admin/auth/login', '/admin/auth/totp/verify'])
+const authRoutes = new Set([
+  '/admin/auth/login',
+  '/admin/auth/totp/verify',
+  '/auth/otp/request',
+  '/auth/otp/verify',
+  '/auth/email/register',
+  '/auth/email/login',
+  '/auth/google',
+  '/auth/refresh',
+  '/auth/logout',
+])
 
 interface MockAccount {
   token: string
@@ -239,6 +302,43 @@ interface MockState {
   vipPlans: VipPlanAdmin[]
   checkin: CheckinScale
   users: MockUser[]
+  tasks: RewardTaskAdmin[]
+  welcomeOffer: WelcomeOffer
+  limitedOffers: LimitedOffer[]
+  promoCodes: PromoCode[]
+  redemptions: Record<string, PromoRedemption[]>
+  topupOrders: MockTopupOrder[]
+  /** Public sessions (recharge site): access token → session. */
+  publicSessions: Map<string, MockPublicSession>
+  /** Public refresh tokens → access token they belong to (rotation: one use each). */
+  refreshTokens: Map<string, string>
+  otpRequests: Map<string, { phone: string; attempts: number; createdAt: number }>
+  /** Passwords of e-mail accounts created in the session (fixture accounts share one). */
+  publicPasswords: Map<string, string>
+}
+
+interface MockPublicSession {
+  userId: string
+  accessToken: string
+  refreshToken: string
+}
+
+/** Top-up order as stored by the mock (the contract exposes a subset). */
+interface MockTopupOrder {
+  id: string
+  userId: string
+  packSku: string
+  country: string
+  status: TopupOrderStatus
+  coins: number
+  amount: Price
+  providerReference: string | null
+  createdAt: string
+  creditedAt: string | null
+  expiresAt: string
+  idempotencyKey?: string
+  /** Fixture-only: forces a reconciliation mismatch reason. */
+  mismatch?: string
 }
 
 /** End user of the app with the raw material of the detail (ledger → wallet projection). */
@@ -301,6 +401,16 @@ function initialState(): MockState {
     vipPlans: clone(monetizationFixture.vipPlans) as VipPlanAdmin[],
     checkin: clone(monetizationFixture.checkin) as CheckinScale,
     users: seedUsers(clone(usersFixture.users) as unknown as MockUserFixture[]),
+    tasks: clone(offersFixture.tasks) as RewardTaskAdmin[],
+    welcomeOffer: clone(offersFixture.welcome) as WelcomeOffer,
+    limitedOffers: resolveFutureDates(clone(offersFixture.limited) as LimitedOffer[]),
+    promoCodes: resolveFutureDates(clone(offersFixture.promoCodes) as PromoCode[]),
+    redemptions: clone(offersFixture.redemptions) as Record<string, PromoRedemption[]>,
+    topupOrders: resolveFutureDates(clone(topupFixture.orders) as MockTopupOrder[]),
+    publicSessions: new Map(),
+    refreshTokens: new Map(),
+    otpRequests: new Map(),
+    publicPasswords: new Map(),
   }
 }
 
@@ -309,12 +419,16 @@ interface MockUserFixture extends Omit<MockUser, 'ledger'> {
   bonusExpiring?: { amount: number; expiresAt: string }[]
 }
 
-/** `__FUTURE_<n>D__` placeholders of the users fixture become dates n days ahead. */
+/** `__FUTURE_<n>D__` / `__PAST_<n>D__` placeholders of fixtures become dates n days away. */
 function futurePlaceholder(value: unknown): unknown {
   if (typeof value !== 'string') return value
-  const match = /^__FUTURE_(\d+)D__$/.exec(value)
+  const match = /^__(FUTURE|PAST)_(\d+)D__$/.exec(value)
   if (!match) return value
-  return new Date(Date.now() + Number(match[1]) * 86_400_000).toISOString()
+  const sign = match[1] === 'PAST' ? -1 : 1
+  // Past placeholders land at 10:00 UTC so they stay inside the civil day n days ago.
+  const date = new Date(Date.now() + sign * Number(match[2]) * 86_400_000)
+  if (sign === -1) date.setUTCHours(10, 0, 0, 0)
+  return date.toISOString()
 }
 
 function resolveFutureDates<T>(value: T): T {
@@ -507,6 +621,7 @@ const EDITABLE_FIELDS: (keyof AdminSeriesInput)[] = [
   'posterHorizontalUrl',
   'freeEpisodeCount',
   'coinCostPerEpisode',
+  'adUnlockEnabled',
   'territories',
 ]
 
@@ -2666,6 +2781,699 @@ route('POST', '/admin/users/:id/unblock', (context): AppUser => {
   return clone(entry.user)
 })
 
+// ---------------------------------------------------------------------------
+// Reward tasks (B-08), offers and promo codes (B-07), reconciliation (B-11) — contract v1.5
+// ---------------------------------------------------------------------------
+
+route('GET', '/admin/rewards/tasks', (context): RewardTaskAdmin[] => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(sortTasks(state.tasks))
+})
+
+route('PATCH', '/admin/rewards/tasks/:key', (context): RewardTaskAdmin => {
+  requireRole(context, MONETIZATION_ROLES)
+  const task = state.tasks.find((item) => item.key === context.params.key)
+  if (!task) fail(404, 'TASK_NOT_FOUND', `Task ${context.params.key} not found`, context.path)
+  const input = (context.body ?? {}) as RewardTaskInput
+  const next = {
+    coins: input.coins ?? task.coins,
+    target: input.target ?? task.target,
+    isActive: input.isActive ?? task.isActive,
+  }
+  const errors = validateTaskForm(next)
+  if (Object.keys(errors).length > 0) {
+    fail(400, 'VALIDATION_ERROR', `Invalid task: ${Object.keys(errors).join(', ')}`, context.path)
+  }
+  const before = { coins: task.coins, target: task.target, isActive: task.isActive }
+  Object.assign(task, next, { updatedAt: now() })
+  audit(context, 'reward_task.update', 'reward_task', task.key, before, next)
+  return clone(task)
+})
+
+// --- welcome offer -----------------------------------------------------------
+
+route('GET', '/admin/offers/welcome', (context): WelcomeOffer => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(state.welcomeOffer)
+})
+
+route('PUT', '/admin/offers/welcome', (context): WelcomeOffer => {
+  requireRole(context, MONETIZATION_ROLES)
+  const input = { ...state.welcomeOffer, ...((context.body ?? {}) as Partial<WelcomeOffer>) }
+  const errors = validateWelcomeOffer(welcomeToForm(input))
+  if (Object.keys(errors).length > 0) {
+    fail(400, 'VALIDATION_ERROR', `Invalid offer: ${Object.keys(errors).join(', ')}`, context.path)
+  }
+  if (input.packSku && !state.packs.some((pack) => pack.sku === input.packSku)) {
+    fail(404, 'PACK_NOT_FOUND', `No pack with sku ${input.packSku}`, context.path)
+  }
+  const before = clone(state.welcomeOffer)
+  state.welcomeOffer = {
+    isActive: Boolean(input.isActive),
+    packSku: input.packSku || null,
+    bonusPercent: input.bonusPercent,
+    hours: input.hours,
+  }
+  audit(context, 'welcome_offer.update', 'welcome_offer', null, before, state.welcomeOffer)
+  return clone(state.welcomeOffer)
+})
+
+// --- limited offers ----------------------------------------------------------
+
+function findLimitedOffer(context: MockContext, id: string): LimitedOffer {
+  const offer = state.limitedOffers.find((item) => item.id === id)
+  if (!offer) fail(404, 'OFFER_NOT_FOUND', `Offer ${id} not found`, context.path)
+  return offer
+}
+
+function readLimitedOffer(
+  context: MockContext,
+  input: LimitedOfferInput,
+  existing?: LimitedOffer,
+): Omit<LimitedOffer, 'id' | 'createdAt' | 'updatedAt'> {
+  const merged = {
+    title: input.title ?? existing?.title ?? '',
+    packSku: input.packSku ?? existing?.packSku ?? null,
+    bonusPercent: input.bonusPercent ?? existing?.bonusPercent ?? null,
+    startsAt: input.startsAt === undefined ? (existing?.startsAt ?? null) : input.startsAt,
+    endsAt: input.endsAt ?? existing?.endsAt ?? null,
+    isActive: input.isActive ?? existing?.isActive ?? true,
+  }
+  const errors = validateLimitedOffer(merged)
+  if (Object.keys(errors).length > 0) {
+    fail(400, 'VALIDATION_ERROR', `Invalid offer: ${Object.keys(errors).join(', ')}`, context.path)
+  }
+  if (!state.packs.some((pack) => pack.sku === merged.packSku)) {
+    fail(404, 'PACK_NOT_FOUND', `No pack with sku ${merged.packSku}`, context.path)
+  }
+  return {
+    title: merged.title.trim(),
+    packSku: merged.packSku as string,
+    bonusPercent: merged.bonusPercent as number,
+    startsAt: merged.startsAt ? new Date(merged.startsAt).toISOString() : null,
+    endsAt: new Date(merged.endsAt as string).toISOString(),
+    isActive: merged.isActive,
+  }
+}
+
+route('GET', '/admin/offers/limited', (context): LimitedOffer[] => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(sortLimitedOffers(state.limitedOffers))
+})
+
+route('POST', '/admin/offers/limited', (context): LimitedOffer => {
+  requireRole(context, MONETIZATION_ROLES)
+  const values = readLimitedOffer(context, (context.body ?? {}) as LimitedOfferInput)
+  const offer: LimitedOffer = { id: newId('off'), ...values, createdAt: now(), updatedAt: now() }
+  state.limitedOffers.push(offer)
+  audit(context, 'limited_offer.create', 'limited_offer', offer.id, null, offer)
+  return clone(offer)
+})
+
+route('PATCH', '/admin/offers/limited/:id', (context): LimitedOffer => {
+  requireRole(context, MONETIZATION_ROLES)
+  const offer = findLimitedOffer(context, context.params.id as string)
+  const before = clone(offer)
+  const values = readLimitedOffer(context, (context.body ?? {}) as LimitedOfferInput, offer)
+  Object.assign(offer, values, { updatedAt: now() })
+  audit(context, 'limited_offer.update', 'limited_offer', offer.id, before, offer)
+  return clone(offer)
+})
+
+route('DELETE', '/admin/offers/limited/:id', (context) => {
+  requireRole(context, MONETIZATION_ROLES)
+  const offer = findLimitedOffer(context, context.params.id as string)
+  state.limitedOffers = state.limitedOffers.filter((item) => item.id !== offer.id)
+  audit(context, 'limited_offer.delete', 'limited_offer', offer.id, offer, null)
+  return null
+})
+
+// --- promo codes -------------------------------------------------------------
+
+function findPromoCode(context: MockContext, id: string): PromoCode {
+  const promo = state.promoCodes.find((item) => item.id === id)
+  if (!promo) fail(404, 'PROMO_NOT_FOUND', `Promo code ${id} not found`, context.path)
+  return promo
+}
+
+route('GET', '/admin/promo-codes', (context): PromoCode[] => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(sortPromoCodes(state.promoCodes))
+})
+
+route('POST', '/admin/promo-codes', (context): PromoCode => {
+  requireRole(context, MONETIZATION_ROLES)
+  const input = (context.body ?? {}) as PromoCodeInput
+  const code = normalizePromoCode(String(input.code ?? ''))
+  const form = {
+    code,
+    coins: input.coins ?? null,
+    maxUses: input.maxUses ?? null,
+    perUserUses: input.perUserUses ?? 1,
+    startsAt: input.startsAt ?? null,
+    endsAt: input.endsAt ?? null,
+    isActive: input.isActive ?? true,
+  }
+  const errors = validatePromoCode(form)
+  if (Object.keys(errors).length > 0 || !isValidPromoCode(code)) {
+    fail(
+      400,
+      'VALIDATION_ERROR',
+      `Invalid promo code: ${Object.keys(errors).join(', ')}`,
+      context.path,
+    )
+  }
+  if (state.promoCodes.some((item) => item.code === code)) {
+    fail(409, 'PROMO_CODE_ALREADY_USED', `A promo code ${code} already exists`, context.path)
+  }
+  const promo: PromoCode = {
+    id: newId('prm'),
+    code,
+    coins: form.coins as number,
+    maxUses: form.maxUses,
+    perUserUses: form.perUserUses,
+    startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+    endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+    isActive: form.isActive,
+    usesCount: 0,
+    createdAt: now(),
+    updatedAt: now(),
+  }
+  state.promoCodes.push(promo)
+  audit(context, 'promo_code.create', 'promo_code', promo.id, null, promo)
+  return clone(promo)
+})
+
+route('PATCH', '/admin/promo-codes/:id', (context): PromoCode => {
+  requireRole(context, MONETIZATION_ROLES)
+  const promo = findPromoCode(context, context.params.id as string)
+  const input = (context.body ?? {}) as PromoCodeInput
+  if (input.code !== undefined && normalizePromoCode(input.code) !== promo.code) {
+    fail(400, 'PROMO_CODE_IMMUTABLE', 'The code cannot be changed after creation', context.path)
+  }
+  const form = {
+    code: promo.code,
+    coins: input.coins ?? promo.coins,
+    maxUses: input.maxUses === undefined ? promo.maxUses : input.maxUses,
+    perUserUses: input.perUserUses ?? promo.perUserUses,
+    startsAt: input.startsAt === undefined ? promo.startsAt : input.startsAt,
+    endsAt: input.endsAt === undefined ? promo.endsAt : input.endsAt,
+    isActive: input.isActive ?? promo.isActive,
+  }
+  const errors = validatePromoCode(form, true)
+  if (Object.keys(errors).length > 0) {
+    fail(
+      400,
+      'VALIDATION_ERROR',
+      `Invalid promo code: ${Object.keys(errors).join(', ')}`,
+      context.path,
+    )
+  }
+  const before = clone(promo)
+  Object.assign(promo, {
+    coins: form.coins,
+    maxUses: form.maxUses,
+    perUserUses: form.perUserUses,
+    startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+    endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+    isActive: form.isActive,
+    updatedAt: now(),
+  })
+  audit(context, 'promo_code.update', 'promo_code', promo.id, before, promo)
+  return clone(promo)
+})
+
+route('GET', '/admin/promo-codes/:id/redemptions', (context): Paginated<PromoRedemption> => {
+  requireRole(context, MONETIZATION_ROLES)
+  const promo = findPromoCode(context, context.params.id as string)
+  const all = [...(state.redemptions[promo.id] ?? [])].sort((a, b) =>
+    b.redeemedAt.localeCompare(a.redeemedAt),
+  )
+  const page = Math.max(1, Number(context.query.get('page') ?? 1))
+  const pageSize = Math.min(100, Math.max(1, Number(context.query.get('pageSize') ?? 20)))
+  return {
+    items: clone(all.slice((page - 1) * pageSize, page * pageSize)),
+    total: all.length,
+    page,
+    pageSize,
+  }
+})
+
+// --- reconciliation (B-11) ---------------------------------------------------
+
+function publicOrder(order: MockTopupOrder): TopupOrder {
+  const status = effectiveOrderStatus(order)
+  return {
+    id: order.id,
+    orderId: order.id,
+    status,
+    coins: order.coins,
+    creditedAt: order.creditedAt,
+    packSku: order.packSku,
+    amount: order.amount,
+    expiresAt: order.expiresAt,
+    createdAt: order.createdAt,
+    ...(status === 'PENDING' ? { paymentUrl: `/mock-payment/${order.id}` } : {}),
+  }
+}
+
+/** A PENDING order past its expiry is EXPIRED (persisted on read, like the backend's job). */
+function effectiveOrderStatus(order: MockTopupOrder): TopupOrderStatus {
+  if (order.status === 'PENDING' && new Date(order.expiresAt).getTime() <= Date.now()) {
+    order.status = 'EXPIRED'
+  }
+  return order.status
+}
+
+route('GET', '/admin/topup/reconciliation', (context): TopupReconciliation => {
+  requireRole(context, MONETIZATION_ROLES)
+  const date = context.query.get('date') ?? dateKey(new Date())
+  if (!isReconciliationDate(date)) {
+    fail(400, 'VALIDATION_ERROR', 'date must be YYYY-MM-DD', context.path)
+  }
+  const orders = state.topupOrders.filter((order) => dateKey(order.createdAt) === date)
+  orders.forEach(effectiveOrderStatus)
+  const paidOrders = orders.filter((order) => order.status === 'PAID')
+  const credited = paidOrders.filter((order) => order.creditedAt !== null)
+  const mismatches: TopupReconciliationMismatch[] = []
+  for (const order of orders) {
+    const reason =
+      order.mismatch ??
+      (order.status === 'PAID' && order.creditedAt === null ? 'PAID_NOT_CREDITED' : null)
+    if (!reason) continue
+    mismatches.push({
+      orderId: order.id,
+      userId: order.userId,
+      packSku: order.packSku,
+      status: order.status,
+      amount: order.amount,
+      providerStatus: order.status === 'PAID' ? 'ACCEPTED' : order.status,
+      coinsExpected: order.coins,
+      coinsCredited: order.creditedAt ? order.coins : 0,
+      reason,
+      createdAt: order.createdAt,
+    })
+  }
+  const amountsByCurrency = new Map<string, number>()
+  for (const order of paidOrders) {
+    amountsByCurrency.set(
+      order.amount.currency,
+      (amountsByCurrency.get(order.amount.currency) ?? 0) + order.amount.amountMinor,
+    )
+  }
+  return {
+    date,
+    orders: orders.length,
+    paid: paidOrders.length,
+    credited: credited.length,
+    failed: orders.filter((order) => order.status === 'FAILED').length,
+    expired: orders.filter((order) => order.status === 'EXPIRED').length,
+    pending: orders.filter((order) => order.status === 'PENDING').length,
+    amounts: [...amountsByCurrency.entries()].map(([currency, amountMinor]) => ({
+      currency: currency as Price['currency'],
+      amountMinor,
+    })),
+    mismatches,
+    generatedAt: now(),
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Public API used by the recharge site (public contract v1.2 + v1.5)
+// ---------------------------------------------------------------------------
+
+const PUBLIC_ACCESS_TTL_SECONDS = 900
+
+function requireAppUser(context: MockContext): MockUser {
+  if (!context.appUser) fail(401, 'UNAUTHENTICATED', 'Missing or invalid token', context.path)
+  if (context.appUser.user.status === 'BLOCKED') {
+    fail(403, 'USER_BLOCKED', 'This account is blocked', context.path)
+  }
+  return context.appUser
+}
+
+function openPublicSession(entry: MockUser, linked = false): PublicAuthSession {
+  const accessToken = `pub_${newId('tok')}`
+  const refreshToken = `rt_${newId('rt')}`
+  state.publicSessions.set(accessToken, { userId: entry.user.id, accessToken, refreshToken })
+  state.refreshTokens.set(refreshToken, accessToken)
+  entry.user.lastSeenAt = now()
+  return {
+    accessToken,
+    refreshToken,
+    expiresIn: PUBLIC_ACCESS_TTL_SECONDS,
+    user: clone(entry.user),
+    linked,
+  }
+}
+
+function newPublicUser(partial: Partial<AppUser>): MockUser {
+  const user: AppUser = {
+    id: crypto.randomUUID(),
+    type: 'REGISTERED',
+    status: 'ACTIVE',
+    displayName: null,
+    email: null,
+    phone: null,
+    country: null,
+    language: 'fr',
+    vipStatus: 'none',
+    vipExpiresAt: null,
+    providers: [],
+    autoUnlock: state.monetizationSettings.autoUnlockDefault,
+    deletionScheduledAt: null,
+    createdAt: now(),
+    lastSeenAt: now(),
+    ...partial,
+  }
+  const entry: MockUser = {
+    user,
+    ledger: [],
+    unlocks: [],
+    purchases: [],
+    subscription: null,
+    devices: 1,
+  }
+  state.users.push(entry)
+  return entry
+}
+
+function readDeviceId(context: MockContext, value: unknown): string {
+  if (typeof value !== 'string' || value.length < 8 || value.length > 128) {
+    fail(400, 'VALIDATION_ERROR', 'deviceId must be 8 to 128 characters', context.path)
+  }
+  return value
+}
+
+route('POST', '/auth/otp/request', (context): OtpRequestResponse => {
+  const body = (context.body ?? {}) as { phone?: unknown }
+  const phone = typeof body.phone === 'string' ? normalizePhone(body.phone) : null
+  if (!phone) fail(400, 'VALIDATION_ERROR', 'phone must be E.164', context.path)
+  const requestId = crypto.randomUUID()
+  state.otpRequests.set(requestId, { phone, attempts: 0, createdAt: Date.now() })
+  return { requestId, expiresIn: 300, resendAfter: 60 }
+})
+
+route('POST', '/auth/otp/verify', (context): PublicAuthSession => {
+  const body = (context.body ?? {}) as { requestId?: unknown; code?: unknown; deviceId?: unknown }
+  readDeviceId(context, body.deviceId)
+  const request = typeof body.requestId === 'string' ? state.otpRequests.get(body.requestId) : null
+  if (!request) fail(404, 'OTP_REQUEST_NOT_FOUND', 'Unknown or expired request', context.path)
+  if (Date.now() - request.createdAt > 300_000) {
+    state.otpRequests.delete(body.requestId as string)
+    fail(404, 'OTP_REQUEST_NOT_FOUND', 'Unknown or expired request', context.path)
+  }
+  if (body.code !== topupFixture.credentials.otpCode) {
+    request.attempts += 1
+    if (request.attempts >= 5) state.otpRequests.delete(body.requestId as string)
+    throw new ApiError(401, 'Invalid code', {
+      statusCode: 401,
+      code: 'OTP_INVALID_CODE',
+      message: 'Invalid code',
+      details: { attemptsLeft: Math.max(0, 5 - request.attempts) },
+      path: context.path,
+      timestamp: now(),
+    })
+  }
+  state.otpRequests.delete(body.requestId as string)
+  const entry =
+    state.users.find((item) => item.user.phone === request.phone) ??
+    newPublicUser({ phone: request.phone, providers: ['phone'], country: 'TG' })
+  if (entry.user.status === 'BLOCKED') fail(403, 'USER_BLOCKED', 'Blocked', context.path)
+  return openPublicSession(entry)
+})
+
+function readEmailCredentials(context: MockContext): { email: string; password: string } {
+  const body = (context.body ?? {}) as { email?: unknown; password?: unknown; deviceId?: unknown }
+  readDeviceId(context, body.deviceId)
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  if (!isValidEmail(email)) fail(400, 'VALIDATION_ERROR', 'email must be an email', context.path)
+  if (typeof body.password !== 'string' || body.password.length < PASSWORD_MIN) {
+    fail(
+      400,
+      'VALIDATION_ERROR',
+      `password must be at least ${PASSWORD_MIN} characters`,
+      context.path,
+    )
+  }
+  return { email, password: body.password }
+}
+
+route('POST', '/auth/email/register', (context): PublicAuthSession => {
+  const { email, password } = readEmailCredentials(context)
+  if (state.users.some((item) => item.user.email?.toLowerCase() === email)) {
+    fail(409, 'EMAIL_TAKEN', 'This e-mail is already registered', context.path)
+  }
+  const entry = newPublicUser({ email, providers: ['email'] })
+  state.publicPasswords.set(entry.user.id, password)
+  return openPublicSession(entry)
+})
+
+route('POST', '/auth/email/login', (context): PublicAuthSession => {
+  const { email, password } = readEmailCredentials(context)
+  const entry = state.users.find((item) => item.user.email?.toLowerCase() === email)
+  const expected = entry
+    ? (state.publicPasswords.get(entry.user.id) ?? topupFixture.credentials.password)
+    : null
+  if (!entry || expected !== password) {
+    fail(401, 'INVALID_CREDENTIALS', 'Invalid e-mail or password', context.path)
+  }
+  if (entry.user.status === 'BLOCKED') fail(403, 'USER_BLOCKED', 'Blocked', context.path)
+  return openPublicSession(entry)
+})
+
+route('POST', '/auth/google', (context) => {
+  fail(503, 'GOOGLE_AUTH_DISABLED', 'Google sign-in is not configured in mock mode', context.path)
+})
+
+route('POST', '/auth/refresh', (context): PublicAuthSession => {
+  const body = (context.body ?? {}) as { refreshToken?: unknown }
+  const refreshToken = typeof body.refreshToken === 'string' ? body.refreshToken : ''
+  const accessToken = state.refreshTokens.get(refreshToken)
+  const session = accessToken ? state.publicSessions.get(accessToken) : undefined
+  if (!session) fail(401, 'INVALID_REFRESH_TOKEN', 'Unknown refresh token', context.path)
+  const entry = state.users.find((item) => item.user.id === session.userId)
+  if (!entry) fail(401, 'INVALID_REFRESH_TOKEN', 'Unknown refresh token', context.path)
+  // Rotation: the old pair dies, a new one is issued.
+  state.refreshTokens.delete(refreshToken)
+  state.publicSessions.delete(session.accessToken)
+  return openPublicSession(entry)
+})
+
+route('POST', '/auth/logout', (context) => {
+  const body = (context.body ?? {}) as { refreshToken?: unknown }
+  const refreshToken = typeof body.refreshToken === 'string' ? body.refreshToken : ''
+  const accessToken = state.refreshTokens.get(refreshToken)
+  if (accessToken) {
+    state.refreshTokens.delete(refreshToken)
+    state.publicSessions.delete(accessToken)
+  } else if (context.token) {
+    state.publicSessions.delete(context.token)
+  }
+  return null
+})
+
+route('GET', '/me', (context): AppUser => clone(requireAppUser(context).user))
+
+route('DELETE', '/me', (context): { scheduledFor: string } => {
+  const entry = requireAppUser(context)
+  const scheduledFor = new Date(Date.now() + 30 * 86_400_000).toISOString()
+  entry.user.status = 'DELETION_PENDING'
+  entry.user.deletionScheduledAt = scheduledFor
+  for (const [token, session] of state.publicSessions) {
+    if (session.userId === entry.user.id) {
+      state.publicSessions.delete(token)
+      state.refreshTokens.delete(session.refreshToken)
+    }
+  }
+  return { scheduledFor }
+})
+
+route('GET', '/wallet', (context): Wallet => clone(walletOf(requireAppUser(context))))
+
+/** Public shop for `X-Country` (or the account country): active packs priced in the currency. */
+route('GET', '/shop', (context): PublicShop => {
+  const header = context.headers?.['X-Country'] ?? context.headers?.['x-country']
+  const country = (header ?? context.appUser?.user.country ?? 'TG').toUpperCase()
+  if (!isIsoCountryCode(country)) {
+    fail(400, 'VALIDATION_ERROR', 'X-Country must be an ISO alpha-2 code', context.path)
+  }
+  const currency = currencyForCountry(country)
+  const coinPacks = sortedPacks()
+    .filter((pack) => pack.isActive)
+    .flatMap((pack) => {
+      const price = priceFor(pack.prices, currency)
+      if (!price) return []
+      const { prices: _prices, isActive: _active, createdAt: _created, ...publicPack } = pack
+      return [{ ...publicPack, price }]
+    })
+  const vipPlans = sortVipPlans(state.vipPlans)
+    .filter((plan) => plan.isActive)
+    .flatMap((plan) => {
+      const price = priceFor(plan.prices, currency)
+      if (!price) return []
+      const { prices: _prices, isActive: _active, ...publicPlan } = plan
+      return [{ ...publicPlan, price }]
+    })
+  return { currency, coinPacks, vipPlans, welcomeOffer: null }
+})
+
+route('GET', '/offers', (context): PublicOffers => {
+  const createdAt = context.appUser?.user.createdAt ?? null
+  return publicOffersFrom(state.welcomeOffer, state.limitedOffers, createdAt)
+})
+
+// --- top-up orders -----------------------------------------------------------
+
+const ORDER_TTL_MS = 30 * 60_000
+
+route('POST', '/topup/orders', (context): TopupOrderCreated => {
+  const entry = requireAppUser(context)
+  const input = (context.body ?? {}) as Partial<TopupOrderCreateInput>
+  if (typeof input.idempotencyKey !== 'string' || input.idempotencyKey.length < 8) {
+    fail(400, 'VALIDATION_ERROR', 'idempotencyKey is required', context.path)
+  }
+  const existing = state.topupOrders.find(
+    (order) => order.userId === entry.user.id && order.idempotencyKey === input.idempotencyKey,
+  )
+  if (existing) {
+    return {
+      orderId: existing.id,
+      amount: existing.amount,
+      paymentUrl: `/mock-payment/${existing.id}`,
+      expiresAt: existing.expiresAt,
+    }
+  }
+  const country = String(input.country ?? '').toUpperCase()
+  if (!isIsoCountryCode(country)) {
+    fail(400, 'VALIDATION_ERROR', 'country must be an ISO alpha-2 code', context.path)
+  }
+  if (input.phone !== undefined && input.phone !== '' && !normalizePhone(String(input.phone))) {
+    fail(400, 'VALIDATION_ERROR', 'phone must be E.164', context.path)
+  }
+  const pack = state.packs.find((item) => item.sku === input.packSku && item.isActive)
+  if (!pack) fail(404, 'PACK_NOT_FOUND', `No active pack with sku ${input.packSku}`, context.path)
+  const price = priceFor(pack.prices, currencyForCountry(country))
+  if (!price) fail(409, 'PACK_NOT_AVAILABLE', 'No price for this country', context.path)
+  const order: MockTopupOrder = {
+    id: newId('ord'),
+    userId: entry.user.id,
+    packSku: pack.sku,
+    country,
+    status: 'PENDING',
+    coins: pack.coins + pack.bonusCoins,
+    amount: price,
+    providerReference: null,
+    createdAt: now(),
+    creditedAt: null,
+    expiresAt: new Date(Date.now() + ORDER_TTL_MS).toISOString(),
+    idempotencyKey: input.idempotencyKey,
+  }
+  state.topupOrders.push(order)
+  return {
+    orderId: order.id,
+    amount: order.amount,
+    paymentUrl: `/mock-payment/${order.id}`,
+    expiresAt: order.expiresAt,
+  }
+})
+
+route('GET', '/topup/orders', (context): Paginated<TopupOrder> => {
+  const entry = requireAppUser(context)
+  const all = state.topupOrders
+    .filter((order) => order.userId === entry.user.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const page = Math.max(1, Number(context.query.get('page') ?? 1))
+  const pageSize = Math.min(100, Math.max(1, Number(context.query.get('pageSize') ?? 20)))
+  return {
+    items: all.slice((page - 1) * pageSize, page * pageSize).map(publicOrder),
+    total: all.length,
+    page,
+    pageSize,
+  }
+})
+
+function findOwnOrder(context: MockContext): MockTopupOrder {
+  const entry = requireAppUser(context)
+  const order = state.topupOrders.find(
+    (item) => item.id === context.params.id && item.userId === entry.user.id,
+  )
+  if (!order) fail(404, 'ORDER_NOT_FOUND', `Order ${context.params.id} not found`, context.path)
+  return order
+}
+
+route('GET', '/topup/orders/:id', (context): TopupOrder => publicOrder(findOwnOrder(context)))
+
+/**
+ * Mock-only stand-in for the provider's webhook: the fake payment page of the recharge app calls
+ * it with `{ outcome: "paid" | "failed" }`. Credits PURCHASE + BONUS lines once (idempotent).
+ */
+route('POST', '/topup/orders/:id/mock-pay', (context): TopupOrder => {
+  const order = findOwnOrder(context)
+  const entry = requireAppUser(context)
+  const outcome = ((context.body ?? {}) as { outcome?: string }).outcome
+  if (effectiveOrderStatus(order) !== 'PENDING') return publicOrder(order)
+  if (outcome === 'failed') {
+    order.status = 'FAILED'
+    order.providerReference = `FAKE-${newId('ref').slice(-6).toUpperCase()}`
+    return publicOrder(order)
+  }
+  const pack = state.packs.find((item) => item.sku === order.packSku)
+  const purchased = pack?.coins ?? order.coins
+  let bonus = pack?.bonusCoins ?? 0
+  const offers = publicOffersFrom(state.welcomeOffer, state.limitedOffers, entry.user.createdAt)
+  const welcome = offers.welcome
+  const firstPurchase = !entry.ledger.some((line) => line.type === 'PURCHASE')
+  if (welcome && firstPurchase && (welcome.packSku === null || welcome.packSku === order.packSku)) {
+    bonus += bonusFromPercent(purchased, welcome.bonusPercent)
+  } else {
+    const limited = offers.limited.find((offer) => offer.packSku === order.packSku)
+    if (limited) bonus += bonusFromPercent(purchased, limited.bonusPercent)
+  }
+  const reference = `topup:${order.id}`
+  const at = now()
+  entry.ledger.push({
+    id: newId('led'),
+    amount: purchased,
+    bucket: 'PURCHASED',
+    type: 'PURCHASE',
+    reference,
+    description: `Recharge mobile money ${order.packSku}`,
+    expiresAt: null,
+    createdAt: at,
+  })
+  if (bonus > 0) {
+    entry.ledger.push({
+      id: newId('led'),
+      amount: bonus,
+      bucket: 'BONUS',
+      type: 'BONUS',
+      reference,
+      description: `Bonus recharge ${order.packSku}`,
+      expiresAt: new Date(
+        Date.now() + state.monetizationSettings.bonusValidityDays * 86_400_000,
+      ).toISOString(),
+      createdAt: at,
+    })
+  }
+  entry.purchases.unshift({
+    id: order.id,
+    productId: order.packSku,
+    type: 'mobile_money',
+    coins: purchased,
+    bonusCoins: bonus,
+    amountMinor: order.amount.amountMinor,
+    currency: order.amount.currency,
+    status: 'CREDITED',
+    createdAt: at,
+  } as AdminUserPurchase)
+  order.status = 'PAID'
+  order.coins = purchased + bonus
+  order.creditedAt = at
+  order.providerReference = `FAKE-${newId('ref').slice(-6).toUpperCase()}`
+  return publicOrder(order)
+})
+
 function stripQuery(path: string): string {
   const index = path.indexOf('?')
   return index === -1 ? path : path.slice(0, index)
@@ -2691,12 +3499,17 @@ export async function mockRequest<T>(request: MockRequest): Promise<T> {
     const account = request.token
       ? state.accounts.find((item) => item.token === request.token && item.isActive)
       : undefined
+    const session = request.token ? state.publicSessions.get(request.token) : undefined
+    const appUser = session
+      ? (state.users.find((item) => item.user.id === session.userId) ?? null)
+      : null
     return candidate.handler({
       ...request,
       path,
       params,
       query: parseQuery(request.path),
       user: account?.user ?? null,
+      appUser,
     }) as T
   }
   throw ApiError.fromBody(404, 'NOT_FOUND', `No mock for ${request.method} ${path}`, path)
@@ -2707,6 +3520,9 @@ export function isAuthRoute(path: string): boolean {
 }
 
 export const mockCredentials = authFixture.credentials
+
+/** Demo end-user credentials of the recharge site in mock mode (e-mail + password, OTP code). */
+export const mockPublicCredentials = topupFixture.credentials
 
 /** Demo accounts (email → role), shown on the login page in mock mode. */
 export const mockAccounts = fixtureAccounts

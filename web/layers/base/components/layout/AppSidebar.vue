@@ -21,6 +21,10 @@ function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(`${path}/`)
 }
 
+function childrenFor(module: (typeof backofficeModules)[number]) {
+  return (module.children ?? []).filter((child) => moduleAllowsRole(child, auth.user?.role))
+}
+
 function badgeFor(module: (typeof backofficeModules)[number]): number | null {
   if (module.badge === 'supportInbox') return inbox.openCount
   return null
@@ -72,6 +76,22 @@ onMounted(() => {
             module.ticket
           }}</span>
         </NuxtLink>
+        <ul v-if="childrenFor(module).length > 0" class="mt-0.5 space-y-0.5 pl-9">
+          <li v-for="child in childrenFor(module)" :key="child.key">
+            <NuxtLink
+              :to="child.path"
+              class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-surface-100"
+              :class="
+                isActive(child.path) ? 'bg-primary-50 font-medium text-primary' : 'text-surface-600'
+              "
+              :aria-current="isActive(child.path) ? 'page' : undefined"
+              data-testid="sidebar-subpage"
+            >
+              <i class="pi pi-angle-right text-xs" aria-hidden="true" />
+              <span class="truncate">{{ t(child.labelKey) }}</span>
+            </NuxtLink>
+          </li>
+        </ul>
       </li>
     </ul>
   </nav>

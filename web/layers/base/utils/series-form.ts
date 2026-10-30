@@ -27,6 +27,8 @@ export interface SeriesFormValues {
   posterHorizontalUrl: string | null
   freeEpisodeCount: number | null
   coinCostPerEpisode: number | null
+  /** Rewarded-ad unlocks allowed on this series (contract v1.5, default true). */
+  adUnlockEnabled: boolean
   territories: string[]
   /** Scheduled publication (ISO, UTC) — B-04. `null` = publish manually. */
   publishedAt: string | null
@@ -63,6 +65,7 @@ export function emptySeriesForm(): SeriesFormValues {
     posterHorizontalUrl: null,
     freeEpisodeCount: 0,
     coinCostPerEpisode: 0,
+    adUnlockEnabled: true,
     territories: [],
     publishedAt: null,
   }
@@ -80,6 +83,7 @@ export function seriesToForm(series: AdminSeries): SeriesFormValues {
     posterHorizontalUrl: series.posterHorizontalUrl,
     freeEpisodeCount: series.freeEpisodeCount,
     coinCostPerEpisode: series.coinCostPerEpisode,
+    adUnlockEnabled: series.adUnlockEnabled ?? true,
     territories: [...series.territories],
     publishedAt: series.publishedAt,
   }
@@ -90,7 +94,7 @@ export function canEditCatalogue(role: AdminRole | null | undefined): boolean {
   return role === 'EDITOR' || role === 'ADMIN'
 }
 
-/** Roles allowed to change `freeEpisodeCount` and `coinCostPerEpisode`. */
+/** Roles allowed to change `freeEpisodeCount`, `coinCostPerEpisode` and `adUnlockEnabled`. */
 export function canEditMonetization(role: AdminRole | null | undefined): boolean {
   return role === 'MONETIZATION' || role === 'ADMIN'
 }
@@ -195,6 +199,7 @@ export function seriesFormToInput(
   if (options.includeMonetization) {
     input.freeEpisodeCount = values.freeEpisodeCount ?? 0
     input.coinCostPerEpisode = values.coinCostPerEpisode ?? 0
+    input.adUnlockEnabled = values.adUnlockEnabled
   }
   return input
 }
@@ -212,7 +217,8 @@ export function seriesFormDiff(
   const diff: AdminSeriesUpdateInput = {}
   for (const key of Object.keys(full) as (keyof AdminSeriesInput)[]) {
     const next = full[key]
-    const previous = original[key]
+    // Older payloads omit `adUnlockEnabled`: the contract default is true.
+    const previous = key === 'adUnlockEnabled' ? (original.adUnlockEnabled ?? true) : original[key]
     const changed = Array.isArray(next)
       ? JSON.stringify(next) !== JSON.stringify(previous)
       : next !== previous

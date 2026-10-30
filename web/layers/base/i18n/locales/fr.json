@@ -1382,5 +1382,244 @@
       "validation": "Données refusées par le serveur : vérifiez le montant, la catégorie et le motif.",
       "conflict": "L'opération est en conflit avec l'état actuel du compte : rechargez la fiche."
     }
+  },
+  "recharge": {
+    "brand": "DRAMA Recharge",
+    "mockBanner": "Mode démonstration : données fictives, paiement simulé.",
+    "language": "Langue",
+    "country": "Pays",
+    "coins": "pièce | pièces",
+    "nav": {
+      "label": "Navigation",
+      "home": "Accueil",
+      "packs": "Packs",
+      "history": "Historique",
+      "account": "Compte",
+      "signIn": "Connexion"
+    },
+    "footer": {
+      "copyright": "© {year} DRAMA",
+      "country": "Pays : {country}",
+      "terms": "CGV",
+      "privacy": "Confidentialité",
+      "support": "Support"
+    },
+    "status": {
+      "PENDING": "En attente",
+      "PAID": "Payée",
+      "FAILED": "Échouée",
+      "EXPIRED": "Expirée"
+    },
+    "errors": {
+      "notFound": "Page introuvable",
+      "fatal": "Cette page a rencontré une erreur"
+    },
+    "home": {
+      "pageTitle": "Recharge mobile money — DRAMA",
+      "title": "Rechargez vos pièces par mobile money",
+      "subtitle": "Même compte que l’application DRAMA : les pièces sont créditées dès la confirmation du paiement.",
+      "operators": "Devise : {currency}. Opérateurs : {operators}.",
+      "ctaSignIn": "Se connecter",
+      "ctaPacks": "Voir les packs",
+      "howTitle": "Comment ça marche",
+      "steps": {
+        "signIn": {
+          "title": "Connectez-vous",
+          "text": "Avec le téléphone, l’e-mail ou Google utilisés dans l’application."
+        },
+        "pick": {
+          "title": "Choisissez un pack",
+          "text": "Prix en devise locale, bonus et offres affichés."
+        },
+        "pay": {
+          "title": "Payez par mobile money",
+          "text": "Vous êtes redirigé vers la page de paiement sécurisée de l’opérateur."
+        },
+        "credited": {
+          "title": "Pièces créditées",
+          "text": "Le serveur crédite votre compte dès la confirmation ; retrouvez le solde dans l’application."
+        }
+      },
+      "sameAccountTitle": "Un seul compte, un seul solde",
+      "sameAccountText": "Les pièces achetées ici apparaissent immédiatement dans l’application DRAMA, sur le même compte."
+    },
+    "login": {
+      "pageTitle": "Connexion — DRAMA Recharge",
+      "title": "Connexion",
+      "subtitle": "Utilisez le même compte que dans l’application.",
+      "method": "Méthode de connexion",
+      "methodPhone": "Téléphone",
+      "methodEmail": "E-mail",
+      "phone": "Numéro de téléphone",
+      "phoneHint": "Format international, avec l’indicatif (ex. +228 90 12 34 56).",
+      "sendCode": "Recevoir un code par SMS",
+      "codeSent": "Code envoyé au {phone}.",
+      "codeSentTo": "Un code à 6 chiffres a été envoyé au {phone}.",
+      "changePhone": "Changer de numéro",
+      "code": "Code reçu par SMS",
+      "verify": "Valider",
+      "resend": "Renvoyer le code",
+      "resendIn": "Renvoyer dans {seconds} s",
+      "mockOtp": "Mode démonstration : le code est {code}.",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "passwordHint": "{min} caractères minimum.",
+      "signIn": "Se connecter",
+      "register": "Créer un compte",
+      "mockHint": "Compte de démonstration :",
+      "or": "ou"
+    },
+    "authErrors": {
+      "invalidCredentials": "E-mail ou mot de passe incorrect.",
+      "emailTaken": "Un compte existe déjà avec cet e-mail : connectez-vous.",
+      "otpInvalid": "Code incorrect. Vérifiez le SMS et réessayez.",
+      "otpExpired": "Le code a expiré : demandez-en un nouveau.",
+      "otpTooSoon": "Patientez avant de redemander un code.",
+      "otpIncomplete": "Saisissez les 6 chiffres du code.",
+      "blocked": "Ce compte est bloqué. Contactez le support.",
+      "rateLimited": "Trop de tentatives. Réessayez dans quelques minutes.",
+      "googleDisabled": "La connexion Google n’est pas disponible.",
+      "smsFailed": "Le SMS n’a pas pu être envoyé. Réessayez.",
+      "validation": "Vérifiez les informations saisies.",
+      "phone": "Numéro invalide : utilisez le format international (+228…).",
+      "network": "Le serveur est injoignable. Vérifiez votre connexion.",
+      "generic": "Une erreur est survenue. Réessayez."
+    },
+    "packs": {
+      "pageTitle": "Packs de pièces — DRAMA Recharge",
+      "title": "Packs de pièces",
+      "subtitle": "Prix en devise locale. Les pièces bonus expirent, les pièces achetées non.",
+      "bonus": "bonus",
+      "total": "total {total}",
+      "bestValue": "Meilleur rapport",
+      "buy": "Recharger",
+      "welcomeBadge": "Bienvenue +{percent} %",
+      "limitedBadge": "Offre +{percent} %",
+      "welcomeUntil": "Bonus de bienvenue sur votre premier achat, jusqu’au {date}.",
+      "limitedUntil": "{title} — jusqu’au {date}.",
+      "welcomeBanner": "Offre de bienvenue : +{percent} % de pièces bonus sur votre premier achat.",
+      "fallbackCurrency": "Pas de prix dans la devise de ce pays : les prix sont affichés en {currency}.",
+      "signInToBuy": "Connectez-vous pour recharger.",
+      "loadError": "Impossible de charger les packs.",
+      "empty": "Aucun pack disponible pour ce pays.",
+      "orderFailed": "Commande impossible",
+      "priceNote": "Prix en {currency}, taxes incluses (ex. {example})."
+    },
+    "pay": {
+      "pageTitle": "Paiement — DRAMA Recharge",
+      "title": "Paiement",
+      "order": "Commande {id}",
+      "pack": "Pack",
+      "coins": "Pièces",
+      "amount": "Montant",
+      "expires": "À régler avant le {date}.",
+      "payNow": "Payer par mobile money",
+      "providerHint": "Vous allez être redirigé vers la page de paiement de l’opérateur, puis ramené ici.",
+      "alreadyPaid": "J’ai déjà payé : vérifier",
+      "noPaymentUrl": "Lien de paiement indisponible : recommencez depuis les packs.",
+      "waiting": "Confirmation du paiement en cours…",
+      "waitingHint": "Nous vérifions auprès de l’opérateur toutes les quelques secondes. Vous pouvez garder cette page ouverte.",
+      "backToProvider": "Revenir à la page de paiement",
+      "timeout": "Paiement toujours en attente",
+      "timeoutHint": "L’opérateur n’a pas encore confirmé. Les pièces seront créditées automatiquement dès réception ; vous pouvez revenir plus tard via l’historique.",
+      "checkAgain": "Vérifier à nouveau",
+      "paidTitle": "Paiement confirmé",
+      "paidText": "{coins} pièces ont été créditées sur votre compte.",
+      "balance": "Nouveau solde : {total} pièces.",
+      "creditedAt": "Crédité le {date}.",
+      "again": "Recharger à nouveau",
+      "failedTitle": "Paiement refusé",
+      "failedText": "L’opérateur a refusé ou annulé le paiement. Aucune pièce n’a été débitée.",
+      "expiredTitle": "Commande expirée",
+      "expiredText": "Le délai de paiement est dépassé. Créez une nouvelle commande.",
+      "retry": "Réessayer",
+      "loadError": "Commande introuvable ou inaccessible."
+    },
+    "history": {
+      "pageTitle": "Historique — DRAMA Recharge",
+      "title": "Historique des recharges",
+      "subtitle": "{count} commande | {count} commandes",
+      "loadError": "Impossible de charger l’historique.",
+      "empty": "Aucune recharge pour l’instant.",
+      "loadMore": "Charger plus",
+      "credited": "créditée"
+    },
+    "account": {
+      "pageTitle": "Mon compte — DRAMA Recharge",
+      "title": "Mon compte",
+      "subtitle": "Solde de pièces et préférences du site de recharge.",
+      "balance": "Solde de pièces",
+      "purchased": "Achetées",
+      "bonus": "Bonus",
+      "expiring": "{amount} pièces bonus expirent le {date}",
+      "negative": "Solde négatif après un remboursement : les déblocages sont bloqués tant qu’il n’est pas régularisé.",
+      "walletError": "Solde indisponible pour le moment.",
+      "topUp": "Recharger",
+      "profile": "Profil",
+      "providers": "Connexion",
+      "accountCountry": "Pays du compte",
+      "preferences": "Préférences",
+      "countryHint": "Détermine la devise et les opérateurs proposés sur ce site.",
+      "logout": "Se déconnecter"
+    },
+    "legal": {
+      "termsTitle": "Conditions générales de vente",
+      "privacyTitle": "Politique de confidentialité",
+      "placeholder": "Texte provisoire : la version définitive sera fournie par le conseil juridique du client avant la mise en ligne (§14 du cahier des charges).",
+      "terms": {
+        "object": {
+          "title": "Objet",
+          "text": "Vente de pièces virtuelles utilisables uniquement dans l’application DRAMA pour débloquer des épisodes."
+        },
+        "coins": {
+          "title": "Pièces",
+          "text": "Les pièces n’ont pas de valeur monétaire, ne sont ni cessibles ni remboursables en espèces ; les pièces bonus ont une durée de validité."
+        },
+        "payment": {
+          "title": "Paiement",
+          "text": "Paiement par mobile money via un agrégateur agréé ; les pièces sont créditées après confirmation du paiement."
+        },
+        "refund": {
+          "title": "Remboursement",
+          "text": "En cas de remboursement par l’opérateur, les pièces correspondantes sont débitées ; un solde négatif bloque les déblocages."
+        },
+        "contact": {
+          "title": "Contact",
+          "text": "Support : support{'@'}drama.app."
+        }
+      },
+      "privacy": {
+        "data": {
+          "title": "Données collectées",
+          "text": "Identifiant de compte, téléphone ou e-mail, pays, historique des recharges."
+        },
+        "purpose": {
+          "title": "Finalités",
+          "text": "Exécution de la commande, lutte contre la fraude, obligations comptables."
+        },
+        "retention": {
+          "title": "Conservation",
+          "text": "Durée légale de conservation des pièces comptables ; suppression du compte sous 30 jours à la demande."
+        },
+        "rights": {
+          "title": "Vos droits",
+          "text": "Accès, rectification, suppression depuis l’application ou auprès du support."
+        },
+        "cookies": {
+          "title": "Cookies",
+          "text": "Cookies strictement nécessaires : session, pays et langue."
+        }
+      }
+    },
+    "mockPayment": {
+      "badge": "Page de paiement simulée",
+      "title": "Opérateur mobile money (simulation)",
+      "hint": "En mode démonstration, cette page remplace celle de l’agrégateur. Choisissez l’issue du paiement.",
+      "pay": "Payer",
+      "fail": "Échouer",
+      "back": "Retour à la commande",
+      "failed": "Simulation impossible",
+      "notMock": "Cette page n’existe qu’en mode démonstration."
+    }
   }
 }

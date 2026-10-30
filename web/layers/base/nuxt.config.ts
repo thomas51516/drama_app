@@ -56,6 +56,9 @@ export default defineNuxtConfig({
     locales: [
       { code: 'fr', language: 'fr-FR', name: 'Français', file: 'fr.json' },
       { code: 'en', language: 'en-US', name: 'English', file: 'en.json' },
+      // ES and PT only carry the recharge site (and a few shared keys); the rest falls back to FR.
+      { code: 'es', language: 'es-ES', name: 'Español', file: 'es.json' },
+      { code: 'pt', language: 'pt-PT', name: 'Português', file: 'pt.json' },
     ],
     defaultLocale: 'fr',
     strategy: 'no_prefix',

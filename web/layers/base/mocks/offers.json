@@ -1,0 +1,158 @@
+{
+  "tasks": [
+    {
+      "key": "watch_3_episodes",
+      "title": "Regarder 3 épisodes aujourd'hui",
+      "description": "Compteur remis à zéro chaque jour (heure de Lomé).",
+      "coins": 5,
+      "target": 3,
+      "isActive": true,
+      "period": "DAILY",
+      "updatedAt": "2026-10-20T09:00:00.000Z"
+    },
+    {
+      "key": "watch_10_episodes",
+      "title": "Regarder 10 épisodes cette semaine",
+      "description": "Compteur remis à zéro chaque lundi.",
+      "coins": 20,
+      "target": 10,
+      "isActive": true,
+      "period": "WEEKLY",
+      "updatedAt": "2026-10-20T09:00:00.000Z"
+    },
+    {
+      "key": "enable_notifications",
+      "title": "Activer les notifications",
+      "description": "Une seule fois, quand l'application reçoit l'autorisation.",
+      "coins": 10,
+      "target": 1,
+      "isActive": true,
+      "period": "ONCE",
+      "updatedAt": "2026-10-20T09:00:00.000Z"
+    },
+    {
+      "key": "share_series",
+      "title": "Partager une série",
+      "description": "Une seule fois, au premier partage.",
+      "coins": 10,
+      "target": 1,
+      "isActive": true,
+      "period": "ONCE",
+      "updatedAt": "2026-10-20T09:00:00.000Z"
+    },
+    {
+      "key": "complete_profile",
+      "title": "Compléter son profil",
+      "description": "Nom affiché, pays et langue renseignés.",
+      "coins": 15,
+      "target": 1,
+      "isActive": false,
+      "period": "ONCE",
+      "updatedAt": "2026-10-20T09:00:00.000Z"
+    },
+    {
+      "key": "add_favorite",
+      "title": "Ajouter une série aux favoris",
+      "description": "Une seule fois, au premier favori.",
+      "coins": 5,
+      "target": 1,
+      "isActive": true,
+      "period": "ONCE",
+      "updatedAt": "2026-10-20T09:00:00.000Z"
+    }
+  ],
+  "welcome": {
+    "isActive": true,
+    "packSku": null,
+    "bonusPercent": 50,
+    "hours": 48
+  },
+  "limited": [
+    {
+      "id": "off_01J0OFFER000000000000000001",
+      "title": "Week-end double bonus",
+      "packSku": "coins_700",
+      "bonusPercent": 30,
+      "startsAt": "__PAST_1D__",
+      "endsAt": "__FUTURE_3D__",
+      "isActive": true,
+      "createdAt": "2026-10-25T10:00:00.000Z"
+    },
+    {
+      "id": "off_01J0OFFER000000000000000002",
+      "title": "Lancement — Mariage sous contrat",
+      "packSku": "coins_300",
+      "bonusPercent": 20,
+      "startsAt": "2026-10-01T00:00:00.000Z",
+      "endsAt": "2026-10-15T23:59:00.000Z",
+      "isActive": true,
+      "createdAt": "2026-09-28T10:00:00.000Z"
+    },
+    {
+      "id": "off_01J0OFFER000000000000000003",
+      "title": "Fêtes de fin d'année",
+      "packSku": "coins_2000",
+      "bonusPercent": 40,
+      "startsAt": "__FUTURE_30D__",
+      "endsAt": "__FUTURE_45D__",
+      "isActive": false,
+      "createdAt": "2026-10-28T16:00:00.000Z"
+    }
+  ],
+  "promoCodes": [
+    {
+      "id": "prm_01J0PROMO00000000000000001",
+      "code": "BIENVENUE50",
+      "coins": 50,
+      "maxUses": 1000,
+      "perUserUses": 1,
+      "startsAt": null,
+      "endsAt": "__FUTURE_60D__",
+      "isActive": true,
+      "usesCount": 2,
+      "createdAt": "2026-10-10T09:00:00.000Z"
+    },
+    {
+      "id": "prm_01J0PROMO00000000000000002",
+      "code": "RADIO-LOME",
+      "coins": 100,
+      "maxUses": 200,
+      "perUserUses": 1,
+      "startsAt": "2026-10-01T00:00:00.000Z",
+      "endsAt": "2026-10-20T00:00:00.000Z",
+      "isActive": true,
+      "usesCount": 200,
+      "createdAt": "2026-09-30T09:00:00.000Z"
+    },
+    {
+      "id": "prm_01J0PROMO00000000000000003",
+      "code": "TEST-QA",
+      "coins": 20,
+      "maxUses": null,
+      "perUserUses": 5,
+      "startsAt": null,
+      "endsAt": null,
+      "isActive": false,
+      "usesCount": 0,
+      "createdAt": "2026-10-28T09:00:00.000Z"
+    }
+  ],
+  "redemptions": {
+    "prm_01J0PROMO00000000000000001": [
+      {
+        "id": "red_01J0RED000000000000000001",
+        "userId": "0192f3a0-7c1e-7a10-8e00-000000000001",
+        "userLabel": "Awa Koné",
+        "coins": 50,
+        "redeemedAt": "2026-10-12T18:30:00.000Z"
+      },
+      {
+        "id": "red_01J0RED000000000000000002",
+        "userId": "0192f3a0-7c1e-7a10-8e00-000000000002",
+        "userLabel": "kofi.mensah@example.com",
+        "coins": 50,
+        "redeemedAt": "2026-10-14T07:12:00.000Z"
+      }
+    ]
+  }
+}

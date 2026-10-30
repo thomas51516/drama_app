@@ -1,0 +1,63 @@
+{
+  "credentials": {
+    "email": "awa.kone@example.com",
+    "password": "Drama1234!",
+    "otpCode": "123456",
+    "phone": "+22890123456"
+  },
+  "orders": [
+    {
+      "id": "ord_01J0TOPUP0000000000000001",
+      "userId": "0192f3a0-7c1e-7a10-8e00-000000000001",
+      "packSku": "coins_300",
+      "country": "TG",
+      "status": "PAID",
+      "coins": 330,
+      "amount": { "currency": "XOF", "amountMinor": 1500 },
+      "providerReference": "FAKE-7F3A21",
+      "createdAt": "__PAST_2D__",
+      "creditedAt": "__PAST_2D__",
+      "expiresAt": "__PAST_2D__"
+    },
+    {
+      "id": "ord_01J0TOPUP0000000000000002",
+      "userId": "0192f3a0-7c1e-7a10-8e00-000000000001",
+      "packSku": "coins_100",
+      "country": "TG",
+      "status": "FAILED",
+      "coins": 100,
+      "amount": { "currency": "XOF", "amountMinor": 500 },
+      "providerReference": "FAKE-1B9C40",
+      "createdAt": "__PAST_1D__",
+      "creditedAt": null,
+      "expiresAt": "__PAST_1D__"
+    },
+    {
+      "id": "ord_01J0TOPUP0000000000000003",
+      "userId": "0192f3a0-7c1e-7a10-8e00-000000000002",
+      "packSku": "coins_700",
+      "country": "GH",
+      "status": "PAID",
+      "coins": 800,
+      "amount": { "currency": "GHS", "amountMinor": 7500 },
+      "providerReference": "FAKE-C0FFEE",
+      "createdAt": "__PAST_0D__",
+      "creditedAt": null,
+      "expiresAt": "__PAST_0D__",
+      "mismatch": "PAID_NOT_CREDITED"
+    },
+    {
+      "id": "ord_01J0TOPUP0000000000000004",
+      "userId": "0192f3a0-7c1e-7a10-8e00-000000000004",
+      "packSku": "coins_300",
+      "country": "NG",
+      "status": "EXPIRED",
+      "coins": 330,
+      "amount": { "currency": "NGN", "amountMinor": 375000 },
+      "providerReference": null,
+      "createdAt": "__PAST_0D__",
+      "creditedAt": null,
+      "expiresAt": "__PAST_0D__"
+    }
+  ]
+}

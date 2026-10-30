@@ -4,6 +4,8 @@ import type {
   CoinPackInput,
   MonetizationOrderInput,
   MonetizationSettings,
+  RewardTaskAdmin,
+  RewardTaskInput,
   VipPlanAdmin,
   VipPlanInput,
 } from '../types/api'
@@ -69,6 +71,15 @@ export function useMonetizationApi() {
       api.get<CheckinScale>('/admin/rewards/checkin', { signal }),
     updateCheckinScale: (input: CheckinScale) =>
       api.put<CheckinScale>('/admin/rewards/checkin', input),
+    // Reward tasks (M-41, contract v1.5): fixed keys, editable coins / target / active.
+    listTasks: async (signal?: AbortSignal) =>
+      asList(
+        await api.get<RewardTaskAdmin[] | { items: RewardTaskAdmin[] }>('/admin/rewards/tasks', {
+          signal,
+        }),
+      ),
+    updateTask: (key: string, input: RewardTaskInput) =>
+      api.patch<RewardTaskAdmin>(`/admin/rewards/tasks/${encode(key)}`, input),
   }
 }
 

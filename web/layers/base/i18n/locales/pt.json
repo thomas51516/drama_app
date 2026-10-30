@@ -1,0 +1,274 @@
+{
+  "app": {
+    "name": "DRAMA",
+    "skipToContent": "Ir para o conteúdo"
+  },
+  "common": {
+    "retry": "Tentar de novo",
+    "refresh": "Atualizar",
+    "loading": "A carregar…"
+  },
+  "validation": {
+    "email": "Introduza um endereço de e-mail válido.",
+    "passwordLength": "A palavra-passe deve ter pelo menos {min} caracteres."
+  },
+  "errors": {
+    "forbidden": "Permissões insuficientes",
+    "network": "O servidor está inacessível. Verifique a sua ligação e tente de novo.",
+    "notFound": "Recurso não encontrado.",
+    "conflict": "A operação está em conflito com o estado atual.",
+    "server": "Erro do servidor ({status}). Tente de novo dentro de instantes.",
+    "generic": "Ocorreu um erro ({status}).",
+    "title": "Erro"
+  },
+  "users": {
+    "providers": {
+      "google": "Google",
+      "phone": "Telefone",
+      "email": "E-mail",
+      "none": "Nenhum (convidado)"
+    },
+    "vip": {
+      "active": "VIP ativo"
+    }
+  },
+  "recharge": {
+    "brand": "DRAMA Recarga",
+    "mockBanner": "Modo de demonstração: dados fictícios, pagamento simulado.",
+    "language": "Idioma",
+    "country": "País",
+    "coins": "moeda | moedas",
+    "nav": {
+      "label": "Navegação",
+      "home": "Início",
+      "packs": "Packs",
+      "history": "Histórico",
+      "account": "Conta",
+      "signIn": "Entrar"
+    },
+    "footer": {
+      "copyright": "© {year} DRAMA",
+      "country": "País: {country}",
+      "terms": "Condições",
+      "privacy": "Privacidade",
+      "support": "Suporte"
+    },
+    "status": {
+      "PENDING": "Pendente",
+      "PAID": "Pago",
+      "FAILED": "Falhou",
+      "EXPIRED": "Expirado"
+    },
+    "errors": {
+      "notFound": "Página não encontrada",
+      "fatal": "Esta página encontrou um erro"
+    },
+    "home": {
+      "pageTitle": "Recarga por mobile money — DRAMA",
+      "title": "Recarregue as suas moedas por mobile money",
+      "subtitle": "A mesma conta que a aplicação DRAMA: as moedas são creditadas assim que o pagamento é confirmado.",
+      "operators": "Moeda: {currency}. Operadores: {operators}.",
+      "ctaSignIn": "Entrar",
+      "ctaPacks": "Ver os packs",
+      "howTitle": "Como funciona",
+      "steps": {
+        "signIn": {
+          "title": "Inicie sessão",
+          "text": "Com o telefone, o e-mail ou a conta Google usados na aplicação."
+        },
+        "pick": {
+          "title": "Escolha um pack",
+          "text": "Preços em moeda local, bónus e ofertas visíveis."
+        },
+        "pay": {
+          "title": "Pague por mobile money",
+          "text": "É redirecionado para a página de pagamento segura do operador."
+        },
+        "credited": {
+          "title": "Moedas creditadas",
+          "text": "O servidor credita a sua conta na confirmação; o saldo aparece na aplicação."
+        }
+      },
+      "sameAccountTitle": "Uma conta, um saldo",
+      "sameAccountText": "As moedas compradas aqui aparecem imediatamente na aplicação DRAMA, na mesma conta."
+    },
+    "login": {
+      "pageTitle": "Entrar — DRAMA Recarga",
+      "title": "Entrar",
+      "subtitle": "Use a mesma conta que na aplicação.",
+      "method": "Método de acesso",
+      "methodPhone": "Telefone",
+      "methodEmail": "E-mail",
+      "phone": "Número de telefone",
+      "phoneHint": "Formato internacional com o indicativo (ex. +228 90 12 34 56).",
+      "sendCode": "Receber um código por SMS",
+      "codeSent": "Código enviado para {phone}.",
+      "codeSentTo": "Foi enviado um código de 6 dígitos para {phone}.",
+      "changePhone": "Mudar de número",
+      "code": "Código recebido por SMS",
+      "verify": "Validar",
+      "resend": "Reenviar o código",
+      "resendIn": "Reenviar em {seconds} s",
+      "mockOtp": "Modo de demonstração: o código é {code}.",
+      "email": "Endereço de e-mail",
+      "password": "Palavra-passe",
+      "passwordHint": "Mínimo de {min} caracteres.",
+      "signIn": "Entrar",
+      "register": "Criar uma conta",
+      "mockHint": "Conta de demonstração:",
+      "or": "ou"
+    },
+    "authErrors": {
+      "invalidCredentials": "E-mail ou palavra-passe incorretos.",
+      "emailTaken": "Já existe uma conta com este e-mail: inicie sessão.",
+      "otpInvalid": "Código incorreto. Verifique o SMS e tente de novo.",
+      "otpExpired": "O código expirou: peça um novo.",
+      "otpTooSoon": "Aguarde antes de pedir outro código.",
+      "otpIncomplete": "Introduza os 6 dígitos do código.",
+      "blocked": "Esta conta está bloqueada. Contacte o suporte.",
+      "rateLimited": "Demasiadas tentativas. Tente de novo dentro de alguns minutos.",
+      "googleDisabled": "O acesso com Google não está disponível.",
+      "smsFailed": "Não foi possível enviar o SMS. Tente de novo.",
+      "validation": "Verifique os dados introduzidos.",
+      "phone": "Número inválido: use o formato internacional (+228…).",
+      "network": "O servidor está inacessível. Verifique a sua ligação.",
+      "generic": "Ocorreu um erro. Tente de novo."
+    },
+    "packs": {
+      "pageTitle": "Packs de moedas — DRAMA Recarga",
+      "title": "Packs de moedas",
+      "subtitle": "Preços em moeda local. As moedas de bónus expiram; as compradas, não.",
+      "bonus": "bónus",
+      "total": "total {total}",
+      "bestValue": "Melhor relação",
+      "buy": "Recarregar",
+      "welcomeBadge": "Boas-vindas +{percent} %",
+      "limitedBadge": "Oferta +{percent} %",
+      "welcomeUntil": "Bónus de boas-vindas na sua primeira compra, até {date}.",
+      "limitedUntil": "{title} — até {date}.",
+      "welcomeBanner": "Oferta de boas-vindas: +{percent} % de moedas de bónus na sua primeira compra.",
+      "fallbackCurrency": "Sem preço na moeda deste país: os preços são apresentados em {currency}.",
+      "signInToBuy": "Inicie sessão para recarregar.",
+      "loadError": "Não foi possível carregar os packs.",
+      "empty": "Nenhum pack disponível para este país.",
+      "orderFailed": "Não foi possível criar a encomenda",
+      "priceNote": "Preços em {currency}, impostos incluídos (ex. {example})."
+    },
+    "pay": {
+      "pageTitle": "Pagamento — DRAMA Recarga",
+      "title": "Pagamento",
+      "order": "Encomenda {id}",
+      "pack": "Pack",
+      "coins": "Moedas",
+      "amount": "Montante",
+      "expires": "Pagar antes de {date}.",
+      "payNow": "Pagar por mobile money",
+      "providerHint": "Será redirecionado para a página de pagamento do operador e depois trazido de volta.",
+      "alreadyPaid": "Já paguei: verificar",
+      "noPaymentUrl": "Ligação de pagamento indisponível: recomece a partir dos packs.",
+      "waiting": "A confirmar o pagamento…",
+      "waitingHint": "Consultamos o operador a cada poucos segundos. Pode manter esta página aberta.",
+      "backToProvider": "Voltar à página de pagamento",
+      "timeout": "Pagamento ainda pendente",
+      "timeoutHint": "O operador ainda não confirmou. As moedas serão creditadas automaticamente na receção; pode voltar mais tarde pelo histórico.",
+      "checkAgain": "Verificar de novo",
+      "paidTitle": "Pagamento confirmado",
+      "paidText": "{coins} moedas foram creditadas na sua conta.",
+      "balance": "Novo saldo: {total} moedas.",
+      "creditedAt": "Creditado em {date}.",
+      "again": "Recarregar de novo",
+      "failedTitle": "Pagamento recusado",
+      "failedText": "O operador recusou ou cancelou o pagamento. Nada foi cobrado.",
+      "expiredTitle": "Encomenda expirada",
+      "expiredText": "O prazo de pagamento terminou. Crie uma nova encomenda.",
+      "retry": "Tentar de novo",
+      "loadError": "Encomenda não encontrada ou inacessível."
+    },
+    "history": {
+      "pageTitle": "Histórico — DRAMA Recarga",
+      "title": "Histórico de recargas",
+      "subtitle": "{count} encomenda | {count} encomendas",
+      "loadError": "Não foi possível carregar o histórico.",
+      "empty": "Ainda não há recargas.",
+      "loadMore": "Carregar mais",
+      "credited": "creditada"
+    },
+    "account": {
+      "pageTitle": "A minha conta — DRAMA Recarga",
+      "title": "A minha conta",
+      "subtitle": "Saldo de moedas e preferências do site de recarga.",
+      "balance": "Saldo de moedas",
+      "purchased": "Compradas",
+      "bonus": "Bónus",
+      "expiring": "{amount} moedas de bónus expiram em {date}",
+      "negative": "Saldo negativo após um reembolso: os desbloqueios ficam bloqueados até à regularização.",
+      "walletError": "Saldo indisponível de momento.",
+      "topUp": "Recarregar",
+      "profile": "Perfil",
+      "providers": "Acesso",
+      "accountCountry": "País da conta",
+      "preferences": "Preferências",
+      "countryHint": "Determina a moeda e os operadores propostos neste site.",
+      "logout": "Terminar sessão"
+    },
+    "legal": {
+      "termsTitle": "Condições gerais de venda",
+      "privacyTitle": "Política de privacidade",
+      "placeholder": "Texto provisório: a versão final será fornecida pelo consultor jurídico do cliente antes do lançamento (§14 do caderno de encargos).",
+      "terms": {
+        "object": {
+          "title": "Objeto",
+          "text": "Venda de moedas virtuais utilizáveis apenas na aplicação DRAMA para desbloquear episódios."
+        },
+        "coins": {
+          "title": "Moedas",
+          "text": "As moedas não têm valor monetário, não são transferíveis nem reembolsáveis em dinheiro; as moedas de bónus têm um prazo de validade."
+        },
+        "payment": {
+          "title": "Pagamento",
+          "text": "Pagamento por mobile money através de um agregador autorizado; as moedas são creditadas após a confirmação do pagamento."
+        },
+        "refund": {
+          "title": "Reembolso",
+          "text": "Se o operador reembolsar um pagamento, as moedas correspondentes são debitadas; um saldo negativo bloqueia os desbloqueios."
+        },
+        "contact": {
+          "title": "Contacto",
+          "text": "Suporte: support{'@'}drama.app."
+        }
+      },
+      "privacy": {
+        "data": {
+          "title": "Dados recolhidos",
+          "text": "Identificador da conta, telefone ou e-mail, país, histórico de recargas."
+        },
+        "purpose": {
+          "title": "Finalidades",
+          "text": "Execução da encomenda, prevenção de fraude, obrigações contabilísticas."
+        },
+        "retention": {
+          "title": "Conservação",
+          "text": "Prazo legal de conservação dos registos contabilísticos; eliminação da conta em 30 dias a pedido."
+        },
+        "rights": {
+          "title": "Os seus direitos",
+          "text": "Acesso, retificação e eliminação a partir da aplicação ou através do suporte."
+        },
+        "cookies": {
+          "title": "Cookies",
+          "text": "Apenas cookies estritamente necessários: sessão, país e idioma."
+        }
+      }
+    },
+    "mockPayment": {
+      "badge": "Página de pagamento simulada",
+      "title": "Operador mobile money (simulação)",
+      "hint": "Em modo de demonstração esta página substitui a do agregador. Escolha o resultado do pagamento.",
+      "pay": "Pagar",
+      "fail": "Falhar",
+      "back": "Voltar à encomenda",
+      "failed": "Simulação impossível",
+      "notMock": "Esta página só existe em modo de demonstração."
+    }
+  }
+}

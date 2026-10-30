@@ -7,7 +7,7 @@ cahier des charges (§11) : **une base Nuxt 3 commune, deux applications distinc
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `layers/base`   | Couche Nuxt partagée : Tailwind CSS, PrimeVue (thème Aura), Pinia, i18n (FR par défaut), client API typé `useApi()`, store d'authentification, layouts et composants de mise en page, fixtures de démonstration                                                                       | S03-WEB-01                                                                              |
 | `apps/admin`    | Back-office (comptes internes, JWT + TOTP obligatoire, appareil de confiance) : catalogue B-01, épisodes et upload B-02, sous-titres B-03, mise en avant B-05, monétisation B-06, récompenses B-08, utilisateurs B-09, notifications B-10, centre d'aide B-03bis, administration B-13 | S03-WEB-01 à 03, S04-WEB-01 à 03, S05-WEB-01/02, B-13+, B-10, B-03bis, B-06, B-08, B-09 |
-| `apps/recharge` | Site de recharge mobile money — emplacement réservé, créé au Sprint 9                                                                                                                                                                                                                 | S09-WEB-*                                                                               |
+| `apps/recharge` | Site de recharge mobile money (SSR, mobile d'abord, FR/EN/ES/PT, < 300 Ko gzip par page) : connexion par le même compte (OTP, e-mail, Google), packs avec offres, paiement, historique, compte                                                                                        | S09-WEB-01/02                                                                           |
 
 ## Versions retenues
 
@@ -30,6 +30,9 @@ npm install            # installe tout l'espace de travail et génère les types
 npm run dev:admin      # back-office en développement : http://localhost:3100 (mode mock activé)
 npm run build:admin    # build de production dans apps/admin/.output
 npm run preview:admin  # sert le build de production
+npm run dev:recharge      # site de recharge en développement : http://localhost:3200 (mode mock activé)
+npm run build:recharge    # build SSR de production dans apps/recharge/.output
+npm run preview:recharge  # sert le build de production
 npm run lint           # ESLint + vérification Prettier (layers + apps)
 npm run lint:fix       # corrige ESLint et reformate
 npm run typecheck      # vue-tsc via `nuxt typecheck`
@@ -40,18 +43,26 @@ En mode mock, se connecter avec `admin@drama.local` / `Admin1234!` puis le code 
 (autres comptes de démonstration : `editor@`, `money@` — première connexion avec enrôlement TOTP —,
 `support@drama.local`, même mot de passe et même code).
 
+Site de recharge en mode mock : compte de démonstration affiché sur `/login` (e-mail + mot de
+passe, ou téléphone avec le code OTP affiché à l'écran), paiement simulé par une page de
+l'application (`/mock-payment/{orderId}`, boutons Payer / Échouer) qui reproduit la page que l'API
+sert réellement en développement (`/topup/fake/{orderId}`).
+
 ## Variables d'environnement
 
 Lues à l'exécution par la configuration runtime de Nuxt (préfixe `NUXT_PUBLIC_`), voir `.env.example`.
 
-| Variable                   | Défaut                                 | Rôle                                                                                                                                                                                    |
-| -------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NUXT_PUBLIC_API_BASE`     | `http://localhost:3000`                | URL de base de l'API NestJS                                                                                                                                                             |
-| `NUXT_PUBLIC_API_MOCK`     | `true` en `nuxt dev`, `false` en build | `true` : `useApi()` répond avec les fixtures de `layers/base/mocks/`, sans réseau                                                                                                       |
-| `NUXT_PUBLIC_CDN_BASE_URL` | `http://localhost:9000/drama-media`    | Base publique des clés média (`hls/{episodeId}/master.m3u8`, vignettes) : bucket MinIO en dev, CDN en production ; utilisée par l'aperçu HLS                                            |
-| `NUXT_BUILD_DIR`           | `apps/admin/.nuxt`                     | Dossier de build Nuxt (option de build, pas de runtime). À pointer ailleurs pour lancer un `nuxt build` ou un second `nuxt dev` à côté d'un serveur de dev déjà lancé sur le même dépôt |
+| Variable                       | Défaut                                 | Rôle                                                                                                                                                                                    |
+| ------------------------------ | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NUXT_PUBLIC_API_BASE`         | `http://localhost:3000`                | URL de base de l'API NestJS                                                                                                                                                             |
+| `NUXT_PUBLIC_API_MOCK`         | `true` en `nuxt dev`, `false` en build | `true` : `useApi()` répond avec les fixtures de `layers/base/mocks/`, sans réseau                                                                                                       |
+| `NUXT_PUBLIC_CDN_BASE_URL`     | `http://localhost:9000/drama-media`    | Base publique des clés média (`hls/{episodeId}/master.m3u8`, vignettes) : bucket MinIO en dev, CDN en production ; utilisée par l'aperçu HLS                                            |
+| `NUXT_BUILD_DIR`               | `apps/admin/.nuxt`                     | Dossier de build Nuxt (option de build, pas de runtime). À pointer ailleurs pour lancer un `nuxt build` ou un second `nuxt dev` à côté d'un serveur de dev déjà lancé sur le même dépôt |
+| `NUXT_PUBLIC_GOOGLE_CLIENT_ID` | vide (bouton masqué)                   | Site de recharge uniquement : identifiant client OAuth Google affiché par le bouton « Continuer avec Google » sur `/login`. Doit aussi figurer dans `GOOGLE_CLIENT_IDS` côté backend.   |
 
-Aucun secret n'est nécessaire côté web : le back-office ne possède que le JWT de l'utilisateur connecté.
+Aucun secret n'est nécessaire côté web : le back-office ne possède que le JWT de l'utilisateur connecté,
+et le site de recharge que le jeton de l'utilisateur final (tokens non httpOnly, même compromis que
+le back-office, voir « Authentification » et « Site de recharge » ci-dessous).
 
 ## Structure
 
@@ -63,15 +74,20 @@ web/
 ├── layers/base/
 │   ├── nuxt.config.ts       # modules, Tailwind, PrimeVue, i18n, runtimeConfig, alias #base
 │   ├── assets/css/main.css  # @import "tailwindcss" + plugin PrimeUI
-│   ├── composables/         # useApi, useCatalogueApi (B-01/B-02), useSubtitlesApi (B-03), useFeaturedApi (B-05),
-│   │                        # useScheduleApi (B-04), useStatsApi (B-11), useAdministrationApi (B-13),
-│   │                        # useAccountApi (appareils de confiance), useCampaignsApi (B-10),
-│   │                        # useHelpCenterApi (FAQ, tickets), useMonetizationApi (B-06, B-08),
-│   │                        # useUsersApi (B-09), useNotify (toasts), useMediaUrl, useEpisodeUploads,
-│   │                        # usePosterUpload
-│   ├── stores/auth.ts       # login() (jeton d'appareil), verifyTotp(code, rememberDevice), fetchMe(), logout(),
-│   │                        # forgetDevice() ; stores/support-inbox.ts (badge des tickets ouverts)
-│   ├── middleware/auth.global.ts
+│   ├── composables/         # useApi (client HTTP, session interchangeable), useCatalogueApi (B-01/B-02),
+│   │                        # useSubtitlesApi (B-03), useFeaturedApi (B-05), useScheduleApi (B-04),
+│   │                        # useStatsApi (B-11), useAdministrationApi (B-13), useAccountApi (appareils de
+│   │                        # confiance), useCampaignsApi (B-10), useHelpCenterApi (FAQ, tickets),
+│   │                        # useMonetizationApi (B-06, B-08 check-in + tâches), useOffersApi (B-07),
+│   │                        # useTopupApi (B-11 réconciliation + routes publiques du site de recharge),
+│   │                        # useUsersApi (B-09), useRechargePrefs (pays/langue, site de recharge),
+│   │                        # useNotify (toasts), useMediaUrl, useEpisodeUploads, usePosterUpload
+│   ├── stores/auth.ts       # session admin : login() (jeton d'appareil), verifyTotp(code, rememberDevice),
+│   │                        # fetchMe(), logout(), forgetDevice() ; support-inbox.ts (badge des tickets
+│   │                        # ouverts) ; recharge-session.ts (session utilisateur final du site de recharge,
+│   │                        # OTP/e-mail/Google, rotation du refresh token) ; topup-orders.ts (mémorise les
+│   │                        # commandes créées par l'onglet, sessionStorage, pour la page de paiement)
+│   ├── middleware/auth.global.ts  # back-office (toutes les pages privées par défaut)
 │   ├── layouts/             # default (shell + Toast + ConfirmDialog), auth (page de connexion)
 │   ├── components/layout/   # AppSidebar, AppTopbar, PageHeader (fil d'Ariane), ComingSoon, Forbidden
 │   ├── components/catalogue/# SeriesForm, PosterUpload, TerritoriesInput, SeriesStatusTag
@@ -89,24 +105,33 @@ web/
 │   ├── components/help-center/ # FaqPanel, FaqEntryDialog, FaqPreview, SupportInbox (B-03bis)
 │   ├── components/monetization/ # SettingsPanel, PacksPanel, PackDialog, VipPlansPanel, VipPlanDialog,
 │   │                        # PricesEditor (prix par devise, complétion depuis le F CFA), ShopSimulator (B-06)
-│   ├── components/rewards/  # CheckinScaleEditor (B-08)
+│   ├── components/rewards/  # CheckinScaleEditor, TasksPanel, TaskDialog (B-08)
+│   ├── components/offers/   # WelcomeOfferCard, LimitedOffersPanel, LimitedOfferDialog, PromoCodesPanel,
+│   │                        # PromoCodeDialog, RedemptionsDrawer, PackPicker, OfferStateTag (B-07)
+│   ├── components/recharge/ # CountrySelect, LanguageSelect, PackCard, OrderStatusTag (site de recharge)
 │   ├── components/users/    # ProfileCard, WalletCard, SubscriptionCard, HistoryTabs,
 │   │                        # CoinAdjustmentDialog, BlockUserDialog (B-09)
 │   ├── i18n/locales/        # fr.json (référence), en.json
 │   ├── mocks/               # index.ts (API simulée avec état), assets.ts, fixtures JSON (stats, campaigns,
 │   │                        # faq, tickets, monetization, users…)
-│   ├── types/api.ts         # contrats de l'API admin (= docs/api/admin-contract-v1.md + section back-office
-│   │                        # de public-contract-v1.2.md + docs/api/contract-v1.3-sprint5.md
-│   │                        # + docs/api/contract-v1.4-sprint6.md)
+│   ├── types/api.ts         # contrats de l'API : docs/api/admin-contract-v1.md + section back-office de
+│   │                        # public-contract-v1.2.md + contract-v1.3-sprint5.md + contract-v1.4-sprint6.md
+│   │                        # + contract-v1.5-sprint7.md (tâches B-08, offres/promos B-07, recharge/
+│   │                        # réconciliation B-11) + les schémas publics d'openapi.v1.json que réutilise le
+│   │                        # site de recharge (AuthSessionDto, ShopDto, WalletDto…)
 │   ├── utils/               # ApiError, upload-queue, upload-transport, polling, series-form,
 │   │                        # subtitles, featured, accounts, audit-diff, schedule (fuseau, calendrier,
 │   │                        # sortie quotidienne), stats (tuiles, taux), markdown (aide), countries,
 │   │                        # format, episode-files, campaigns (B-10), help-center (FAQ, tickets),
-│   │                        # monetization (devises, prix, simulateur, formulaires B-06), rewards (barème B-08),
+│   │                        # monetization (devises, prix, simulateur, formulaires B-06), rewards (barème
+│   │                        # B-08 + tâches M-41), offers (offre de bienvenue, offres limitées, codes promo
+│   │                        # + générateur, B-07), reconciliation (compteurs, CSV, B-11), topup (pays/devises,
+│   │                        # machine à états de la commande, téléphone/OTP/e-mail, site de recharge),
 │   │                        # users (ajustement de pièces, erreurs 4xx B-09), auth-errors (DEF-005),
-│   │                        # registre des modules B-01…B-13 (+ B-03bis, rôles, badge)
+│   │                        # registre des modules B-01…B-13 (+ B-03bis, rôles, badge, sous-pages)
 │   └── tests/
-├── docs/guide-back-office.md # guide v1 de l'équipe éditoriale (S06-WEB-02), rendu sur /help
+├── docs/guide-back-office.md # guide v1 de l'équipe éditoriale (S06-WEB-02, étendu B-07/Tâches/Réconciliation
+│                              # au sprint 7), rendu sur /help
 └── apps/
     ├── admin/
     │   ├── nuxt.config.ts   # extends: ['../../layers/base'], ssr: false
@@ -114,11 +139,21 @@ web/
     │   ├── error.vue        # erreurs fatales (404 de route…)
     │   ├── pages/           # login, index (→ /series), series/{index,new,[id]/index,[id]/episodes},
     │   │                    # episodes/index et subtitles/index (choix de la série), schedule (B-04),
-    │   │                    # featured (B-05), campaigns (B-10), help-center (B-03bis), dashboard (B-11),
+    │   │                    # featured (B-05), monetization (B-06), offers (B-07), rewards (B-08),
+    │   │                    # users (B-09), campaigns (B-10), help-center (B-03bis), dashboard (B-11),
+    │   │                    # topup-reconciliation (B-11, sous le menu Tableaux de bord),
     │   │                    # administration (B-13), account (Mon compte), help (guide),
     │   │                    # [module] (« Module à venir »)
     │   └── tests/
-    └── recharge/README.md
+    └── recharge/            # site de recharge mobile money (SSR, S09-WEB-01/02)
+        ├── nuxt.config.ts   # extends: ['../../layers/base'], ssr: true
+        ├── app.vue          # langue depuis le cookie drama_lang (FR par défaut)
+        ├── plugins/api-session.ts   # branche useApi() sur la session utilisateur final (recharge-session.ts)
+        ├── middleware/auth.global.ts # seules /pay, /history, /account, /mock-payment exigent une session
+        ├── layouts/default.vue # en-tête compact, navigation basse sur mobile, pied de page légal
+        └── pages/           # index (accueil), login (téléphone+OTP ou e-mail+mot de passe, bouton Google
+                              # masqué sans NUXT_PUBLIC_GOOGLE_CLIENT_ID), packs, pay/[orderId], history,
+                              # account, legal/cgv, legal/confidentialite, mock-payment/[orderId] (mode mock)
 ```
 
 ## Authentification (S03-WEB-02)
@@ -271,6 +306,22 @@ Contrat : section « Back-office (B-04, B-11 v0) » de `docs/api/public-contract
   `rankTopSeries`, `topSeriesChartData`, formats compacts FR).
 - Mock : `mocks/stats.json` (chiffres plausibles par période), `generatedAt` = maintenant.
 
+### Réconciliation des recharges (B-11, contrat v1.5)
+
+- `/topup-reconciliation`, sous-entrée du menu « Tableaux de bord », MONETIZATION et ADMIN.
+  `GET /admin/topup/reconciliation?date=YYYY-MM-DD` pour un **jour civil en heure de Lomé**
+  (sélecteur avec flèches précédent/suivant, jamais de date future, bouton « Aujourd'hui »).
+- Quatre tuiles (commandes, payées, créditées, écarts) avec les ratios payées/commandes et
+  créditées/payées, un bandeau « tout concorde » ou « écarts à traiter ». Le total encaissé du
+  jour est affiché en additionnant les montants **par devise** (`amounts: Price[]` renvoyés par
+  l'API, pas un total unique : `utils/reconciliation.ts#formatAmounts`).
+- Table des écarts (commande, utilisateur, pack, montant, statut, pièces créditées/attendues,
+  raison : `PAID_NOT_CREDITED`, `CREDITED_NOT_PAID`, `AMOUNT_MISMATCH`, `COINS_MISMATCH`,
+  `DUPLICATE_CREDIT`, `PROVIDER_UNKNOWN`) et **export CSV** (`reconciliationToCsv`, BOM UTF-8,
+  une ligne par écart) pour la comptabilité ou l'agrégateur.
+- Mock : `GET /admin/topup/reconciliation` regroupe les commandes du jour par statut et par
+  devise à partir de `mocks/topup.json` (une commande `PAID` sans `creditedAt` simule un écart).
+
 ### Aide en ligne (S06-WEB-02)
 
 - `web/docs/guide-back-office.md` : guide v1 en français pour l'équipe éditoriale (connexion et
@@ -359,9 +410,16 @@ INACTIVE (jours 1-365)` avec champs conditionnels, date d'envoi facultative sais
   `GET`/`PUT /admin/rewards/checkin` — barème sur 7 jours (`days`), **total sur 7 jours** calculé
   en direct (`checkinTotal`), interrupteur **« Un jour manqué remet la série à zéro »**
   (`resetOnMiss`), aperçu téléphone (jours reçus / aujourd'hui / à venir), confirmation avant
-  enregistrement, validation (7 entiers ≥ 0, au moins un jour non nul). Onglet **Tâches** :
-  emplacement « Sprint 8 ».
-- Mock : barème avec état, 400 sur un barème invalide, audit `checkin_scale.update`.
+  enregistrement, validation (7 entiers ≥ 0, au moins un jour non nul). Onglet **Tâches** (M-41,
+  contrat v1.5) : `GET /admin/rewards/tasks` liste les **six clés fixes** du MVP
+  (`watch_3_episodes`, `watch_10_episodes`, `enable_notifications`, `share_series`,
+  `complete_profile`, `add_favorite` — titre et description gérés par le serveur) ; chaque ligne
+  s'édite avec `PATCH /admin/rewards/tasks/{key}` (**pièces**, **objectif**, **active**), tri des
+  clés connues en premier (`sortTasks`), bandeau « potentiel hebdomadaire » (`weeklyTaskPotential` :
+  une tâche quotidienne compte ×7, les autres ×1, seules les tâches actives comptent).
+- Mock : barème avec état, 400 sur un barème invalide, audit `checkin_scale.update` ;
+  `mocks/offers.json` fournit les six tâches, `PATCH` audité (`reward_task.update`), 400 sur des
+  pièces négatives ou un objectif nul.
 
 ### Utilisateurs (B-09, contrat v1.4)
 
@@ -386,6 +444,31 @@ INACTIVE (jours 1-365)` avec champs conditionnels, date d'envoi facultative sais
   ajoute une ligne `ADJUSTMENT` (bonus avec expiration à `bonusValidityDays`), un débit excessif
   renvoie 409 `INSUFFICIENT_COINS`, le blocage met `devices` à 0 ; audit `user.coins_adjust`,
   `user.block`, `user.unblock` avec le motif.
+
+### Offres et promos (B-07, contrat v1.5)
+
+- `/offers` (barre latérale « Offres et promos »), MONETIZATION et ADMIN. Deux onglets :
+  - **Offres** : carte **Offre de bienvenue** (`GET`/`PUT /admin/offers/welcome` — actif, pack
+    concerné ou « tous les packs », **bonus en %**, fenêtre en **heures après l'inscription**,
+    aperçu du bonus sur un pack) et table **Offres limitées** (`GET/POST/PATCH/DELETE
+/admin/offers/limited` — titre, pack, bonus en %, période en **heure de Lomé**
+    (`toPickerDate`/`fromPickerDate`), état `En cours`/Programmée/Terminée/Désactivée calculé par
+    `offerState()`/`sortLimitedOffers()`). **Le backend réel exige `startsAt` en ISO 8601** (une
+    valeur vide est envoyée comme l'instant courant par `limitedOfferToInput()`, malgré le
+    contrat qui lit « vide = tout de suite »).
+  - **Codes promo** : `GET/POST/PATCH /admin/promo-codes` — **code immuable après création**
+    (`PROMO_CODE_RE`, majuscules/chiffres/4-32), générateur sans caractères ambigus
+    (`generatePromoCode`/`generatePromoCodes`, préfixe facultatif), pièces offertes, quotas
+    (global `maxUses` ou illimité, `perUserUses`), période facultative, barre d'utilisation
+    (`promoUsageRatio`/`isPromoExhausted`). **Pas de route de suppression** : désactiver
+    (`isActive: false`) retire un code. Tiroir **Utilisations** :
+    `GET /admin/promo-codes/{id}/redemptions` (compte, pièces, date).
+- L'éligibilité d'une série à la pub récompensée (M-22) se règle sur la fiche série
+  (`adUnlockEnabled`, fieldset Monétisation) ; le plafond quotidien reste dans Monétisation →
+  Paramètres (`adDailyCap`).
+- Mock : `mocks/offers.json` (offre de bienvenue active, offres limitées et codes de démo),
+  audité (`welcome_offer.update`, `limited_offer.*`, `promo_code.*`), `SKU`/pack inconnu → 404
+  `PACK_NOT_FOUND`, code dupliqué → 409 `PROMO_CODE_ALREADY_USED`.
 
 ### Administration (S05-WEB-01, B-13)
 
@@ -413,13 +496,83 @@ réinitialisation TOTP → nouvel enrôlement, compte créé qui peut se connect
 et journal d'audit alimenté par chaque mutation du mock, appareils de confiance (connexion sans code),
 campagnes push (estimation, envoi simulé, programmation, annulation), FAQ (avec le `GET /help/faq`
 public), tickets de support, paramètres de monétisation, packs et formules VIP, barème du check-in
-et utilisateurs finaux (portefeuille projeté du grand livre, ajustements, blocage). Les URL d'upload sont des `mock://upload/...`
+et utilisateurs finaux (portefeuille projeté du grand livre, ajustements, blocage), tâches
+récompensées, offres (bienvenue/limitées) et codes promo, commandes de recharge et les routes
+publiques que réutilise le site de recharge (`/auth/otp/*`, `/auth/email/*`, `/auth/refresh`,
+`/me`, `/wallet`, `/shop`, `/offers`, `/topup/orders*`, voir « Site de recharge » ci-dessous). Les
+URL d'upload sont des `mock://upload/...`
 traitées par `mockUploadTransport` (progression simulée, fichier conservé pour l'aperçu des affiches) ;
 `POST /uploaded` fait passer l'épisode `UPLOADED` → `PROCESSING` (1,5 s) → `READY` (4 s), avec un
 manifeste HLS pointant vers les échantillons `hls/samples/epN/` de `infra/media-samples` dans MinIO,
 donc l'aperçu fonctionne réellement si MinIO tourne. Astuces de démonstration : un fichier dont le nom
 contient `upload-error` échoue à l'envoi (bouton Relancer), un nom contenant `fail` finit en `FAILED`
 (bouton Relancer le transcodage).
+
+## Site de recharge (S09-WEB-01/02, contrat v1.5)
+
+`apps/recharge` étend `layers/base` comme `apps/admin`, avec `ssr: true` (rendu serveur, §11 du
+cahier des charges) et sa propre page de connexion : **même compte que l'application mobile**, par
+les routes **publiques** `/auth/*` du contrat (pas le JWT admin). Chaque page sert moins de
+300 Ko gzip de JS + CSS (mesuré sur le HTML rendu plus les scripts précompilés ; voir le compte
+rendu de sprint pour le détail par page).
+
+### Session et authentification
+
+- `stores/recharge-session.ts` (couche de base) : connexion **téléphone + OTP**
+  (`POST /auth/otp/request` puis `/auth/otp/verify`), **e-mail + mot de passe**
+  (`/auth/email/login` ou `/auth/email/register`), **Google** (`/auth/google`, bouton masqué tant
+  que `NUXT_PUBLIC_GOOGLE_CLIENT_ID` est vide). Jetons dans les cookies `drama_user_token` /
+  `drama_user_refresh` (`SameSite=Lax`, pas `httpOnly` — même compromis documenté que le
+  back-office, voir « Authentification » ci-dessus ; `Lax` plutôt que `Strict` car le retour du
+  paiement est une navigation externe). `refresh()` fait tourner le jeton de rafraîchissement
+  (jeton réutilisé = session révoquée côté serveur) ; `apps/recharge/plugins/api-session.ts`
+  branche `useApi()` sur cette session (un 401 hors flux d'authentification tente un
+  rafraîchissement puis renvoie vers `/login`) au lieu du store admin.
+- `apps/recharge/middleware/auth.global.ts` : seules `/pay`, `/history`, `/account` et
+  `/mock-payment` exigent une session ; `/`, `/login`, `/packs`, `/legal/*` sont publiques.
+- `composables/useRechargePrefs.ts` : pays (`drama_country`) et langue (`drama_lang`) persistés un
+  an en cookie pour que le rendu serveur parte directement dans la bonne devise et la bonne
+  langue ; un compte connecté sans choix explicite reprend le pays de son profil.
+
+### Pages
+
+- `/` : explication en 4 étapes, sélecteur de pays, bouton de connexion ou lien direct vers les
+  packs.
+- `/login` : bascule téléphone/e-mail, compte de démonstration affiché en mode mock.
+- `/packs` : `GET /shop` avec l'en-tête `X-Country`, badge **meilleur rapport**
+  (`bestValueSku`), badge d'offre (`GET /offers` + `packOfferBadge()` — l'offre de bienvenue prime
+  sur une offre limitée), avertissement de repli sur une autre devise
+  (`isCurrencyFallback`), achat → `POST /topup/orders` (clé d'idempotence `newIdempotencyKey()`).
+- `/pay/{orderId}` : résumé (pièces, montant, expiration), bouton **Payer** qui ouvre le
+  `paymentUrl` renvoyé par la commande (page réelle de l'agrégateur en production, page simulée de
+  l'API en dev), puis sonde `GET /topup/orders/{id}` toutes les 3 s au retour
+  (`createPoller`, jusqu'à 2 min) jusqu'à `PAID` (solde affiché via `GET /wallet`), `FAILED` ou
+  `EXPIRED` (bouton **Réessayer**, nouvelle commande). La machine à états (`payStep()`) et le
+  mémo de commande (`stores/topup-orders.ts`, `sessionStorage`) sont dans `utils/topup.ts`.
+  **Les pièces créditées sont `coins + bonusCoins` additionnés** (`orderTotalCoins()`) : l'API
+  réelle renvoie les deux séparément plutôt qu'un total unique.
+- `/history` : `GET /topup/orders?page`, le plus récent en premier, « Charger plus ».
+- `/account` : solde (`GET /wallet`, pièces achetées/bonus, lots bonus qui expirent), profil
+  (`GET /me`), préférence de pays, déconnexion.
+- `/legal/cgv`, `/legal/confidentialite` : textes provisoires marqués comme tels (§14 — la version
+  définitive viendra du conseil juridique du client avant la mise en ligne).
+
+### Mode mock et paiement simulé
+
+- Les routes publiques (`/auth/*`, `/me`, `/wallet`, `/shop`, `/offers`, `/topup/orders*`) sont
+  simulées dans `layers/base/mocks/index.ts` (sessions et jetons de rafraîchissement en mémoire,
+  `mocks/topup.json` pour l'historique de démonstration).
+- `/mock-payment/{orderId}` (mode mock uniquement) reproduit la page que l'API sert réellement en
+  développement (`/topup/fake/{orderId}`, agrégateur simulé) : boutons **Payer** / **Échouer**
+  qui appellent la route mock `POST /topup/orders/{id}/mock-pay` (idempotente), créditent le
+  grand livre (achat + bonus, offre de bienvenue ou limitée appliquée automatiquement) et
+  renvoient vers `/pay/{orderId}?returned=1` pour reprendre la sonde.
+
+### Langues
+
+FR par défaut, EN/ES/PT via la couche i18n commune (`layers/base/i18n/locales/{es,pt}.json` ne
+portent que le site de recharge et quelques clés partagées ; le reste retombe sur le français,
+`missingWarn`/`fallbackWarn` désactivés pour ne pas polluer la console).
 
 ## Ajouter une application sur la couche de base
 

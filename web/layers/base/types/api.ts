@@ -2,7 +2,8 @@
  * Contracts of the admin API consumed by the web apps.
  * Source of truth: docs/api/admin-contract-v1.md, the back-office section of
  * docs/api/public-contract-v1.2.md, docs/api/contract-v1.3-sprint5.md and
- * docs/api/contract-v1.4-sprint6.md (binding for backend and back-office).
+ * docs/api/contract-v1.4-sprint6.md and docs/api/contract-v1.5-sprint7.md (binding for backend,
+ * back-office and the recharge site).
  * These types drive both the real client and the mock mode.
  */
 
@@ -120,6 +121,8 @@ export interface AdminSeries {
   posterHorizontalUrl: string | null
   freeEpisodeCount: number
   coinCostPerEpisode: number
+  /** Eligible to rewarded-ad unlocks (contract v1.5, default true). Optional for older payloads. */
+  adUnlockEnabled?: boolean
   status: SeriesStatus
   territories: string[]
   episodeCount: number
@@ -141,6 +144,7 @@ export type AdminSeriesInput = Pick<
   | 'posterHorizontalUrl'
   | 'freeEpisodeCount'
   | 'coinCostPerEpisode'
+  | 'adUnlockEnabled'
   | 'territories'
 >
 
@@ -152,7 +156,11 @@ export type AdminSeriesInput = Pick<
 export type AdminSeriesUpdateInput = Partial<AdminSeriesInput> & { publishedAt?: string | null }
 
 /** Fields only MONETIZATION and ADMIN may change. */
-export const MONETIZATION_FIELDS = ['freeEpisodeCount', 'coinCostPerEpisode'] as const
+export const MONETIZATION_FIELDS = [
+  'freeEpisodeCount',
+  'coinCostPerEpisode',
+  'adUnlockEnabled',
+] as const
 
 /** Query of GET /admin/series */
 export interface AdminSeriesListQuery {
@@ -922,6 +930,223 @@ export interface CoinAdjustmentInput {
 /** POST /admin/users/{id}/block and /unblock */
 export interface UserBlockInput {
   reason: string
+}
+
+// ---------------------------------------------------------------------------
+// Reward tasks (B-08, M-41) — contract v1.5
+// ---------------------------------------------------------------------------
+
+/** Fixed task keys of the MVP (contract v1.5). The backend owns the progress logic. */
+export const REWARD_TASK_KEYS = [
+  'watch_3_episodes',
+  'watch_10_episodes',
+  'enable_notifications',
+  'share_series',
+  'complete_profile',
+  'add_favorite',
+] as const
+export type RewardTaskKey = (typeof REWARD_TASK_KEYS)[number]
+
+/** Recurrence of a task as the backend reports it (`daily` = reset every day…). */
+export type RewardTaskPeriod = 'DAILY' | 'WEEKLY' | 'ONCE'
+
+/** Item of GET /admin/rewards/tasks. */
+export interface RewardTaskAdmin {
+  key: RewardTaskKey | string
+  /** Title shown in the app (French), informative in the back-office. */
+  title: string
+  description: string | null
+  coins: number
+  /** Goal of the progress counter (1 for one-shot tasks). */
+  target: number
+  isActive: boolean
+  period?: RewardTaskPeriod
+  updatedAt?: string
+}
+
+/** PATCH /admin/rewards/tasks/{key} */
+export interface RewardTaskInput {
+  coins?: number
+  target?: number
+  isActive?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Offers and promo codes (B-07, M-24) — contract v1.5
+// ---------------------------------------------------------------------------
+
+/** GET/PUT /admin/offers/welcome : bonus % on the first purchase, `hours` after sign-up. */
+export interface WelcomeOffer {
+  isActive: boolean
+  /** Pack the bonus applies to; `null` = every pack. */
+  packSku: string | null
+  bonusPercent: number
+  hours: number
+}
+
+/** Item of GET /admin/offers/limited. */
+export interface LimitedOffer {
+  id: string
+  title: string
+  packSku: string
+  bonusPercent: number
+  /** ISO UTC; `null` = starts now. */
+  startsAt: string | null
+  endsAt: string
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export type LimitedOfferInput = Partial<Omit<LimitedOffer, 'id' | 'createdAt' | 'updatedAt'>>
+
+/** Item of GET /admin/promo-codes. */
+export interface PromoCode {
+  id: string
+  code: string
+  coins: number
+  /** Total redemptions allowed; `null` = unlimited. */
+  maxUses: number | null
+  perUserUses: number
+  startsAt: string | null
+  endsAt: string | null
+  isActive: boolean
+  /** Redemptions so far (sent by the backend). */
+  usesCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export type PromoCodeInput = Partial<
+  Omit<PromoCode, 'id' | 'usesCount' | 'createdAt' | 'updatedAt'>
+>
+
+/** Item of GET /admin/promo-codes/{id}/redemptions. */
+export interface PromoRedemption {
+  id: string
+  userId: string
+  /** Display name, e-mail or phone when the backend sends it. */
+  userLabel?: string | null
+  coins: number
+  redeemedAt: string
+}
+
+/** Code format accepted by the back-office: upper-case letters and digits, 4 to 32 chars. */
+export const PROMO_CODE_RE = /^[A-Z0-9][A-Z0-9_-]{3,31}$/
+
+/** Public GET /offers (what the app and the recharge site show). */
+export interface PublicOffers {
+  welcome: { packSku: string | null; bonusPercent: number; expiresAt: string } | null
+  limited: { id: string; title: string; packSku: string; bonusPercent: number; endsAt: string }[]
+}
+
+// ---------------------------------------------------------------------------
+// Mobile money top-ups (M-34, S09) — contract v1.5
+// ---------------------------------------------------------------------------
+
+export type TopupOrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED'
+export const TOPUP_ORDER_STATUSES: readonly TopupOrderStatus[] = [
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'EXPIRED',
+]
+
+/** POST /topup/orders */
+export interface TopupOrderCreateInput {
+  packSku: string
+  country: string
+  phone?: string
+  idempotencyKey: string
+}
+
+/** 201 of POST /topup/orders. */
+export interface TopupOrderCreated {
+  orderId: string
+  amount: Price
+  paymentUrl: string
+  expiresAt: string
+}
+
+/** GET /topup/orders/{id} and items of GET /topup/orders?page. */
+export interface TopupOrder {
+  /** The backend may name the identifier `id` or `orderId`: both are accepted. */
+  id?: string
+  orderId?: string
+  status: TopupOrderStatus
+  /**
+   * Base (purchased) coins of the pack. The real backend reports the bonus separately in
+   * `bonusCoins` rather than folding it into `coins`, despite the contract text ("coins
+   * credited") suggesting a single total: use `orderTotalCoins()` to get purchased + bonus.
+   */
+  coins: number
+  bonusCoins?: number
+  creditedAt: string | null
+  packSku?: string
+  amount?: Price
+  paymentUrl?: string | null
+  expiresAt?: string
+  createdAt?: string
+}
+
+/** GET /admin/topup/reconciliation?date (MONETIZATION, ADMIN). */
+export interface TopupReconciliationMismatch {
+  orderId: string
+  userId?: string | null
+  packSku?: string | null
+  status?: TopupOrderStatus | string
+  amount?: Price | null
+  /** What the provider reports vs what the ledger holds. */
+  providerStatus?: string | null
+  coinsExpected?: number | null
+  coinsCredited?: number | null
+  reason: string
+  createdAt?: string
+}
+
+export interface TopupReconciliation {
+  /** `YYYY-MM-DD` in Lomé time. */
+  date: string
+  orders: number
+  paid: number
+  credited: number
+  /** Optional totals when the backend sends them. */
+  failed?: number
+  expired?: number
+  pending?: number
+  /** Amounts paid, grouped per currency (the real API reports an array, not a single total). */
+  amounts?: Price[]
+  mismatches: TopupReconciliationMismatch[]
+  generatedAt?: string
+}
+
+// ---------------------------------------------------------------------------
+// Public API reused by the recharge site (public contract v1.2, openapi.v1.json)
+// ---------------------------------------------------------------------------
+
+/** `AuthSessionDto`: the session of an end user (OTP, e-mail, Google). */
+export interface PublicAuthSession {
+  accessToken: string
+  refreshToken: string
+  /** Lifetime of the access JWT in seconds. */
+  expiresIn: number
+  user: AppUser
+  linked: boolean
+}
+
+/** POST /auth/otp/request → `OtpRequestResponseDto`. */
+export interface OtpRequestResponse {
+  requestId: string
+  expiresIn: number
+  resendAfter: number
+}
+
+/** GET /shop (with `X-Country`). */
+export interface PublicShop {
+  currency: Currency
+  coinPacks: CoinPack[]
+  vipPlans: VipPlan[]
+  welcomeOffer: unknown | null
 }
 
 // ---------------------------------------------------------------------------
