@@ -20,15 +20,15 @@ Contrat partagé : `docs/api/public-contract-v1.2.md`.
 | B-04 | WEB | Planification : dates de publication, calendrier des sorties (avancé) | Terminé, vérifié, commité |
 | B-11 v0 | WEB | Tableau de bord : utilisateurs actifs, top séries, épisodes vus (avancé) | Terminé, vérifié, commité |
 | S06-WEB-02 | WEB | Guide back-office v1 (avancé) | Terminé, vérifié, commité |
-| S04-A1-01 | A1 | Flux vertical « Pour vous » M-02 | En cours |
+| S04-A1-01 | A1 | Flux vertical « Pour vous » M-02 | Terminé, vérifié, commité |
 | S04-A1-02 | A1 | Continuer à regarder | Terminé au sprint 3 |
-| S04-A1-03 | A1 | Partage par lien profond, App Links M-16 | En cours |
-| S04-A2-01 | A2 | Lecture via URL signée, rafraîchissement à expiration | En cours |
+| S04-A1-03 | A1 | Partage par lien profond, App Links M-16 | Terminé, vérifié, commité |
+| S04-A2-01 | A2 | Lecture via URL signée, rafraîchissement à expiration | Terminé, vérifié, commité |
 | S04-A2-02 à 04 | A2 | Enchaînement, coupures réseau, reprise cross-device | Terminés |
-| S05-A1-01 | A1 | Recherche M-03 (avancé) | En cours |
-| S05-A1-02 | A1 | Ma liste et J'aime M-16 (avancé) | En cours |
-| S05-A2-01 | A2 | Connexion Google, OTP, e-mail M-51 (avancé) | En cours |
-| S05-A2-02 | A2 | Rattachement du compte invité M-50 (avancé) | En cours |
+| S05-A1-01 | A1 | Recherche M-03 (avancé) | Terminé, vérifié, commité |
+| S05-A1-02 | A1 | Ma liste et J'aime M-16 (avancé) | Terminé, vérifié, commité |
+| S05-A2-01 | A2 | Connexion Google, OTP, e-mail M-51 (avancé) | Terminé, vérifié, commité |
+| S05-A2-02 | A2 | Rattachement du compte invité M-50 (avancé) | Terminé, vérifié, commité |
 
 ## Tickets qui dépendent du client
 
@@ -39,6 +39,16 @@ Contrat partagé : `docs/api/public-contract-v1.2.md`.
 | S04-A1-03 | App Links | Réserver le nom de domaine ; `assetlinks.json` à publier dessus |
 | S04-PM-01, S04-UX-01 | Spécifications récompenses, maquettes | Ateliers et designer |
 
-## Compte rendu de fin de sprint
+## Compte rendu de fin de sprint (30 octobre 2026)
 
-À compléter.
+Tous les tickets techniques sont livrés, vérifiés et poussés, dont l'essentiel du sprint 5.
+
+| Lot | Livré | Tests |
+| --- | --- | --- |
+| Backend | URL signées, Google, OTP, e-mail, rattachement et fusion, profil et suppression différée, favoris, recherche, planification, statistiques | 148 unitaires, 26 e2e |
+| Web | Planification, tableau de bord v0, guide | 115 Vitest, flux réel vérifié |
+| Android | Pour vous, lecture signée avec renouvellement, partage, recherche, Ma liste, connexion et rattachement, profil | Suite verte, parcours réel sur émulateur, installé sur le téléphone |
+
+Réserves : la connexion Google n'a pas été testée de bout en bout (pas de compte Google sur l'émulateur, téléphone sur données mobiles pendant le test) ; les notifications push à la publication programmée restent à brancher avec M-54 au sprint 6.
+
+Reste pour le jalon 1 (sprints 5 et 6) : notifications push, centre d'aide, accessibilité, performance entrée de gamme, i18n complète des écrans, recette sur 8 appareils. Côté client : fournisseur SMS, domaine App Links, clé de signature, maquettes.
