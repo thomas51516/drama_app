@@ -1,5 +1,7 @@
 package com.drama.feature.wallet
 
+import com.drama.core.common.analytics.AnalyticsEvent
+import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
@@ -9,7 +11,12 @@ import com.drama.domain.model.LedgerBucket
 import com.drama.domain.model.LedgerEntry
 import com.drama.domain.model.LedgerPage
 import com.drama.domain.model.LedgerType
+import com.drama.domain.model.Offers
+import com.drama.domain.model.PromoRedemption
+import com.drama.domain.model.RemoteFlags
 import com.drama.domain.model.Wallet
+import com.drama.domain.repository.OffersRepository
+import com.drama.domain.repository.RemoteConfigRepository
 import com.drama.domain.repository.WalletRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,7 +48,19 @@ class WalletViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = WalletViewModel(repository, Clock { now }, NoOpLogger)
+    private fun viewModel() =
+        WalletViewModel(
+            repository,
+            Clock { now },
+            NoOpLogger,
+            WalletFakeOffersRepository(),
+            WalletFakeRemoteConfigRepository(),
+            object : AnalyticsTracker {
+                override fun track(event: AnalyticsEvent) = Unit
+
+                override fun setUserId(userId: String?) = Unit
+            },
+        )
 
     @Test
     fun `loads the wallet, flags bonus expiring within seven days and the first page of history`() =
@@ -186,4 +205,16 @@ class WalletViewModelTest {
     private companion object {
         const val DAY_MS = 24L * 60 * 60 * 1_000
     }
+}
+
+private class WalletFakeOffersRepository : OffersRepository {
+    override suspend fun offers(): AppResult<Offers> = AppResult.Success(Offers.NONE)
+
+    override suspend fun redeemPromo(code: String): AppResult<PromoRedemption> = error("not used")
+}
+
+private class WalletFakeRemoteConfigRepository : RemoteConfigRepository {
+    override val flags: Flow<RemoteFlags> = MutableStateFlow(RemoteFlags())
+
+    override suspend fun refresh() = Unit
 }

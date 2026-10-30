@@ -9,16 +9,20 @@ import com.drama.core.common.share.HostShareLinkProvider
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.LedgerPage
 import com.drama.domain.model.LedgerType
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.ResumeTarget
 import com.drama.domain.model.Series
+import com.drama.domain.model.UnlockAllQuote
+import com.drama.domain.model.UnlockAllResult
 import com.drama.domain.model.UnlockResult
 import com.drama.domain.model.Wallet
 import com.drama.domain.model.WatchHistoryEntry
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.FavoritesRepository
+import com.drama.domain.repository.GenresRepository
 import com.drama.domain.repository.PushRepository
 import com.drama.domain.repository.UnlockRepository
 import com.drama.domain.repository.WalletRepository
@@ -84,6 +88,7 @@ class SeriesViewModelTest {
             push = push,
             wallet = walletRepository,
             unlocks = unlocks,
+            genres = FakeGenresRepository(),
         )
 
     private val favorites = FakeFavoritesRepository()
@@ -98,7 +103,19 @@ class SeriesViewModelTest {
 
             override suspend fun refreshUnlocks(seriesId: String): AppResult<Set<String>> =
                 AppResult.Success(emptySet())
+
+            override suspend fun quoteUnlockAll(seriesId: String): AppResult<UnlockAllQuote> =
+                AppResult.Success(UnlockAllQuote(lockedCount = 0, fullPrice = 0, discountPercent = 0, price = 0))
+
+            override suspend fun unlockAll(seriesId: String): AppResult<UnlockAllResult> =
+                AppResult.Failure(AppError.NotFound("not used"))
         }
+
+    private class FakeGenresRepository : GenresRepository {
+        override val labels: Flow<GenreLabels> = MutableStateFlow(GenreLabels.EMPTY)
+
+        override suspend fun refresh(force: Boolean): GenreLabels = GenreLabels.EMPTY
+    }
 
     @Test
     fun `first favourite asks for the notification permission once`() =

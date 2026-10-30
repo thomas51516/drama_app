@@ -21,6 +21,7 @@ fun NavGraphBuilder.accountScreen(
     onOpenNotifications: () -> Unit,
     onOpenWallet: () -> Unit,
     onOpenShop: () -> Unit,
+    onOpenRewards: () -> Unit = {},
 ) {
     composable<AccountRoute> {
         AccountScreen(
@@ -29,6 +30,7 @@ fun NavGraphBuilder.accountScreen(
             onOpenNotifications = onOpenNotifications,
             onOpenWallet = onOpenWallet,
             onOpenShop = onOpenShop,
+            onOpenRewards = onOpenRewards,
         )
     }
 }

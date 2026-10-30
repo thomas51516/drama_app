@@ -33,4 +33,17 @@
     <string name="series_error_not_found">Esta série já não está disponível.</string>
     <string name="series_error_load">Não foi possível carregar a série.</string>
     <string name="series_balance_cd">Saldo: %1$s. Abrir a carteira</string>
+
+    <string name="series_unlock_all">Desbloquear toda a série (%1$d ep.) · %2$s</string>
+    <string name="series_unlock_all_discount">Desbloquear toda a série (%1$d ep.) · %2$s · -%3$d %%</string>
+    <string name="series_unlock_all_busy">A desbloquear…</string>
+    <string name="series_unlock_all_title">Desbloquear toda a série?</string>
+    <string name="series_unlock_all_body">Os %1$d episódios bloqueados serão desbloqueados por %2$s.</string>
+    <string name="series_unlock_all_body_discount">Os %1$d episódios bloqueados serão desbloqueados por %2$s em vez de %3$s (-%4$d %%).</string>
+    <string name="series_unlock_all_confirm">Desbloquear por %1$s</string>
+    <plurals name="series_notice_unlocked_all">
+        <item quantity="one">%1$d episódio desbloqueado</item>
+        <item quantity="other">%1$d episódios desbloqueados</item>
+    </plurals>
+    <string name="series_notice_unlock_all_failed">Não foi possível desbloquear, tente novamente.</string>
 </resources>

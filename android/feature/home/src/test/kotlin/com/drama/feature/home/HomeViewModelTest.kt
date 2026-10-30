@@ -1,21 +1,28 @@
 package com.drama.feature.home
 
 import com.drama.core.common.result.AppError
+import com.drama.core.common.result.AppResult
 import com.drama.core.common.result.Resource
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.ContinueWatchingItem
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.HomeBanner
 import com.drama.domain.model.HomeContent
 import com.drama.domain.model.HomeItem
 import com.drama.domain.model.HomeRow
 import com.drama.domain.model.HomeRowType
+import com.drama.domain.model.RankingPeriod
+import com.drama.domain.model.Rankings
 import com.drama.domain.model.Series
+import com.drama.domain.repository.GenresRepository
+import com.drama.domain.repository.RankingsRepository
 import com.drama.domain.usecase.ObserveContinueWatchingUseCase
 import com.drama.domain.usecase.ObserveHomeUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -54,6 +61,8 @@ class HomeViewModelTest {
                     home
                 },
             observeContinueWatching = ObserveContinueWatchingUseCase { local },
+            rankings = FakeRankingsRepository(),
+            genres = FakeGenresRepository(),
         )
 
     @Test
@@ -226,4 +235,17 @@ class HomeViewModelTest {
         lastWatched: Long,
         completed: Boolean = false,
     ) = ContinueWatchingItem(series(seriesId), episodeId, index, positionMs, durationMs, completed, lastWatched)
+}
+
+private class FakeRankingsRepository : RankingsRepository {
+    override suspend fun rankings(
+        period: RankingPeriod,
+        genre: String?,
+    ): AppResult<Rankings> = AppResult.Failure(AppError.NotFound("rankings"))
+}
+
+private class FakeGenresRepository : GenresRepository {
+    override val labels: Flow<GenreLabels> = MutableStateFlow(GenreLabels.EMPTY)
+
+    override suspend fun refresh(force: Boolean): GenreLabels = GenreLabels.EMPTY
 }

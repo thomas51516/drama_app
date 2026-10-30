@@ -42,6 +42,7 @@ fun NavGraphBuilder.seriesScreen(
     onBack: () -> Unit,
     onPlayEpisode: (seriesId: String, episodeId: String) -> Unit,
     onOpenWallet: () -> Unit,
+    onOpenShop: (missingCoins: Int) -> Unit = {},
 ) {
     composable<SeriesRoute>(
         deepLinks =
@@ -55,6 +56,7 @@ fun NavGraphBuilder.seriesScreen(
             onBack = onBack,
             onPlayEpisode = { episodeId -> onPlayEpisode(route.seriesId, episodeId) },
             onOpenWallet = onOpenWallet,
+            onOpenShop = onOpenShop,
         )
     }
 }

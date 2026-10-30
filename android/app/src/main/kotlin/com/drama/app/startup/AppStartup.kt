@@ -7,6 +7,7 @@ import com.drama.core.common.logging.Logger
 import com.drama.core.common.result.AppResult
 import com.drama.domain.model.SessionState
 import com.drama.domain.repository.PushRepository
+import com.drama.domain.repository.RemoteConfigRepository
 import com.drama.domain.repository.SessionRepository
 import com.drama.domain.usecase.RestorePurchasesUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +30,7 @@ class AppStartup
         private val pushRepository: PushRepository,
         private val analytics: AnalyticsTracker,
         private val restorePurchases: RestorePurchasesUseCase,
+        private val remoteConfig: RemoteConfigRepository,
         private val dispatchers: DispatcherProvider,
         private val logger: Logger,
     ) {
@@ -65,6 +67,8 @@ class AppStartup
                         }
                     }
             }
+            // M-34: Remote Config flags (mobile money link) refreshed once per process start.
+            scope.launch { remoteConfig.refresh() }
             scope.launch {
                 when (val result = sessionRepository.ensureSession()) {
                     is AppResult.Success -> logger.i(TAG, "guest session ready user=${result.value.userId}")

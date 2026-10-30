@@ -7,4 +7,17 @@
         <item quantity="one">%1$d ep. · %2$s</item>
         <item quantity="other">%1$d ep. · %2$s</item>
     </plurals>
+
+    <string name="home_top_of_day">Top today</string>
+    <string name="home_rank_badge">#%1$d</string>
+    <string name="rankings_title">Rankings</string>
+    <string name="rankings_period_day">Today</string>
+    <string name="rankings_period_week">This week</string>
+    <string name="rankings_period_all">All time</string>
+    <string name="rankings_empty">No ranking yet.</string>
+    <string name="rankings_error_load">The rankings could not be loaded.</string>
+    <plurals name="rankings_viewers">
+        <item quantity="one">%1$d viewer</item>
+        <item quantity="other">%1$d viewers</item>
+    </plurals>
 </resources>

@@ -35,4 +35,11 @@ class DataStorePlayerSettingsRepository
 
         override suspend fun setSubtitles(mode: SubtitleMode) =
             preferences.setSubtitleMode(SubtitleMode.serialize(mode))
+
+        override val dataSaver: Flow<Boolean> =
+            preferences.preferences
+                .map { it.dataSaverEnabled }
+                .distinctUntilChanged()
+
+        override suspend fun setDataSaver(enabled: Boolean) = preferences.setDataSaverEnabled(enabled)
     }

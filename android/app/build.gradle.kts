@@ -62,6 +62,21 @@ val googleWebClientId =
         ?: System.getenv("DRAMA_GOOGLE_WEB_CLIENT_ID")?.trim()?.takeIf { it.isNotEmpty() }
         ?: ""
 
+// S09-A1-03: Remote Config defaults (M-34). The console values win once fetched; these only seed a build that has
+// no Firebase (or before the first fetch) so the mobile money link can be exercised against the dev recharge site:
+// -PdramaMobileMoneyLinkEnabled=true -PdramaRechargeUrl=http://192.168.1.145:3001/
+val mobileMoneyLinkEnabledDefault =
+    (project.findProperty("dramaMobileMoneyLinkEnabled") as String?)?.toBooleanStrictOrNull() ?: false
+val rechargeUrlDefault = (project.findProperty("dramaRechargeUrl") as String?)?.trim().orEmpty()
+
+// S08-A1-01: AdMob application id (manifest meta-data, mandatory once the Mobile Ads SDK is on the classpath).
+// Google's sample id until the owner's AdMob account is approved: -PdramaAdmobAppId=ca-app-pub-xxx~yyy.
+val admobAppId =
+    (project.findProperty("dramaAdmobAppId") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: localProperties.getProperty("drama.admobAppId")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: System.getenv("DRAMA_ADMOB_APP_ID")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: "ca-app-pub-3940256099942544~3347511713"
+
 android {
     namespace = "com.drama.app"
 
@@ -76,7 +91,10 @@ android {
         buildConfigField("boolean", "FIREBASE_CONFIGURED", "$firebaseConfigured")
         buildConfigField("String", "APP_LINKS_HOST", "\"$appLinksHost\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("boolean", "MOBILE_MONEY_LINK_ENABLED_DEFAULT", "$mobileMoneyLinkEnabledDefault")
+        buildConfigField("String", "RECHARGE_URL_DEFAULT", "\"$rechargeUrlDefault\"")
         manifestPlaceholders["appLinksHost"] = appLinksHost
+        manifestPlaceholders["admobAppId"] = admobAppId
     }
 
     signingConfigs {
@@ -146,6 +164,7 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:database"))
     implementation(project(":core:billing"))
+    implementation(project(":core:ads"))
     implementation(project(":domain"))
     implementation(project(":data"))
     implementation(project(":feature:home"))
@@ -158,6 +177,7 @@ dependencies {
     implementation(project(":feature:help"))
     implementation(project(":feature:notifications"))
     implementation(project(":feature:wallet"))
+    implementation(project(":feature:rewards"))
 
     // Per-app locales (S05-A1-03) and the baseline profile installer (S06-A2-02).
     implementation(libs.androidx.appcompat)
@@ -181,4 +201,5 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.config)
 }

@@ -44,14 +44,17 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -73,6 +76,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -91,8 +95,10 @@ import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.Series
+import com.drama.domain.model.UnlockAllQuote
 import com.drama.core.ui.R as CoreR
 
 @Composable
@@ -101,11 +107,17 @@ fun SeriesScreen(
     onPlayEpisode: (episodeId: String) -> Unit,
     onOpenWallet: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenShop: (missingCoins: Int) -> Unit = {},
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(state.openShopMissing) {
+        val missing = state.openShopMissing ?: return@LaunchedEffect
+        viewModel.onShopOpened()
+        onOpenShop(missing)
+    }
     LaunchedEffect(state.notice) {
         val notice = state.notice ?: return@LaunchedEffect
         snackbar.showSnackbar(notice.asString(context))
@@ -134,6 +146,9 @@ fun SeriesScreen(
                     onToggleLike = viewModel::onToggleLike,
                     onShare = { context.shareText(viewModel.onShare()) },
                     onOpenWallet = onOpenWallet,
+                    onUnlockAll = viewModel::onUnlockAllRequested,
+                    onUnlockAllConfirmed = viewModel::onUnlockAllConfirmed,
+                    onUnlockAllDismissed = viewModel::onUnlockAllDismissed,
                 ),
         )
         SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
@@ -149,6 +164,9 @@ data class SeriesActions(
     val onToggleLike: () -> Unit,
     val onShare: () -> Unit,
     val onOpenWallet: () -> Unit = {},
+    val onUnlockAll: () -> Unit = {},
+    val onUnlockAllConfirmed: () -> Unit = {},
+    val onUnlockAllDismissed: () -> Unit = {},
 )
 
 @Composable
@@ -167,6 +185,15 @@ fun SeriesContent(
             state.isLoading -> SeriesSkeleton()
             state.showError -> ErrorState(message = state.error.toMessage().asString(), onRetry = actions.onRetry)
             state.series != null -> SeriesBody(series = state.series, state = state, actions = actions)
+        }
+        if (state.confirmUnlockAll) {
+            state.unlockAllQuote?.let { quote ->
+                UnlockAllConfirmDialog(
+                    quote = quote,
+                    onConfirm = actions.onUnlockAllConfirmed,
+                    onDismiss = actions.onUnlockAllDismissed,
+                )
+            }
         }
         // Drawn over the body but read first by TalkBack: back, share, favourite, then the title and the rest.
         Row(
@@ -306,7 +333,7 @@ private fun SeriesBody(
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.padding(horizontal = DramaSpacing.md)) {
-                MetaRow(series)
+                MetaRow(series, state.genreLabels)
                 Spacer(Modifier.height(DramaSpacing.md))
                 // Wraps the like button under the primary button when the font scale makes the label long.
                 FlowRow(
@@ -325,6 +352,10 @@ private fun SeriesBody(
                         onClick = actions.onToggleLike,
                         modifier = Modifier.align(Alignment.CenterVertically),
                     )
+                }
+                state.unlockAllQuote?.let { quote ->
+                    Spacer(Modifier.height(DramaSpacing.sm))
+                    UnlockAllButton(quote = quote, busy = state.isUnlockingAll, onClick = actions.onUnlockAll)
                 }
                 if (state.isRefreshing) {
                     LinearProgressIndicator(
@@ -420,7 +451,10 @@ private fun PosterHeader(series: Series) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MetaRow(series: Series) {
+private fun MetaRow(
+    series: Series,
+    genreLabels: GenreLabels,
+) {
     val ageLabel = ageRatingLabel(series.ageRating)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
@@ -448,11 +482,78 @@ private fun MetaRow(series: Series) {
     if (series.genres.isNotEmpty()) {
         Spacer(Modifier.height(DramaSpacing.sm))
         Text(
-            text = series.genres.joinToString(" · ") { it.replaceFirstChar(Char::titlecase) },
+            text = genreLabels.labels(series.genres).joinToString(" · "),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/** "Débloquer toute la série" (M-23): quoted price with the discount; the confirmation dialog does the rest. */
+@Composable
+private fun UnlockAllButton(
+    quote: UnlockAllQuote,
+    busy: Boolean,
+    onClick: () -> Unit,
+) {
+    val priceText = pluralStringResource(CoreR.plurals.coin_count, quote.price, quote.price)
+    OutlinedButton(
+        onClick = onClick,
+        enabled = !busy,
+        modifier = Modifier.fillMaxWidth().heightIn(min = DramaSizes.touchTarget),
+    ) {
+        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(DramaSpacing.xs))
+        Text(
+            text =
+                when {
+                    busy -> stringResource(R.string.series_unlock_all_busy)
+                    quote.hasDiscount ->
+                        stringResource(
+                            R.string.series_unlock_all_discount,
+                            quote.lockedCount,
+                            priceText,
+                            quote.discountPercent,
+                        )
+                    else -> stringResource(R.string.series_unlock_all, quote.lockedCount, priceText)
+                },
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun UnlockAllConfirmDialog(
+    quote: UnlockAllQuote,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val priceText = pluralStringResource(CoreR.plurals.coin_count, quote.price, quote.price)
+    val fullText = pluralStringResource(CoreR.plurals.coin_count, quote.fullPrice, quote.fullPrice)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.series_unlock_all_title)) },
+        text = {
+            Text(
+                if (quote.hasDiscount) {
+                    stringResource(
+                        R.string.series_unlock_all_body_discount,
+                        quote.lockedCount,
+                        priceText,
+                        fullText,
+                        quote.discountPercent,
+                    )
+                } else {
+                    stringResource(R.string.series_unlock_all_body, quote.lockedCount, priceText)
+                },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.series_unlock_all_confirm, priceText)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreR.string.action_cancel)) } },
+    )
 }
 
 /** "J'aime" toggle with its count (M-16): a checkbox node for TalkBack, 48 dp tall at the default font scale. */

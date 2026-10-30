@@ -5,8 +5,10 @@ import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.ui.text.UiText
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.SearchResult
 import com.drama.domain.model.Series
+import com.drama.domain.repository.GenresRepository
 import com.drama.domain.repository.SearchRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,7 +49,7 @@ class SearchViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = SearchViewModel(repository, analytics)
+    private fun viewModel() = SearchViewModel(repository, analytics, FakeGenresRepository())
 
     @Test
     fun `typing is debounced into one suggestion call for the last query`() =
@@ -209,4 +211,10 @@ class SearchViewModelTest {
             recent.value = emptyList()
         }
     }
+}
+
+private class FakeGenresRepository : GenresRepository {
+    override val labels: Flow<GenreLabels> = MutableStateFlow(GenreLabels.EMPTY)
+
+    override suspend fun refresh(force: Boolean): GenreLabels = GenreLabels.EMPTY
 }

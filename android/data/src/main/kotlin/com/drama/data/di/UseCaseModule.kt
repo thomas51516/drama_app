@@ -1,8 +1,12 @@
 package com.drama.data.di
 
+import com.drama.core.common.time.Clock
+import com.drama.domain.repository.AdGateway
+import com.drama.domain.repository.AdRepository
 import com.drama.domain.repository.BillingGateway
 import com.drama.domain.repository.CatalogRepository
 import com.drama.domain.repository.PlaybackRepository
+import com.drama.domain.repository.SessionRepository
 import com.drama.domain.repository.ShopRepository
 import com.drama.domain.repository.UnlockRepository
 import com.drama.domain.repository.WatchHistoryRepository
@@ -17,6 +21,7 @@ import com.drama.domain.usecase.DefaultReportProgressUseCase
 import com.drama.domain.usecase.DefaultRestorePurchasesUseCase
 import com.drama.domain.usecase.DefaultStartPlaybackUseCase
 import com.drama.domain.usecase.DefaultUnlockEpisodeUseCase
+import com.drama.domain.usecase.DefaultWatchRewardedAdUseCase
 import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.GetSeriesUseCase
 import com.drama.domain.usecase.ObserveContinueWatchingUseCase
@@ -28,6 +33,7 @@ import com.drama.domain.usecase.RestorePurchasesUseCase
 import com.drama.domain.usecase.StartPlaybackUseCase
 import com.drama.domain.usecase.UnlockEpisodeUseCase
 import com.drama.domain.usecase.VerifyPurchase
+import com.drama.domain.usecase.WatchRewardedAdUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -85,6 +91,14 @@ object UseCaseModule {
         billing: BillingGateway,
         verify: VerifyPurchase,
     ): PurchaseProductUseCase = DefaultPurchaseProductUseCase(billing, verify)
+
+    @Provides
+    fun provideWatchRewardedAd(
+        ads: AdRepository,
+        gateway: AdGateway,
+        session: SessionRepository,
+        clock: Clock,
+    ): WatchRewardedAdUseCase = DefaultWatchRewardedAdUseCase(ads, gateway, session, clock)
 
     @Provides
     fun provideRestorePurchases(

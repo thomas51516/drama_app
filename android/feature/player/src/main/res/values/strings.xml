@@ -80,4 +80,36 @@
     <string name="player_paywall_missing">Il vous manque %1$s</string>
     <string name="player_paywall_recharge">Recharger</string>
     <string name="player_paywall_error">Déblocage impossible, réessayez.</string>
+
+    <!-- Rewarded ad (M-22) -->
+    <plurals name="player_paywall_ad_remaining">
+        <item quantity="one">Regarder une pub (%1$d restante)</item>
+        <item quantity="other">Regarder une pub (%1$d restantes)</item>
+    </plurals>
+    <string name="player_paywall_ad_loading">Pub en cours…</string>
+    <string name="player_paywall_ad_cap">Limite de pubs atteinte</string>
+    <string name="player_paywall_ad_unavailable_short">Pub indisponible</string>
+    <string name="player_ad_cap_reached">Vous avez atteint la limite de pubs du jour.</string>
+    <string name="player_ad_not_eligible">Cet épisode ne peut pas être débloqué par une pub.</string>
+    <string name="player_ad_pending">Pub vue, confirmation en attente : réessayez dans un instant.</string>
+    <string name="player_ad_rejected">La pub n\'a pas été validée par le serveur.</string>
+    <string name="player_ad_unavailable">Aucune pub disponible pour le moment.</string>
+    <string name="player_fake_ad_title">Publicité simulée</string>
+    <string name="player_fake_ad_body">Regardez jusqu\'au bout pour débloquer l\'épisode.</string>
+    <string name="player_fake_ad_countdown">Récompense dans %1$d s</string>
+    <string name="player_fake_ad_collect">Récupérer ma récompense</string>
+    <string name="player_fake_ad_skip">Quitter la pub</string>
+    <string name="player_fake_ad_debug_label" translatable="false">FAKE AD · debug build</string>
+    <!-- Whole-series unlock (M-23) -->
+    <string name="player_paywall_unlock_all">Débloquer toute la série (%1$d ép.) · %2$s</string>
+    <string name="player_paywall_unlock_all_discount">Débloquer toute la série (%1$d ép.) · %2$s · -%3$d %%</string>
+    <string name="player_unlock_all_title">Débloquer toute la série ?</string>
+    <string name="player_unlock_all_body">Les %1$d épisodes verrouillés seront débloqués pour %2$s.</string>
+    <string name="player_unlock_all_body_discount">Les %1$d épisodes verrouillés seront débloqués pour %2$s au lieu de %3$s (-%4$d %%).</string>
+    <string name="player_unlock_all_confirm">Débloquer pour %1$s</string>
+    <!-- Welcome offer (M-24) -->
+    <string name="player_paywall_welcome_offer">Offre de bienvenue : +%1$d %% sur votre premier achat</string>
+    <string name="player_paywall_welcome_offer_until">Offre de bienvenue : +%1$d %% sur votre premier achat · %2$s</string>
+    <!-- Data saver (M-17) -->
+    <string name="player_quality_data_saver">%1$s · éco</string>
 </resources>

@@ -15,4 +15,6 @@ dependencies {
     api(libs.androidx.compose.ui)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    // Custom Tabs for the recharge site (M-34).
+    implementation(libs.androidx.browser)
 }

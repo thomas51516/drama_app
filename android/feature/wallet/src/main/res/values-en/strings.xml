@@ -75,4 +75,25 @@
     <string name="shop_fake_dialog_body">Product %1$s. Choose how the payment ends.</string>
     <string name="shop_fake_success">Succeed</string>
     <string name="shop_fake_pending">Pending</string>
+
+    <string name="wallet_promo_entry">I have a code</string>
+    <string name="wallet_promo_title">Promo code</string>
+    <string name="wallet_promo_label">Your code</string>
+    <string name="wallet_promo_submit">Apply</string>
+    <string name="wallet_promo_submitting">Checking…</string>
+    <string name="wallet_promo_invalid">Invalid code.</string>
+    <string name="wallet_promo_already_used">You already used this code.</string>
+    <string name="wallet_promo_expired">This code has expired.</string>
+    <string name="wallet_promo_exhausted">This code is no longer available.</string>
+    <plurals name="wallet_promo_credited">
+        <item quantity="one">Code accepted: %1$d coin credited</item>
+        <item quantity="other">Code accepted: %1$d coins credited</item>
+    </plurals>
+    <string name="wallet_recharge_mobile_money">Top up with mobile money</string>
+    <string name="shop_recharge_mobile_money">Top up with mobile money</string>
+    <string name="shop_welcome_offer_title">Welcome offer: +%1$d%% coins</string>
+    <string name="shop_welcome_offer_body">On your first purchase.</string>
+    <string name="shop_welcome_offer_until">On your first purchase · ends in %1$s</string>
+    <string name="shop_limited_offer">Limited offer · +%1$d%%</string>
+    <string name="shop_limited_offer_until">Limited offer · +%1$d%% · %2$s</string>
 </resources>

@@ -127,4 +127,10 @@
         <item quantity="other">%1$d achats restaurés</item>
     </plurals>
     <string name="settings_msg_nothing_to_restore">Aucun achat à restaurer</string>
+
+    <!-- Rewards entry (M-40 / M-41) and data saver (M-17) -->
+    <string name="rewards_entry">Récompenses</string>
+    <string name="rewards_entry_hint">Connexion quotidienne et tâches</string>
+    <string name="settings_playback">Lecture</string>
+    <string name="settings_data_saver_hint">Qualité limitée à 540p en données mobiles. Jamais en Wi-Fi.</string>
 </resources>

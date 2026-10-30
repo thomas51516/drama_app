@@ -6,6 +6,7 @@ import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
+import com.drama.core.common.network.FixedNetworkStatus
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.share.HostShareLinkProvider
@@ -165,6 +166,7 @@ class PlayerViewModelTest {
             deviceLocale = FixedDeviceLocale(deviceLanguage, "FR"),
             shareLinks = HostShareLinkProvider("links.drama.example"),
             walletRepository = walletRepository,
+            networkStatus = FixedNetworkStatus(metered = false),
             engineFactory = PlaybackEngineFactory { engine },
         )
 
@@ -730,6 +732,10 @@ class PlayerViewModelTest {
         override suspend fun setQuality(quality: VideoQuality) = state.update { it.copy(quality = quality) }
 
         override suspend fun setSubtitles(mode: SubtitleMode) = state.update { it.copy(subtitles = mode) }
+
+        override val dataSaver: Flow<Boolean> = MutableStateFlow(false)
+
+        override suspend fun setDataSaver(enabled: Boolean) = Unit
     }
 
     private class RecordingAnalytics : AnalyticsTracker {

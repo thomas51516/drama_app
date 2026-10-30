@@ -63,6 +63,7 @@ import com.drama.core.ui.component.PosterCard
 import com.drama.core.ui.text.asString
 import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.Series
 import com.drama.core.ui.R as CoreR
 
@@ -160,7 +161,12 @@ fun SearchContent(
                         .focusRequester(focusRequester),
             )
         }
-        GenreChips(chips = state.genreChips, selected = state.selectedGenre, onSelect = actions.onGenreSelected)
+        GenreChips(
+            chips = state.genreChips,
+            selected = state.selectedGenre,
+            label = state::genreLabel,
+            onSelect = actions.onGenreSelected,
+        )
         if (state.isSearching) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         val errorMessage = state.errorMessage
         when {
@@ -178,6 +184,7 @@ fun SearchContent(
 private fun GenreChips(
     chips: List<String>,
     selected: String?,
+    label: (String) -> String,
     onSelect: (String?) -> Unit,
 ) {
     LazyRow(
@@ -190,7 +197,7 @@ private fun GenreChips(
                 onClick = { onSelect(genre) },
                 label = {
                     Text(
-                        genre.replaceFirstChar(Char::titlecase),
+                        label(genre),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -323,7 +330,7 @@ private fun EmptyResults(
         Text(
             text =
                 if (genre != null) {
-                    stringResource(R.string.search_no_results_genre, state.query, genre)
+                    stringResource(R.string.search_no_results_genre, state.query, state.genreLabel(genre))
                 } else {
                     stringResource(R.string.search_no_results, state.query)
                 },
@@ -349,6 +356,7 @@ private fun ResultsGrid(
     state: SearchUiState,
     onOpenSeries: (String) -> Unit,
 ) {
+    val genreLabels = state.genreLabels
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = GRID_MIN_CELL),
@@ -357,7 +365,7 @@ private fun ResultsGrid(
             verticalArrangement = Arrangement.spacedBy(DramaSpacing.md),
             modifier = Modifier.fillMaxSize(),
         ) {
-            items(state.results, key = { it.id }) { series -> ResultCard(series, onOpenSeries) }
+            items(state.results, key = { it.id }) { series -> ResultCard(series, genreLabels, onOpenSeries) }
         }
         if (state.searched && state.results.isNotEmpty()) {
             Text(
@@ -376,6 +384,7 @@ private fun ResultsGrid(
 @Composable
 private fun ResultCard(
     series: Series,
+    genreLabels: GenreLabels,
     onOpenSeries: (String) -> Unit,
 ) {
     val episodeCount = series.episodeCount
@@ -385,7 +394,7 @@ private fun ResultCard(
         subtitle =
             listOfNotNull(
                 pluralStringResource(CoreR.plurals.episode_count_short, episodeCount, episodeCount),
-                series.genres.firstOrNull()?.replaceFirstChar(Char::titlecase),
+                series.genres.firstOrNull()?.let(genreLabels::label),
             ).joinToString(" · "),
         onClick = { onOpenSeries(series.id) },
         width = GRID_MIN_CELL,

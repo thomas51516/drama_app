@@ -26,6 +26,10 @@ import javax.inject.Singleton
  * FCM registration (S06-A1-02). `PUT /me/devices/push` is idempotent (upsert by token) but is only sent when
  * the (token, user) pair differs from the last successful registration, so a cold start costs no request.
  * A 404/501 from a backend that has not shipped the endpoint yet is logged and treated as "retry later".
+ *
+ * DEF-011: the startup sync and `onNewToken` race at first launch. Both go through one mutex and both compare the
+ * (token, user) pair with the persisted registration, so the second caller finds the first one's result and sends
+ * nothing: one `PUT` per (token, user) per process, whatever the order of the callers.
  */
 @Singleton
 class DefaultPushRepository
@@ -53,7 +57,8 @@ class DefaultPushRepository
             return register(token, force)
         }
 
-        override suspend fun onNewToken(token: String): AppResult<Unit> = register(token, force = true)
+        /** A refreshed token differs from the registered one and registers; the same token again is a no-op. */
+        override suspend fun onNewToken(token: String): AppResult<Unit> = register(token, force = false)
 
         override suspend fun unregister(): AppResult<Unit> =
             mutex.withLock {

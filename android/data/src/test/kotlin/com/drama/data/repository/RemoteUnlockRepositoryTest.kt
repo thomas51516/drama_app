@@ -6,6 +6,7 @@ import com.drama.core.common.result.AppResult
 import com.drama.core.common.time.Clock
 import com.drama.core.network.ApiErrorMapper
 import com.drama.core.network.api.AuthApi
+import com.drama.core.network.api.OffersApi
 import com.drama.core.network.api.WalletApi
 import com.drama.core.network.auth.AuthTokens
 import com.drama.core.network.auth.SessionManager
@@ -105,6 +106,7 @@ class RemoteUnlockRepositoryTest {
         repository =
             RemoteUnlockRepository(
                 api = retrofit.create(WalletApi::class.java),
+                offersApi = retrofit.create(OffersApi::class.java),
                 keys = keys,
                 walletStore = walletStore,
                 catalogLocal = catalogLocal,

@@ -3,6 +3,7 @@ package com.drama.feature.player.ui
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,6 +39,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -76,6 +78,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
+import com.drama.core.ads.ActivityAdHost
 import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.ui.component.ErrorMessage
 import com.drama.core.ui.component.LoadingIndicator
@@ -84,7 +87,10 @@ import com.drama.core.ui.text.UiText
 import com.drama.core.ui.text.asString
 import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
+import com.drama.core.ui.window.SecureWindow
+import com.drama.domain.model.AdUiHost
 import com.drama.domain.model.Episode
+import com.drama.domain.model.SecureScreenRules
 import com.drama.feature.player.EndOfEpisode
 import com.drama.feature.player.PageState
 import com.drama.feature.player.PaywallEvent
@@ -123,6 +129,11 @@ fun PlayerScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val player by viewModel.activePlayer.collectAsStateWithLifecycle()
     val paywall by paywallViewModel.uiState.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
+    val adHost: AdUiHost? = remember(activity) { activity?.let(::ActivityAdHost) }
+
+    // M-18: screenshots and recordings are blocked as soon as the episode on screen is not free.
+    SecureWindow(secure = SecureScreenRules.shouldSecure(state.currentEpisode?.access))
 
     // Pause when the screen leaves the foreground, resume when it comes back (release happens in onCleared).
     LifecycleStartEffect(Unit) {
@@ -137,6 +148,7 @@ fun PlayerScreen(
         paywallViewModel.events.collect { event ->
             when (event) {
                 is PaywallEvent.Unlocked -> viewModel.onEpisodeUnlocked(event.episodeId)
+                is PaywallEvent.SeriesUnlocked -> viewModel.onSeriesUnlocked(event.currentEpisodeId, event.episodeIds)
                 is PaywallEvent.OpenShop -> onOpenShop(event.tab, event.missingCoins)
             }
         }
@@ -153,7 +165,12 @@ fun PlayerScreen(
                 onRecharge = paywallViewModel::onRecharge,
                 onAutoUnlockChanged = paywallViewModel::onAutoUnlockChanged,
                 onDismiss = viewModel::onPaywallDismissed,
+                onWatchAd = { adHost?.let(paywallViewModel::onWatchAd) },
+                onUnlockAll = paywallViewModel::onUnlockAllRequested,
+                onUnlockAllConfirmed = paywallViewModel::onUnlockAllConfirmed,
+                onUnlockAllDismissed = paywallViewModel::onUnlockAllDismissed,
             ),
+        onFakeAdFinished = paywallViewModel::onFakeAdFinished,
         actions =
             PlayerActions(
                 onPageSettled = viewModel::onPageSettled,
@@ -189,6 +206,7 @@ fun PlayerContent(
     modifier: Modifier = Modifier,
     paywall: PaywallUiState? = null,
     paywallActions: PaywallActions? = null,
+    onFakeAdFinished: (Boolean) -> Unit = {},
 ) {
     KeepScreenOn(enabled = state.isPlaying)
     ImmersiveSystemBars()
@@ -288,6 +306,17 @@ fun PlayerContent(
                 actions = paywallActions,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
+            if (paywall.confirmUnlockAll) {
+                paywall.unlockAll?.let { quote ->
+                    UnlockAllDialog(
+                        quote = quote,
+                        onConfirm = paywallActions.onUnlockAllConfirmed,
+                        onDismiss = paywallActions.onUnlockAllDismissed,
+                    )
+                }
+            }
+            // M-22 (debug): the simulated rewarded ad covers everything until its countdown ends.
+            paywall.fakeAd?.let { prompt -> FakeAdOverlay(prompt = prompt, onFinished = onFakeAdFinished) }
         }
     }
 }

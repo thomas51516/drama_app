@@ -9,6 +9,7 @@ import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
+import com.drama.core.common.network.NetworkStatusProvider
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.share.ShareLinkProvider
@@ -19,6 +20,7 @@ import com.drama.core.player.engine.PlaybackEngineFactory
 import com.drama.core.player.engine.PlaybackEvent
 import com.drama.core.player.engine.TrackSelectionMapper
 import com.drama.core.ui.text.UiText
+import com.drama.domain.model.DataSaverRules
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.EpisodeNavigation
@@ -41,6 +43,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -82,6 +85,7 @@ class PlayerViewModel
         private val deviceLocale: DeviceLocaleProvider,
         private val shareLinks: ShareLinkProvider,
         private val walletRepository: WalletRepository,
+        private val networkStatus: NetworkStatusProvider,
         engineFactory: PlaybackEngineFactory,
     ) : ViewModel() {
         private val seriesId: String = checkNotNull(savedStateHandle[PlayerRoute.ARG_SERIES_ID])
@@ -121,8 +125,20 @@ class PlayerViewModel
             viewModelScope.launch { engine.position.collect { pos -> uiStateFlow.update { it.copy(position = pos) } } }
             viewModelScope.launch { engine.tracks.collect(::onTracksChanged) }
             viewModelScope.launch { playerSettings.settings.collect(::applySettings) }
+            // M-17: the cap follows the data saver switch and the network type, re-applied on every change.
+            viewModelScope.launch {
+                combine(playerSettings.dataSaver, networkStatus.isMetered) { saver, metered -> saver to metered }
+                    .collect { (saver, metered) ->
+                        dataSaverEnabled = saver
+                        metered.also { networkMetered = it }
+                        applyQualityCap(uiStateFlow.value.settings.quality, force = true)
+                    }
+            }
             load()
         }
+
+        private var dataSaverEnabled = false
+        private var networkMetered = false
 
         // --- settings (M-13 / M-14) ---
 
@@ -150,10 +166,23 @@ class PlayerViewModel
             if (previous.quality != settings.quality ||
                 !settingsApplied
             ) {
-                engine.setMaxVideoShortSide(settings.quality.maxHeight)
+                applyQualityCap(settings.quality, force = true)
             }
             settingsApplied = true
             applySubtitles()
+        }
+
+        /** Engine cap = manual choice lowered by the data saver on a metered network (M-17). */
+        private fun applyQualityCap(
+            preferred: VideoQuality,
+            force: Boolean,
+        ) {
+            val effective = DataSaverRules.effectiveQuality(preferred, dataSaverEnabled, networkMetered)
+            val capping = effective != preferred
+            if (force || capping != uiStateFlow.value.dataSaverCapping) {
+                engine.setMaxVideoShortSide(effective.maxHeight)
+                uiStateFlow.update { it.copy(dataSaverCapping = capping) }
+            }
         }
 
         /** Resolves the text track for the current episode from the mode, what `/play` offers and the device language. */
@@ -480,6 +509,32 @@ class PlayerViewModel
                 paywallSuppressedIndex = target.index
                 startAt(target.index)
             }
+        }
+
+        /** The paywall unlocked the whole series (M-23): every page is forgotten and the current one plays. */
+        fun onSeriesUnlocked(
+            currentEpisodeId: String,
+            episodeIds: List<String>,
+        ) {
+            val state = uiStateFlow.value
+            val unlocked = episodeIds.toSet()
+            uiStateFlow.update {
+                it.copy(
+                    pages = it.pages.filterKeys { index -> it.episodes.getOrNull(index)?.id !in unlocked },
+                    episodes =
+                        it.episodes.map { e ->
+                            if (e.id in unlocked &&
+                                e.access == EpisodeAccess.LOCKED
+                            ) {
+                                e.copy(access = EpisodeAccess.UNLOCKED)
+                            } else {
+                                e
+                            }
+                        },
+                )
+            }
+            logger.i(TAG, "series unlocked: ${unlocked.size} episode(s)")
+            onEpisodeUnlocked(currentEpisodeId.takeIf { it in unlocked } ?: state.currentEpisode?.id ?: return)
         }
 
         /** The paywall unlocked [episodeId] (M-21): resolve the page again, it now plays. */

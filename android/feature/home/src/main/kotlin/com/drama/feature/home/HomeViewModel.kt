@@ -3,13 +3,19 @@ package com.drama.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.drama.core.common.result.AppError
+import com.drama.core.common.result.AppResult
 import com.drama.core.common.result.Resource
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.ContinueWatchingItem
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.HomeBanner
 import com.drama.domain.model.HomeContent
 import com.drama.domain.model.HomeItem
 import com.drama.domain.model.HomeRowType
+import com.drama.domain.model.RankingPeriod
+import com.drama.domain.model.Rankings
+import com.drama.domain.repository.GenresRepository
+import com.drama.domain.repository.RankingsRepository
 import com.drama.domain.usecase.ObserveContinueWatchingUseCase
 import com.drama.domain.usecase.ObserveHomeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,6 +48,8 @@ data class HomeRowUi(
     val title: UiText,
     val type: HomeRowType,
     val cards: List<HomeCard>,
+    /** True for the "Top du jour" row (M-04): the title opens the rankings screen. */
+    val opensRankings: Boolean = false,
 )
 
 data class HomeUiState(
@@ -63,6 +71,8 @@ class HomeViewModel
     constructor(
         private val observeHome: ObserveHomeUseCase,
         private val observeContinueWatching: ObserveContinueWatchingUseCase,
+        private val rankings: RankingsRepository,
+        private val genres: GenresRepository,
     ) : ViewModel() {
         private val uiStateFlow = MutableStateFlow(HomeUiState())
         val uiState: StateFlow<HomeUiState> = uiStateFlow.asStateFlow()
@@ -70,6 +80,8 @@ class HomeViewModel
         private var collectJob: Job? = null
         private var serverContent: HomeContent? = null
         private var localContinue: List<ContinueWatchingItem> = emptyList()
+        private var topOfDay: Rankings? = null
+        private var genreLabels: GenreLabels = GenreLabels.EMPTY
 
         init {
             viewModelScope.launch {
@@ -78,11 +90,34 @@ class HomeViewModel
                     publish()
                 }
             }
+            viewModelScope.launch {
+                genres.labels.collect { labels ->
+                    genreLabels = labels
+                    publish()
+                }
+            }
+            viewModelScope.launch { genres.refresh() }
             load()
         }
 
         /** (Re)starts the stale-while-revalidate collection; used by the retry button and pull-to-refresh. */
-        fun refresh() = load()
+        fun refresh() {
+            load()
+            viewModelScope.launch { genres.refresh(force = true) }
+        }
+
+        /** "Top du jour" (M-04): `GET /rankings?period=day`; absent (404/501, offline) the row is simply not shown. */
+        private fun loadTopOfDay() {
+            viewModelScope.launch {
+                when (val result = rankings.rankings(RankingPeriod.DAY)) {
+                    is AppResult.Success -> {
+                        topOfDay = result.value
+                        publish()
+                    }
+                    is AppResult.Failure -> Unit
+                }
+            }
+        }
 
         private var languageTag: String? = null
 
@@ -98,6 +133,7 @@ class HomeViewModel
         }
 
         private fun load() {
+            loadTopOfDay()
             collectJob?.cancel()
             collectJob =
                 viewModelScope.launch {
@@ -124,7 +160,7 @@ class HomeViewModel
         private fun publish() {
             val content = serverContent
             if (content == null && localContinue.isEmpty()) return
-            val rows = buildRows(content, localContinue)
+            val rows = buildRows(content, localContinue, topOfDay, genreLabels)
             uiStateFlow.update {
                 it.copy(
                     banners = content?.banners.orEmpty(),
@@ -138,16 +174,22 @@ class HomeViewModel
         companion object {
             const val CONTINUE_WATCHING_LIMIT = 10
             const val CONTINUE_WATCHING_KEY = "continue_watching"
+            const val TOP_OF_DAY_KEY = "top_of_day"
+            const val TOP_OF_DAY_LIMIT = 10
             val CONTINUE_WATCHING_TITLE: UiText = UiText.Res(R.string.home_continue_watching)
+            val TOP_OF_DAY_TITLE: UiText = UiText.Res(R.string.home_top_of_day)
 
             /**
              * Rows shown on screen: empty rows are dropped; the continue-watching row merges the local history
              * (fresher, newest first) with the server row (synced across devices), de-duplicated by series, and is
-             * placed first when the server did not position one. Completed local entries are kept out.
+             * placed first when the server did not position one. Completed local entries are kept out. The
+             * "Top du jour" row (M-04) follows the continue-watching row, before the configured rows.
              */
             fun buildRows(
                 content: HomeContent?,
                 local: List<ContinueWatchingItem>,
+                topOfDay: Rankings? = null,
+                genreLabels: GenreLabels = GenreLabels.EMPTY,
             ): List<HomeRowUi> {
                 val serverRows = content?.rows.orEmpty()
                 val serverContinue = serverRows.firstOrNull { it.type == HomeRowType.CONTINUE_WATCHING }
@@ -161,7 +203,7 @@ class HomeViewModel
                         ?.items
                         .orEmpty()
                         .filter { item -> localCards.none { it.seriesId == item.series.id } }
-                        .map { it.toCard(continueWatching = true) }
+                        .map { it.toCard(continueWatching = true, genreLabels = genreLabels) }
                 val continueCards = localCards + serverCards
                 val continueRow =
                     continueCards.takeIf { it.isNotEmpty() }?.let {
@@ -172,13 +214,45 @@ class HomeViewModel
                             cards = it,
                         )
                     }
+                val topRow =
+                    topOfDay?.items?.take(TOP_OF_DAY_LIMIT)?.takeIf { it.isNotEmpty() }?.let { items ->
+                        HomeRowUi(
+                            key = TOP_OF_DAY_KEY,
+                            title = TOP_OF_DAY_TITLE,
+                            type = HomeRowType.TRENDING,
+                            cards =
+                                items.map { item ->
+                                    HomeCard(
+                                        seriesId = item.series.id,
+                                        title = item.series.title,
+                                        posterUrl = item.series.posterVerticalUrl,
+                                        subtitle =
+                                            item.series.genres.firstOrNull()?.let { genre ->
+                                                UiText.Plural(
+                                                    R.plurals.home_card_meta,
+                                                    item.series.episodeCount,
+                                                    listOf(item.series.episodeCount, genreLabels.label(genre)),
+                                                )
+                                            }
+                                                ?: UiText.Plural(
+                                                    CoreR.plurals.episode_count_short,
+                                                    item.series.episodeCount,
+                                                ),
+                                        badge = UiText.of(R.string.home_rank_badge, item.rank),
+                                    )
+                                },
+                            opensRankings = true,
+                        )
+                    }
                 val result = mutableListOf<HomeRowUi>()
                 var continueInserted = false
+                if (topRow != null && continueRow == null) result += topRow
                 serverRows.forEach { row ->
                     if (row.type == HomeRowType.CONTINUE_WATCHING) {
                         if (continueRow != null && !continueInserted) {
                             result += continueRow
                             continueInserted = true
+                            topRow?.let { result += it }
                         }
                         return@forEach
                     }
@@ -188,10 +262,13 @@ class HomeViewModel
                             key = row.key,
                             title = UiText.Raw(row.title),
                             type = row.type,
-                            cards = row.items.map { it.toCard(continueWatching = false) },
+                            cards = row.items.map { it.toCard(continueWatching = false, genreLabels = genreLabels) },
                         )
                 }
-                if (continueRow != null && !continueInserted) result.add(0, continueRow)
+                if (continueRow != null && !continueInserted) {
+                    result.add(0, continueRow)
+                    topRow?.let { result.add(1, it) }
+                }
                 return result
             }
 
@@ -206,9 +283,12 @@ class HomeViewModel
                     resumeEpisodeId = episodeId,
                 )
 
-            private fun HomeItem.toCard(continueWatching: Boolean): HomeCard {
+            private fun HomeItem.toCard(
+                continueWatching: Boolean,
+                genreLabels: GenreLabels,
+            ): HomeCard {
                 val resume = episode?.takeIf { continueWatching }
-                val genre = series.genres.firstOrNull()?.replaceFirstChar(Char::titlecase)
+                val genre = series.genres.firstOrNull()?.let(genreLabels::label)
                 val count = series.episodeCount
                 return HomeCard(
                     seriesId = series.id,

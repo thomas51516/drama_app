@@ -7,7 +7,9 @@ import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.ui.text.UiText
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.Series
+import com.drama.domain.repository.GenresRepository
 import com.drama.domain.repository.SearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -33,13 +35,19 @@ data class SearchUiState(
     val searched: Boolean = false,
     val isSearching: Boolean = false,
     val error: AppError? = null,
+    /** Localised genre labels (DEF-012): the server's list when fetched, the capitalised keys otherwise. */
+    val genreLabels: GenreLabels = GenreLabels.EMPTY,
 ) {
     val isIdle: Boolean get() = query.trim().length < SearchRepository.MIN_QUERY_LENGTH
     val showEmpty: Boolean get() = searched && !isSearching && error == null && results.isEmpty()
     val showSuggestions: Boolean get() = !isIdle && !searched && suggestions.isNotEmpty()
 
-    /** Genres offered as chips: the fixed catalogue genres plus whatever the results carry. */
-    val genreChips: List<String> get() = (DEFAULT_GENRES + results.flatMap { it.genres }).distinct()
+    /** Genre keys offered as chips: the server's genres (DEF-012) or the fixed defaults, plus what the results carry. */
+    val genreChips: List<String>
+        get() = (genreLabels.keys.ifEmpty { DEFAULT_GENRES } + results.flatMap { it.genres }).distinct()
+
+    /** Label shown on a chip for [genre]. */
+    fun genreLabel(genre: String): String = genreLabels.label(genre)
 
     /** User-facing message for [error], resolved by the UI (S05-A2-03). */
     val errorMessage: UiText?
@@ -75,6 +83,7 @@ class SearchViewModel
     constructor(
         private val repository: SearchRepository,
         private val analytics: AnalyticsTracker,
+        private val genres: GenresRepository,
     ) : ViewModel() {
         private val uiStateFlow = MutableStateFlow(SearchUiState())
         val uiState: StateFlow<SearchUiState> = uiStateFlow.asStateFlow()
@@ -86,6 +95,12 @@ class SearchViewModel
             viewModelScope.launch {
                 repository.recentSearches.collect { recent -> uiStateFlow.update { it.copy(recentSearches = recent) } }
             }
+            viewModelScope.launch {
+                genres.labels.collect { labels ->
+                    uiStateFlow.update { it.copy(genreLabels = labels) }
+                }
+            }
+            viewModelScope.launch { genres.refresh() }
             viewModelScope.launch {
                 queryInput
                     .debounce(DEBOUNCE_MS)

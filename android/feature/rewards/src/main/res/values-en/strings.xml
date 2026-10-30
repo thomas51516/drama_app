@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rewards_title">Rewards</string>
+    <string name="rewards_checkin_heading">Daily check-in</string>
+    <string name="rewards_checkin_hint">Come back every day: the bonus grows for 7 days.</string>
+    <string name="rewards_day_short">D%1$d</string>
+    <string name="rewards_day_cd">Day %1$d, %2$s, %3$s</string>
+    <string name="rewards_day_claimed">claimed</string>
+    <string name="rewards_day_today">today</string>
+    <string name="rewards_day_upcoming">upcoming</string>
+    <string name="rewards_claim">Claim</string>
+    <string name="rewards_claim_coins">Claim %1$s</string>
+    <string name="rewards_claiming">One moment…</string>
+    <string name="rewards_claimed_today">Today\'s reward claimed</string>
+    <string name="rewards_come_back_tomorrow">Come back tomorrow for %1$s.</string>
+    <plurals name="rewards_msg_claimed">
+        <item quantity="one">+%1$d bonus coin credited</item>
+        <item quantity="other">+%1$d bonus coins credited</item>
+    </plurals>
+    <string name="rewards_msg_already_claimed">Already claimed today, come back tomorrow.</string>
+    <string name="rewards_msg_task_not_claimable">This task is not complete yet.</string>
+    <string name="rewards_error_load">The rewards could not be loaded.</string>
+    <string name="rewards_error_claim">Claim failed, try again.</string>
+    <string name="rewards_tasks_heading">Tasks</string>
+    <string name="rewards_tasks_empty">No task right now.</string>
+    <string name="rewards_task_progress">%1$d/%2$d · %3$s</string>
+    <string name="rewards_task_claimed">Claimed</string>
+    <string name="rewards_task_locked">Locked</string>
+    <string name="rewards_task_in_progress">In progress</string>
+    <string name="rewards_banner_title">Daily reward</string>
+    <string name="rewards_banner_subtitle">Day %1$d · %2$s to claim</string>
+    <string name="rewards_banner_claimed">Day %1$d claimed, see you tomorrow!</string>
+</resources>

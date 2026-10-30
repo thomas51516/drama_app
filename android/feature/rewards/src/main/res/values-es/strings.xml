@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rewards_title">Recompensas</string>
+    <string name="rewards_checkin_heading">Conexión diaria</string>
+    <string name="rewards_checkin_hint">Vuelve cada día: el bono crece durante 7 días.</string>
+    <string name="rewards_day_short">D%1$d</string>
+    <string name="rewards_day_cd">Día %1$d, %2$s, %3$s</string>
+    <string name="rewards_day_claimed">reclamado</string>
+    <string name="rewards_day_today">hoy</string>
+    <string name="rewards_day_upcoming">próximo</string>
+    <string name="rewards_claim">Reclamar</string>
+    <string name="rewards_claim_coins">Reclamar %1$s</string>
+    <string name="rewards_claiming">Un momento…</string>
+    <string name="rewards_claimed_today">Recompensa de hoy reclamada</string>
+    <string name="rewards_come_back_tomorrow">Vuelve mañana por %1$s.</string>
+    <plurals name="rewards_msg_claimed">
+        <item quantity="one">+%1$d moneda extra acreditada</item>
+        <item quantity="other">+%1$d monedas extra acreditadas</item>
+    </plurals>
+    <string name="rewards_msg_already_claimed">Ya reclamado hoy, vuelve mañana.</string>
+    <string name="rewards_msg_task_not_claimable">Esta tarea aún no está completa.</string>
+    <string name="rewards_error_load">No se pudieron cargar las recompensas.</string>
+    <string name="rewards_error_claim">No se pudo reclamar, inténtalo de nuevo.</string>
+    <string name="rewards_tasks_heading">Tareas</string>
+    <string name="rewards_tasks_empty">Ninguna tarea por ahora.</string>
+    <string name="rewards_task_progress">%1$d/%2$d · %3$s</string>
+    <string name="rewards_task_claimed">Reclamado</string>
+    <string name="rewards_task_locked">Bloqueada</string>
+    <string name="rewards_task_in_progress">En curso</string>
+    <string name="rewards_banner_title">Recompensa del día</string>
+    <string name="rewards_banner_subtitle">Día %1$d · %2$s por reclamar</string>
+    <string name="rewards_banner_claimed">Día %1$d reclamado, ¡hasta mañana!</string>
+</resources>

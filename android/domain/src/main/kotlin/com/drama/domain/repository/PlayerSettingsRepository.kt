@@ -14,4 +14,9 @@ interface PlayerSettingsRepository {
     suspend fun setQuality(quality: VideoQuality)
 
     suspend fun setSubtitles(mode: SubtitleMode)
+
+    /** Data saver (M-17): cap the rendition at 540p on metered networks. */
+    val dataSaver: Flow<Boolean>
+
+    suspend fun setDataSaver(enabled: Boolean)
 }

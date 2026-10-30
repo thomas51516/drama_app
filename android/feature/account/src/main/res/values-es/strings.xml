@@ -118,4 +118,9 @@
         <item quantity="other">%1$d compras restauradas</item>
     </plurals>
     <string name="settings_msg_nothing_to_restore">No hay compras que restaurar</string>
+
+    <string name="rewards_entry">Recompensas</string>
+    <string name="rewards_entry_hint">Conexión diaria y tareas</string>
+    <string name="settings_playback">Reproducción</string>
+    <string name="settings_data_saver_hint">Calidad limitada a 540p con datos móviles. Nunca en Wi-Fi.</string>
 </resources>

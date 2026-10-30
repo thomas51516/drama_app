@@ -118,4 +118,9 @@
         <item quantity="other">%1$d purchases restored</item>
     </plurals>
     <string name="settings_msg_nothing_to_restore">No purchase to restore</string>
+
+    <string name="rewards_entry">Rewards</string>
+    <string name="rewards_entry_hint">Daily check-in and tasks</string>
+    <string name="settings_playback">Playback</string>
+    <string name="settings_data_saver_hint">Quality capped at 540p on mobile data. Never on Wi-Fi.</string>
 </resources>

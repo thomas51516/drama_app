@@ -12,6 +12,8 @@ android {
 
 dependencies {
     implementation(project(":core:player"))
+    // ActivityAdHost only; the ad network stays behind the domain AdGateway port (M-22).
+    implementation(project(":core:ads"))
 
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.ui.compose)

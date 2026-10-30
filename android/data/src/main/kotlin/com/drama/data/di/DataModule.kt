@@ -14,10 +14,15 @@ import com.drama.data.repository.DefaultNotificationsRepository
 import com.drama.data.repository.DefaultPushRepository
 import com.drama.data.repository.DefaultSessionRepository
 import com.drama.data.repository.DefaultShopRepository
+import com.drama.data.repository.RemoteAdRepository
 import com.drama.data.repository.RemoteCatalogRepository
 import com.drama.data.repository.RemoteEventsRepository
 import com.drama.data.repository.RemoteFeedRepository
+import com.drama.data.repository.RemoteGenresRepository
+import com.drama.data.repository.RemoteOffersRepository
 import com.drama.data.repository.RemotePlaybackRepository
+import com.drama.data.repository.RemoteRankingsRepository
+import com.drama.data.repository.RemoteRewardsRepository
 import com.drama.data.repository.RemoteSearchRepository
 import com.drama.data.repository.RemoteUnlockRepository
 import com.drama.data.repository.RemoteWalletRepository
@@ -28,15 +33,20 @@ import com.drama.data.session.DataStoreSessionStore
 import com.drama.data.session.InstallationDeviceIdProvider
 import com.drama.data.wallet.DataStoreUnlockKeyStore
 import com.drama.domain.repository.AccountRepository
+import com.drama.domain.repository.AdRepository
 import com.drama.domain.repository.CatalogRepository
 import com.drama.domain.repository.EventsRepository
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.FeedRepository
+import com.drama.domain.repository.GenresRepository
 import com.drama.domain.repository.HelpRepository
 import com.drama.domain.repository.NotificationsRepository
+import com.drama.domain.repository.OffersRepository
 import com.drama.domain.repository.PlaybackRepository
 import com.drama.domain.repository.PlayerSettingsRepository
 import com.drama.domain.repository.PushRepository
+import com.drama.domain.repository.RankingsRepository
+import com.drama.domain.repository.RewardsRepository
 import com.drama.domain.repository.SearchRepository
 import com.drama.domain.repository.SessionRepository
 import com.drama.domain.repository.ShopRepository
@@ -131,6 +141,26 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindShopRepository(impl: DefaultShopRepository): ShopRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRewardsRepository(impl: RemoteRewardsRepository): RewardsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAdRepository(impl: RemoteAdRepository): AdRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindOffersRepository(impl: RemoteOffersRepository): OffersRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRankingsRepository(impl: RemoteRankingsRepository): RankingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindGenresRepository(impl: RemoteGenresRepository): GenresRepository
 
     companion object {
         /** `-PdramaUseFakeCatalog=true` (debug) swaps in the Sprint 1 fake catalogue; the API otherwise. */

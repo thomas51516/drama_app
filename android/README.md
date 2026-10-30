@@ -652,3 +652,83 @@ sans compte de service : AAB signé, pas de distribution. Avec les deux : envoi 
   `DefaultAccountRepositoryTest` : connexion, rattachement, déconnexion), `:feature:account`
   (`AccountViewModelTest` : OTP, minuteur de renvoi, e-mail, message de rattachement, déconnexion).
 - Android Lint : `./gradlew lintDebug` (bloquant sur les erreurs).
+
+## Sprint 7 : récompenses, publicité récompensée, offres, classements, économie de données (S08-A1-01/02, S09-A1-03, S09-A2-01/02, S10-A1-01/02)
+
+Contrat : `docs/api/contract-v1.5-sprint7.md`. Les intégrations externes (AdMob, Firebase Remote Config) passent
+par un port avec une implémentation simulée en dev (`FAKE_ADS`) et une implémentation réelle prête à configurer.
+
+### Pub récompensée (M-22)
+
+- Port `domain.repository.AdGateway` (`showRewardedAd`, `fakeAd`, `finishFakeAd`) ; `:core:ads` fournit
+  `FakeAdGateway` (debug, `BuildConfig.FAKE_ADS`, override `-PdramaFakeAds=true|false`) et `AdMobAdGateway`
+  (Play Services Ads, `RewardedAd` avec `ServerSideVerificationOptions.userId`/`customData`). Le flux :
+  `GET /ads/eligibility` (bouton actif + nombre restant) → `POST /ads/sessions` → la régie (ou l'écran plein
+  écran simulé 5 s `FakeAdOverlay`, fermeture seulement après le décompte) → sondage `GET /ads/sessions/{id}`
+  pendant 15 s max (`DefaultWatchRewardedAdUseCase`). Le client ne crédite jamais lui-même : seul le callback
+  SSV serveur débloque. En mode simulé, l'app rejoue elle-même ce callback (`AdRepository.simulateServerReward`,
+  `FakeAdSsv` : HMAC-SHA256 avec `BuildConfig.AD_SSV_FAKE_SECRET`, jamais compilé en release) — secret source :
+  `-PdramaAdSsvFakeSecret`, `drama.adSsvFakeSecret` dans `local.properties`, ou `DRAMA_AD_SSV_FAKE_SECRET`.
+  AdMob : identifiant d'application dans le manifeste (placeholder `admobAppId`, `-PdramaAdmobAppId`, défaut =
+  identifiant d'exemple Google). Événement `ad_reward`.
+
+### Connexion quotidienne et tâches (M-40, M-41)
+
+- `domain.repository.RewardsRepository` (`checkInStatus`, `claimCheckIn`, `tasks`, `claimTask`) sur
+  `GET/POST /rewards/checkin`, `GET /rewards/tasks`, `POST /rewards/tasks/{id}/claim`. Nouveau module
+  `:feature:rewards` : bandeau « Récompense du jour » sur l'accueil (`CheckInBanner`, visible seulement une fois
+  le serveur répondu) et écran complet (Profil → « Récompenses ») avec bande de 7 jours (réclamé / aujourd'hui /
+  à venir, animation de « pop » simple sans confettis) et liste de tâches à barres de progression. Clés
+  d'idempotence tenues en mémoire par (check-in du jour, tâche). Événements `checkin`, `task_claim`.
+
+### Déblocage de série entière, offres et codes promo (M-23, M-24)
+
+- `UnlockRepository.quoteUnlockAll` / `unlockAll` (`GET /series/{id}/unlock-all/quote`,
+  `POST /series/{id}/unlock-all`, idempotent comme le déblocage simple). Bouton « Débloquer toute la série » sur
+  la fiche série et dans le paywall, avec le prix, la remise et une boîte de confirmation. `OffersRepository`
+  (`GET /offers`, `POST /promo/redeem`) : bandeau d'offre de bienvenue avec compte à rebours (boutique, paywall),
+  badges d'offres limitées sur les packs, entrée « J'ai un code » dans le portefeuille. Événements `unlock_all`,
+  `promo_redeem`.
+
+### Classements (M-04) et genres localisés (DEF-012)
+
+- `RankingsRepository` (`GET /rankings?period&genre`) : rangée « Top du jour » sur l'accueil (titre = lien) et
+  écran « Classements » (`:feature:home`) avec onglets de période et puces de genre. `GenresRepository`
+  (`GET /genres?lang`) : une résolution par langue d'application, mise en cache en mémoire, utilisée pour les
+  puces de recherche, la fiche série et les libellés de genre de l'accueil et des classements (corrige DEF-012).
+
+### Économie de données (M-17) et protection des épisodes payants (M-18)
+
+- `DataSaverRules.effectiveQuality` (`:domain`, pur Kotlin) : la qualité manuelle n'est abaissée à 540p que si
+  l'interrupteur « Économiseur de données » (Paramètres) est actif **et** le réseau est détecté facturé
+  (`core.common.network.NetworkStatusProvider`, implémenté par `ConnectivityNetworkStatus` sur
+  `ConnectivityManager.NetworkCapabilities.NET_CAPABILITY_NOT_METERED`) ; jamais de plafond en Wi-Fi. Appliqué au
+  lecteur (`PlayerViewModel`, chip de qualité suffixé « éco ») et au flux « Pour vous ». `SecureScreenRules` :
+  `core.ui.window.SecureWindow` pose `FLAG_SECURE` sur la fenêtre dès que l'épisode affiché n'est pas gratuit
+  (lecteur et flux), levé sinon ; aucune lecture audio en arrière-plan (le lecteur se met en pause quand l'écran
+  quitte le premier plan, comportement déjà en place depuis le sprint 2).
+
+### Recharge mobile money derrière Remote Config (M-34)
+
+- `domain.repository.RemoteConfigRepository` (`flags: Flow<RemoteFlags>`, `refresh()`) : clés Firebase Remote
+  Config `mobile_money_link_enabled` (booléen, défaut `false`) et `recharge_url` ; `FirebaseRemoteConfigRepository`
+  (fetch-and-activate à chaque démarrage, intervalle minimal 0 en debug) avec repli `StaticRemoteConfigRepository`
+  sans Firebase. Défauts de build : `-PdramaMobileMoneyLinkEnabled=true -PdramaRechargeUrl=http://<IP>:3001/`.
+  Quand le drapeau est actif, la boutique et le portefeuille affichent « Recharger par mobile money », ouvert
+  dans un onglet personnalisé (`core.ui.browser.openCustomTab`, Custom Tabs ; repli navigateur système). Pas de
+  jeton de session transmis pour l'instant (le site de recharge utilise sa propre authentification publique,
+  contrat v1.5 §« Recharge mobile money »).
+
+### Défaut DEF-011 — jeton push enregistré deux fois
+
+`DefaultPushRepository.onNewToken` ne force plus un enregistrement systématique : il réutilise la même
+comparaison (jeton, utilisateur) que `syncToken`, sous le même mutex. Le démarrage (`AppStartup.syncToken`) et
+`onNewToken` partagent donc une seule décision, quelle que soit leur ordre d'arrivée : un seul `PUT
+/me/devices/push` par (jeton, utilisateur) et par processus.
+
+### Attention KSP / KDoc
+
+Un commentaire KDoc contenant littéralement `/*` (par exemple `` `/ads/*` ``) ouvre un commentaire de bloc imbriqué
+et casse silencieusement la résolution Dagger/Hilt de **tout le module** (erreurs KSP qui semblent sans rapport,
+« tel type ne peut pas être résolu » sur une classe sans lien apparent). Déjà documenté plus haut (section
+Conventions de build) ; vécu en pratique sur `RemoteAdRepository` au sprint 7 — jamais écrire `/*` dans un KDoc.

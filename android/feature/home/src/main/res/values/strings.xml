@@ -9,4 +9,18 @@
         <item quantity="one">%1$d ép. · %2$s</item>
         <item quantity="other">%1$d ép. · %2$s</item>
     </plurals>
+
+    <!-- Rankings (M-04) -->
+    <string name="home_top_of_day">Top du jour</string>
+    <string name="home_rank_badge">#%1$d</string>
+    <string name="rankings_title">Classements</string>
+    <string name="rankings_period_day">Jour</string>
+    <string name="rankings_period_week">Semaine</string>
+    <string name="rankings_period_all">Toujours</string>
+    <string name="rankings_empty">Aucun classement pour le moment.</string>
+    <string name="rankings_error_load">Impossible de charger les classements.</string>
+    <plurals name="rankings_viewers">
+        <item quantity="one">%1$d spectateur</item>
+        <item quantity="other">%1$d spectateurs</item>
+    </plurals>
 </resources>

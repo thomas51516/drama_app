@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Rewards screen (M-40 / M-41) -->
+    <string name="rewards_title">Récompenses</string>
+    <string name="rewards_checkin_heading">Connexion quotidienne</string>
+    <string name="rewards_checkin_hint">Revenez chaque jour : le bonus augmente pendant 7 jours.</string>
+    <string name="rewards_day_short">J%1$d</string>
+    <string name="rewards_day_cd">Jour %1$d, %2$s, %3$s</string>
+    <string name="rewards_day_claimed">réclamé</string>
+    <string name="rewards_day_today">aujourd\'hui</string>
+    <string name="rewards_day_upcoming">à venir</string>
+    <string name="rewards_claim">Réclamer</string>
+    <string name="rewards_claim_coins">Réclamer %1$s</string>
+    <string name="rewards_claiming">Un instant…</string>
+    <string name="rewards_claimed_today">Récompense du jour réclamée</string>
+    <string name="rewards_come_back_tomorrow">Revenez demain pour %1$s.</string>
+    <plurals name="rewards_msg_claimed">
+        <item quantity="one">+%1$d pièce bonus créditée</item>
+        <item quantity="other">+%1$d pièces bonus créditées</item>
+    </plurals>
+    <string name="rewards_msg_already_claimed">Déjà réclamé aujourd\'hui, revenez demain.</string>
+    <string name="rewards_msg_task_not_claimable">Cette tâche n\'est pas encore terminée.</string>
+    <string name="rewards_error_load">Impossible de charger les récompenses.</string>
+    <string name="rewards_error_claim">Réclamation impossible, réessayez.</string>
+    <string name="rewards_tasks_heading">Tâches</string>
+    <string name="rewards_tasks_empty">Aucune tâche pour le moment.</string>
+    <string name="rewards_task_progress">%1$d/%2$d · %3$s</string>
+    <string name="rewards_task_claimed">Réclamé</string>
+    <string name="rewards_task_locked">Verrouillée</string>
+    <string name="rewards_task_in_progress">En cours</string>
+
+    <!-- Home banner -->
+    <string name="rewards_banner_title">Récompense du jour</string>
+    <string name="rewards_banner_subtitle">Jour %1$d · %2$s à réclamer</string>
+    <string name="rewards_banner_claimed">Jour %1$d réclamé, à demain !</string>
+</resources>

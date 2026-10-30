@@ -4,6 +4,7 @@ import androidx.media3.common.Player
 import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.logging.NoOpLogger
+import com.drama.core.common.network.FixedNetworkStatus
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.time.Clock
@@ -20,13 +21,17 @@ import com.drama.domain.model.FeedPage
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.PlaybackSource
+import com.drama.domain.model.PlayerSettings
 import com.drama.domain.model.Series
 import com.drama.domain.model.SignedUrlPolicy
 import com.drama.domain.model.StreamFormat
+import com.drama.domain.model.SubtitleMode
+import com.drama.domain.model.VideoQuality
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.FeedRepository
 import com.drama.domain.repository.PlaybackRepository
+import com.drama.domain.repository.PlayerSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -130,6 +135,8 @@ class FeedViewModelTest {
             clock = clock,
             logger = NoOpLogger,
             engineFactory = PlaybackEngineFactory { engine },
+            playerSettings = FakePlayerSettingsRepository(),
+            networkStatus = FixedNetworkStatus(metered = false),
         )
 
     @Test
@@ -435,4 +442,17 @@ class FeedViewModelTest {
 
         override fun release() = Unit
     }
+}
+
+private class FakePlayerSettingsRepository : PlayerSettingsRepository {
+    override val settings: Flow<PlayerSettings> = MutableStateFlow(PlayerSettings())
+    override val dataSaver: Flow<Boolean> = MutableStateFlow(false)
+
+    override suspend fun setSpeed(speed: Float) = Unit
+
+    override suspend fun setQuality(quality: VideoQuality) = Unit
+
+    override suspend fun setSubtitles(mode: SubtitleMode) = Unit
+
+    override suspend fun setDataSaver(enabled: Boolean) = Unit
 }

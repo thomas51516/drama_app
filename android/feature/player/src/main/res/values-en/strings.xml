@@ -68,4 +68,31 @@
     <string name="player_paywall_missing">You are %1$s short</string>
     <string name="player_paywall_recharge">Top up</string>
     <string name="player_paywall_error">Unlock failed, try again.</string>
+
+    <plurals name="player_paywall_ad_remaining">
+        <item quantity="one">Watch an ad (%1$d left)</item>
+        <item quantity="other">Watch an ad (%1$d left)</item>
+    </plurals>
+    <string name="player_paywall_ad_loading">Ad playing…</string>
+    <string name="player_paywall_ad_cap">Ad limit reached</string>
+    <string name="player_paywall_ad_unavailable_short">Ad unavailable</string>
+    <string name="player_ad_cap_reached">You reached today\'s ad limit.</string>
+    <string name="player_ad_not_eligible">This episode cannot be unlocked with an ad.</string>
+    <string name="player_ad_pending">Ad watched, confirmation pending: try again in a moment.</string>
+    <string name="player_ad_rejected">The server did not validate the ad.</string>
+    <string name="player_ad_unavailable">No ad available right now.</string>
+    <string name="player_fake_ad_title">Simulated ad</string>
+    <string name="player_fake_ad_body">Watch until the end to unlock the episode.</string>
+    <string name="player_fake_ad_countdown">Reward in %1$d s</string>
+    <string name="player_fake_ad_collect">Collect my reward</string>
+    <string name="player_fake_ad_skip">Leave the ad</string>
+    <string name="player_paywall_unlock_all">Unlock the whole series (%1$d ep.) · %2$s</string>
+    <string name="player_paywall_unlock_all_discount">Unlock the whole series (%1$d ep.) · %2$s · -%3$d%%</string>
+    <string name="player_unlock_all_title">Unlock the whole series?</string>
+    <string name="player_unlock_all_body">The %1$d locked episodes will be unlocked for %2$s.</string>
+    <string name="player_unlock_all_body_discount">The %1$d locked episodes will be unlocked for %2$s instead of %3$s (-%4$d%%).</string>
+    <string name="player_unlock_all_confirm">Unlock for %1$s</string>
+    <string name="player_paywall_welcome_offer">Welcome offer: +%1$d%% on your first purchase</string>
+    <string name="player_paywall_welcome_offer_until">Welcome offer: +%1$d%% on your first purchase · %2$s</string>
+    <string name="player_quality_data_saver">%1$s · saver</string>
 </resources>

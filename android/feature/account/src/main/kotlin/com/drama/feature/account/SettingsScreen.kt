@@ -54,6 +54,7 @@ data class SettingsActions(
     val onRequestPermission: () -> Unit,
     val onOpenSystemSettings: () -> Unit,
     val onRestorePurchases: () -> Unit = {},
+    val onDataSaverChanged: (Boolean) -> Unit = {},
 )
 
 /** Settings step of the Profil tab (M-52): language, notification preferences, system permission. */
@@ -99,6 +100,7 @@ fun SettingsStep(
                 onRequestPermission = viewModel::onRequestPermission,
                 onOpenSystemSettings = { context.openNotificationSettings() },
                 onRestorePurchases = viewModel::onRestorePurchases,
+                onDataSaverChanged = viewModel::onDataSaverChanged,
             ),
         modifier = modifier,
     )
@@ -198,13 +200,15 @@ fun SettingsContent(
             )
         }
         if (state.showDataSaver) {
-            // M-17 placeholder: the switch exists but the feature ships later; hidden by default.
+            Spacer(Modifier.height(DramaSpacing.lg))
+            SectionTitle(stringResource(R.string.settings_playback))
+            Spacer(Modifier.height(DramaSpacing.xs))
+            // M-17: capped at 540p on mobile data; Wi-Fi is never capped.
             PreferenceSwitch(
                 title = stringResource(R.string.settings_data_saver),
-                hint = null,
-                checked = false,
-                enabled = false,
-                onCheckedChange = {},
+                hint = stringResource(R.string.settings_data_saver_hint),
+                checked = state.dataSaverEnabled,
+                onCheckedChange = actions.onDataSaverChanged,
             )
         }
     }

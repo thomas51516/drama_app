@@ -54,10 +54,14 @@ data class SettingsActions(
 
 /** Localised quality label: the manual cap (`540p`) or `player_quality_auto` plus the live rendition when known. */
 @Composable
-internal fun PlayerUiState.qualityText(): String =
-    manualQualityLabel
-        ?: playingShortSide?.let { stringResource(R.string.player_quality_auto_live, it) }
-        ?: stringResource(R.string.player_quality_auto)
+internal fun PlayerUiState.qualityText(): String {
+    val base =
+        manualQualityLabel
+            ?: playingShortSide?.let { stringResource(R.string.player_quality_auto_live, it) }
+            ?: stringResource(R.string.player_quality_auto)
+    // M-17: the data saver is lowering the rendition on a metered network.
+    return if (dataSaverCapping) stringResource(R.string.player_quality_data_saver, base) else base
+}
 
 /** Localised subtitle label: the active language code (`FR`) or `player_subtitles_off`. */
 @Composable

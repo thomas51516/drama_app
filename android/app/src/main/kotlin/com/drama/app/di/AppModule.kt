@@ -7,8 +7,11 @@ import com.drama.app.analytics.LogcatAnalyticsTracker
 import com.drama.app.locale.AndroidDeviceLocale
 import com.drama.app.locale.AppCompatLocaleController
 import com.drama.app.logging.AndroidLogger
+import com.drama.app.network.ConnectivityNetworkStatus
 import com.drama.app.push.BuildConfigAppInfo
 import com.drama.app.push.FirebasePushTokenProvider
+import com.drama.app.remoteconfig.FirebaseRemoteConfigRepository
+import com.drama.app.remoteconfig.StaticRemoteConfigRepository
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.auth.AuthConfig
 import com.drama.core.common.coroutines.DefaultDispatcherProvider
@@ -16,12 +19,15 @@ import com.drama.core.common.coroutines.DispatcherProvider
 import com.drama.core.common.locale.AppLocaleController
 import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
+import com.drama.core.common.network.NetworkStatusProvider
 import com.drama.core.common.push.AppInfoProvider
 import com.drama.core.common.push.PushTokenProvider
 import com.drama.core.common.share.HostShareLinkProvider
 import com.drama.core.common.share.ShareLinkProvider
 import com.drama.core.common.time.Clock
 import com.drama.core.common.time.SystemClock
+import com.drama.domain.model.RemoteFlags
+import com.drama.domain.repository.RemoteConfigRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -71,6 +77,35 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAuthConfig(): AuthConfig = AuthConfig(googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID)
+
+    /** Metered-network signal for the data saver (M-17). */
+    @Provides
+    @Singleton
+    fun provideNetworkStatus(impl: ConnectivityNetworkStatus): NetworkStatusProvider = impl
+
+    /**
+     * Remote Config (M-34): Firebase when configured, otherwise the BuildConfig defaults
+     * (`-PdramaMobileMoneyLinkEnabled`, `-PdramaRechargeUrl`) so the link can be exercised on a dev build.
+     */
+    @Provides
+    @Singleton
+    fun provideRemoteConfig(
+        @ApplicationContext context: Context,
+        logger: Logger,
+    ): RemoteConfigRepository {
+        val defaults =
+            RemoteFlags(
+                mobileMoneyLinkEnabled = BuildConfig.MOBILE_MONEY_LINK_ENABLED_DEFAULT,
+                rechargeUrl = BuildConfig.RECHARGE_URL_DEFAULT,
+            )
+        val firebase =
+            if (BuildConfig.FIREBASE_CONFIGURED) {
+                FirebaseRemoteConfigRepository.createIfAvailable(context, defaults, BuildConfig.DEBUG, logger)
+            } else {
+                null
+            }
+        return firebase ?: StaticRemoteConfigRepository(defaults)
+    }
 
     /** Firebase when google-services.json was present at build time and the SDK initialised; Logcat otherwise. */
     @Provides

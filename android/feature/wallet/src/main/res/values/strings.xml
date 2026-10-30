@@ -79,4 +79,28 @@
     <string name="shop_fake_dialog_body">Produit %1$s. Choisissez le résultat du paiement.</string>
     <string name="shop_fake_success">Réussir</string>
     <string name="shop_fake_pending">En attente</string>
+
+    <!-- Promo codes (M-24) -->
+    <string name="wallet_promo_entry">J\'ai un code</string>
+    <string name="wallet_promo_title">Code promo</string>
+    <string name="wallet_promo_label">Votre code</string>
+    <string name="wallet_promo_submit">Valider</string>
+    <string name="wallet_promo_submitting">Vérification…</string>
+    <string name="wallet_promo_invalid">Code invalide.</string>
+    <string name="wallet_promo_already_used">Vous avez déjà utilisé ce code.</string>
+    <string name="wallet_promo_expired">Ce code a expiré.</string>
+    <string name="wallet_promo_exhausted">Ce code n\'est plus disponible.</string>
+    <plurals name="wallet_promo_credited">
+        <item quantity="one">Code accepté : %1$d pièce créditée</item>
+        <item quantity="other">Code accepté : %1$d pièces créditées</item>
+    </plurals>
+    <!-- Mobile money (M-34) -->
+    <string name="wallet_recharge_mobile_money">Recharger par mobile money</string>
+    <string name="shop_recharge_mobile_money">Recharger par mobile money</string>
+    <!-- Offers (M-24) -->
+    <string name="shop_welcome_offer_title">Offre de bienvenue : +%1$d %% de pièces</string>
+    <string name="shop_welcome_offer_body">Sur votre premier achat.</string>
+    <string name="shop_welcome_offer_until">Sur votre premier achat · expire dans %1$s</string>
+    <string name="shop_limited_offer">Offre limitée · +%1$d %%</string>
+    <string name="shop_limited_offer_until">Offre limitée · +%1$d %% · %2$s</string>
 </resources>

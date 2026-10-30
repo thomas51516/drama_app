@@ -71,4 +71,31 @@
     <string name="player_paywall_missing">Te faltan %1$s</string>
     <string name="player_paywall_recharge">Recargar</string>
     <string name="player_paywall_error">No se pudo desbloquear, inténtalo de nuevo.</string>
+
+    <plurals name="player_paywall_ad_remaining">
+        <item quantity="one">Ver un anuncio (queda %1$d)</item>
+        <item quantity="other">Ver un anuncio (quedan %1$d)</item>
+    </plurals>
+    <string name="player_paywall_ad_loading">Anuncio en curso…</string>
+    <string name="player_paywall_ad_cap">Límite de anuncios alcanzado</string>
+    <string name="player_paywall_ad_unavailable_short">Anuncio no disponible</string>
+    <string name="player_ad_cap_reached">Has alcanzado el límite de anuncios de hoy.</string>
+    <string name="player_ad_not_eligible">Este episodio no se puede desbloquear con un anuncio.</string>
+    <string name="player_ad_pending">Anuncio visto, confirmación pendiente: inténtalo en un momento.</string>
+    <string name="player_ad_rejected">El servidor no validó el anuncio.</string>
+    <string name="player_ad_unavailable">No hay anuncios disponibles por ahora.</string>
+    <string name="player_fake_ad_title">Anuncio simulado</string>
+    <string name="player_fake_ad_body">Míralo hasta el final para desbloquear el episodio.</string>
+    <string name="player_fake_ad_countdown">Recompensa en %1$d s</string>
+    <string name="player_fake_ad_collect">Recoger mi recompensa</string>
+    <string name="player_fake_ad_skip">Salir del anuncio</string>
+    <string name="player_paywall_unlock_all">Desbloquear toda la serie (%1$d ep.) · %2$s</string>
+    <string name="player_paywall_unlock_all_discount">Desbloquear toda la serie (%1$d ep.) · %2$s · -%3$d %%</string>
+    <string name="player_unlock_all_title">¿Desbloquear toda la serie?</string>
+    <string name="player_unlock_all_body">Los %1$d episodios bloqueados se desbloquearán por %2$s.</string>
+    <string name="player_unlock_all_body_discount">Los %1$d episodios bloqueados se desbloquearán por %2$s en lugar de %3$s (-%4$d %%).</string>
+    <string name="player_unlock_all_confirm">Desbloquear por %1$s</string>
+    <string name="player_paywall_welcome_offer">Oferta de bienvenida: +%1$d %% en tu primera compra</string>
+    <string name="player_paywall_welcome_offer_until">Oferta de bienvenida: +%1$d %% en tu primera compra · %2$s</string>
+    <string name="player_quality_data_saver">%1$s · ahorro</string>
 </resources>

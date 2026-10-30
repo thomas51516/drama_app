@@ -33,6 +33,7 @@
                 <data android:scheme="drama" android:host="player" />
                 <data android:scheme="drama" android:host="notifications" />
                 <data android:scheme="drama" android:host="help" />
+                <data android:scheme="drama" android:host="rewards" />
             </intent-filter>
             <!-- https://${appLinksHost}/s/{seriesId}: verified App Link (S04-A1-03). The host comes from the Gradle
                  property dramaAppLinksHost and must publish /.well-known/assetlinks.json (see android/README.md). -->
@@ -73,6 +74,15 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="new_episodes" />
+
+        <!-- Google Mobile Ads (M-22): application id from the Gradle property dramaAdmobAppId (sample id by default).
+             Initialisation is deferred to the first rewarded ad request (AdMobAdGateway). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
     </application>
 
 </manifest>

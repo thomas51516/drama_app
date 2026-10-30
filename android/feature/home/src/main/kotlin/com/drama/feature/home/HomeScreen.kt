@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -24,6 +25,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -72,6 +74,9 @@ fun HomeScreen(
     onResumeEpisode: (seriesId: String, episodeId: String) -> Unit,
     onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenRankings: () -> Unit = {},
+    /** Slot above the rows for the check-in banner (M-40), provided by :app from :feature:rewards. */
+    banner: @Composable () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,6 +92,8 @@ fun HomeScreen(
         onRefresh = viewModel::refresh,
         onOpenSearch = onOpenSearch,
         modifier = modifier,
+        onOpenRankings = onOpenRankings,
+        banner = banner,
     )
 }
 
@@ -99,6 +106,8 @@ fun HomeContent(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenSearch: () -> Unit = {},
+    onOpenRankings: () -> Unit = {},
+    banner: @Composable () -> Unit = {},
 ) {
     Column(
         modifier =
@@ -130,6 +139,7 @@ fun HomeContent(
                                 )
                             }
                         }
+                        item(key = "checkin") { banner() }
                         if (state.banners.isNotEmpty()) {
                             item(key = "banners") {
                                 BannerCarousel(banners = state.banners, onBannerClick = { onOpenSeries(it.seriesId) })
@@ -147,6 +157,7 @@ fun HomeContent(
                         items(state.rows, key = { it.key }) { row ->
                             HomeRowSection(
                                 row = row,
+                                onTitleClick = if (row.opensRankings) onOpenRankings else null,
                                 onCardClick = { card ->
                                     val episodeId = card.resumeEpisodeId
                                     if (episodeId != null) {
@@ -317,17 +328,48 @@ private fun BannerCard(
 private fun HomeRowSection(
     row: HomeRowUi,
     onCardClick: (HomeCard) -> Unit,
+    onTitleClick: (() -> Unit)? = null,
 ) {
     Column {
-        Text(
-            text = row.title.asString(),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier =
-                Modifier
-                    .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm)
-                    .semantics { heading() },
-        )
+        if (onTitleClick != null) {
+            // M-04: the row title opens the rankings screen (period and genre selectors).
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onTitleClick, role = Role.Button)
+                        .heightIn(min = DramaSizes.touchTarget)
+                        .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = row.title.asString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                Text(
+                    text = stringResource(CoreR.string.action_see_all),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else {
+            Text(
+                text = row.title.asString(),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier =
+                    Modifier
+                        .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm)
+                        .semantics { heading() },
+            )
+        }
         LazyRow(
             contentPadding = PaddingValues(horizontal = DramaSpacing.md),
             horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm + DramaSpacing.xs),

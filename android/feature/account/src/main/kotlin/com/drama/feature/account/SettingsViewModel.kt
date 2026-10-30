@@ -11,6 +11,7 @@ import com.drama.core.common.result.AppResult
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.NotificationPreferences
 import com.drama.domain.repository.AccountRepository
+import com.drama.domain.repository.PlayerSettingsRepository
 import com.drama.domain.repository.PushRepository
 import com.drama.domain.usecase.RestorePurchasesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,8 +41,9 @@ data class SettingsUiState(
     val notificationsAllowed: Boolean? = null,
     /** One-shot: the UI should launch the POST_NOTIFICATIONS request. */
     val requestPermission: Boolean = false,
-    /** Hidden until M-17 ships; kept in the state so the switch can be enabled by flag later. */
-    val showDataSaver: Boolean = false,
+    /** Data saver (M-17): cap the video at 540p on mobile data. */
+    val showDataSaver: Boolean = true,
+    val dataSaverEnabled: Boolean = false,
     /** "Restaurer les achats" in progress (M-31). */
     val isRestoring: Boolean = false,
     val message: UiText? = null,
@@ -68,6 +70,7 @@ class SettingsViewModel
         deviceLocale: DeviceLocaleProvider,
         private val logger: Logger,
         private val restorePurchases: RestorePurchasesUseCase,
+        private val playerSettings: PlayerSettingsRepository,
     ) : ViewModel() {
         private val uiStateFlow =
             MutableStateFlow(
@@ -96,6 +99,17 @@ class SettingsViewModel
                 val result = account.refreshProfile()
                 if (result is AppResult.Failure) logger.w(TAG, "GET /me failed in settings: ${result.error}")
             }
+            viewModelScope.launch {
+                playerSettings.dataSaver.collect { enabled ->
+                    uiStateFlow.update { it.copy(dataSaverEnabled = enabled) }
+                }
+            }
+        }
+
+        /** Data saver switch (M-17): persisted on the device, applied by the player on metered networks. */
+        fun onDataSaverChanged(enabled: Boolean) {
+            uiStateFlow.update { it.copy(dataSaverEnabled = enabled) }
+            viewModelScope.launch { playerSettings.setDataSaver(enabled) }
         }
 
         /** Applies the language to the app right away (activities are recreated) then persists it server-side. */

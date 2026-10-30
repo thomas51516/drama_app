@@ -8,4 +8,17 @@
         <item quantity="many">%1$d ep. · %2$s</item>
         <item quantity="other">%1$d ep. · %2$s</item>
     </plurals>
+
+    <string name="home_top_of_day">Top del día</string>
+    <string name="home_rank_badge">#%1$d</string>
+    <string name="rankings_title">Clasificaciones</string>
+    <string name="rankings_period_day">Hoy</string>
+    <string name="rankings_period_week">Semana</string>
+    <string name="rankings_period_all">Siempre</string>
+    <string name="rankings_empty">Todavía no hay clasificación.</string>
+    <string name="rankings_error_load">No se pudieron cargar las clasificaciones.</string>
+    <plurals name="rankings_viewers">
+        <item quantity="one">%1$d espectador</item>
+        <item quantity="other">%1$d espectadores</item>
+    </plurals>
 </resources>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rewards_title">Recompensas</string>
+    <string name="rewards_checkin_heading">Check-in diário</string>
+    <string name="rewards_checkin_hint">Volte todos os dias: o bónus aumenta durante 7 dias.</string>
+    <string name="rewards_day_short">D%1$d</string>
+    <string name="rewards_day_cd">Dia %1$d, %2$s, %3$s</string>
+    <string name="rewards_day_claimed">resgatado</string>
+    <string name="rewards_day_today">hoje</string>
+    <string name="rewards_day_upcoming">a seguir</string>
+    <string name="rewards_claim">Resgatar</string>
+    <string name="rewards_claim_coins">Resgatar %1$s</string>
+    <string name="rewards_claiming">Um momento…</string>
+    <string name="rewards_claimed_today">Recompensa de hoje resgatada</string>
+    <string name="rewards_come_back_tomorrow">Volte amanhã para %1$s.</string>
+    <plurals name="rewards_msg_claimed">
+        <item quantity="one">+%1$d moeda bónus creditada</item>
+        <item quantity="other">+%1$d moedas bónus creditadas</item>
+    </plurals>
+    <string name="rewards_msg_already_claimed">Já resgatado hoje, volte amanhã.</string>
+    <string name="rewards_msg_task_not_claimable">Esta tarefa ainda não está concluída.</string>
+    <string name="rewards_error_load">Não foi possível carregar as recompensas.</string>
+    <string name="rewards_error_claim">Não foi possível resgatar, tente novamente.</string>
+    <string name="rewards_tasks_heading">Tarefas</string>
+    <string name="rewards_tasks_empty">Nenhuma tarefa por agora.</string>
+    <string name="rewards_task_progress">%1$d/%2$d · %3$s</string>
+    <string name="rewards_task_claimed">Resgatado</string>
+    <string name="rewards_task_locked">Bloqueada</string>
+    <string name="rewards_task_in_progress">Em curso</string>
+    <string name="rewards_banner_title">Recompensa do dia</string>
+    <string name="rewards_banner_subtitle">Dia %1$d · %2$s a resgatar</string>
+    <string name="rewards_banner_claimed">Dia %1$d resgatado, até amanhã!</string>
+</resources>

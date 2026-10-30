@@ -11,10 +11,13 @@ import com.drama.core.common.share.ShareLinkProvider
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.ResumeTarget
 import com.drama.domain.model.Series
+import com.drama.domain.model.UnlockAllQuote
 import com.drama.domain.repository.FavoritesRepository
+import com.drama.domain.repository.GenresRepository
 import com.drama.domain.repository.PushRepository
 import com.drama.domain.repository.UnlockRepository
 import com.drama.domain.repository.WalletRepository
@@ -49,8 +52,17 @@ data class SeriesUiState(
     val requestNotificationPermission: Boolean = false,
     /** Coin balance for the header chip (M-32); null until `GET /wallet` answered. */
     val coinBalance: Int? = null,
+    /** Whole-series offer (M-23); null while there is nothing locked or the quote failed. */
+    val unlockAllQuote: UnlockAllQuote? = null,
+    val isUnlockingAll: Boolean = false,
+    val confirmUnlockAll: Boolean = false,
+    /** Localised genre labels (DEF-012); keys are shown capitalised until they arrive. */
+    val genreLabels: GenreLabels = GenreLabels.EMPTY,
+    /** One-shot: open the shop with this many coins missing for the whole-series unlock (M-23, 402). */
+    val openShopMissing: Int? = null,
 ) {
     val showError: Boolean get() = error != null && series == null
+    val canUnlockAll: Boolean get() = unlockAllQuote != null && unlockAllQuote.lockedCount > 0 && !isUnlockingAll
 
     /** Label of the primary button: "Regarder" for a fresh series, "Reprendre l'épisode N" afterwards. */
     val primaryActionLabel: UiText
@@ -78,6 +90,7 @@ class SeriesViewModel
         private val push: PushRepository,
         private val wallet: WalletRepository,
         private val unlocks: UnlockRepository,
+        private val genres: GenresRepository,
     ) : ViewModel() {
         val seriesId: String = checkNotNull(savedStateHandle[SeriesRoute.ARG_SERIES_ID])
 
@@ -109,8 +122,90 @@ class SeriesViewModel
             }
             // Balance chip and unlock statuses come from the server (M-21/M-32); failures leave the cache as is.
             viewModelScope.launch { wallet.refresh() }
-            viewModelScope.launch { unlocks.refreshUnlocks(seriesId) }
+            viewModelScope.launch {
+                unlocks.refreshUnlocks(seriesId)
+                loadQuote()
+            }
+            viewModelScope.launch {
+                genres.labels.collect { labels ->
+                    uiStateFlow.update { it.copy(genreLabels = labels) }
+                }
+            }
+            viewModelScope.launch { genres.refresh() }
             load()
+        }
+
+        /** "Débloquer toute la série" (M-23): confirmation dialog first. */
+        fun onUnlockAllRequested() {
+            if (uiStateFlow.value.canUnlockAll) uiStateFlow.update { it.copy(confirmUnlockAll = true) }
+        }
+
+        fun onUnlockAllDismissed() = uiStateFlow.update { it.copy(confirmUnlockAll = false) }
+
+        /** Confirmed: `POST /series/{id}/unlock-all`; a 402 sends the viewer to the shop with the missing amount. */
+        fun onUnlockAllConfirmed() {
+            val state = uiStateFlow.value
+            val quote = state.unlockAllQuote ?: return
+            if (state.isUnlockingAll) return
+            val balance = state.coinBalance
+            if (balance != null && balance < quote.price) {
+                uiStateFlow.update { it.copy(confirmUnlockAll = false, openShopMissing = quote.price - balance) }
+                return
+            }
+            uiStateFlow.update { it.copy(confirmUnlockAll = false, isUnlockingAll = true) }
+            viewModelScope.launch {
+                when (val result = unlocks.unlockAll(seriesId)) {
+                    is AppResult.Success -> {
+                        val unlocked = result.value
+                        analytics.track(
+                            AnalyticsEvent.UnlockAll(seriesId, unlocked.unlockedEpisodeIds.size, unlocked.charged),
+                        )
+                        uiStateFlow.update {
+                            it.copy(
+                                isUnlockingAll = false,
+                                unlockAllQuote = null,
+                                notice =
+                                    UiText.Plural(
+                                        R.plurals.series_notice_unlocked_all,
+                                        unlocked.unlockedEpisodeIds.size,
+                                    ),
+                            )
+                        }
+                    }
+                    is AppResult.Failure -> {
+                        val error = result.error
+                        if (error is AppError.InsufficientCoins) {
+                            uiStateFlow.update {
+                                it.copy(
+                                    isUnlockingAll = false,
+                                    openShopMissing =
+                                        error.missing ?: (quote.price - (error.balance ?: 0)).coerceAtLeast(0),
+                                )
+                            }
+                        } else {
+                            uiStateFlow.update {
+                                it.copy(
+                                    isUnlockingAll = false,
+                                    notice = UiText.Res(R.string.series_notice_unlock_all_failed),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /** The UI navigated to the shop for the missing coins. */
+        fun onShopOpened() = uiStateFlow.update { it.copy(openShopMissing = null) }
+
+        private fun loadQuote() {
+            viewModelScope.launch {
+                when (val quote = unlocks.quoteUnlockAll(seriesId)) {
+                    is AppResult.Success ->
+                        uiStateFlow.update { it.copy(unlockAllQuote = quote.value.takeIf { q -> q.lockedCount > 0 }) }
+                    is AppResult.Failure -> uiStateFlow.update { it.copy(unlockAllQuote = null) }
+                }
+            }
         }
 
         fun retry() = load()

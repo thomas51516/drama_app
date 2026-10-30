@@ -10,9 +10,13 @@ import com.drama.core.ui.text.UiText
 import com.drama.domain.model.AccountDeletion
 import com.drama.domain.model.NotificationPreferences
 import com.drama.domain.model.OtpChallenge
+import com.drama.domain.model.PlayerSettings
 import com.drama.domain.model.SignInResult
+import com.drama.domain.model.SubtitleMode
 import com.drama.domain.model.UserProfile
+import com.drama.domain.model.VideoQuality
 import com.drama.domain.repository.AccountRepository
+import com.drama.domain.repository.PlayerSettingsRepository
 import com.drama.domain.repository.PushRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,6 +56,7 @@ class SettingsViewModelTest {
             deviceLocale = FixedDeviceLocale(deviceLanguage, "CI"),
             logger = NoOpLogger,
             restorePurchases = { AppResult.Success(emptyList()) },
+            playerSettings = FakePlayerSettingsRepository(),
         )
 
     @Test
@@ -252,4 +257,17 @@ class SettingsViewModelTest {
 
         override suspend fun deleteAccount(): AppResult<AccountDeletion> = error("unused")
     }
+}
+
+private class FakePlayerSettingsRepository : PlayerSettingsRepository {
+    override val settings: Flow<PlayerSettings> = MutableStateFlow(PlayerSettings())
+    override val dataSaver: Flow<Boolean> = MutableStateFlow(false)
+
+    override suspend fun setSpeed(speed: Float) = Unit
+
+    override suspend fun setQuality(quality: VideoQuality) = Unit
+
+    override suspend fun setSubtitles(mode: SubtitleMode) = Unit
+
+    override suspend fun setDataSaver(enabled: Boolean) = Unit
 }

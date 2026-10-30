@@ -41,4 +41,18 @@
     <string name="series_error_not_found">Cette série n\'est plus disponible.</string>
     <string name="series_error_load">Impossible de charger la série.</string>
     <string name="series_balance_cd">Solde : %1$s. Ouvrir le portefeuille</string>
+
+    <!-- Whole-series unlock (M-23) -->
+    <string name="series_unlock_all">Débloquer toute la série (%1$d ép.) · %2$s</string>
+    <string name="series_unlock_all_discount">Débloquer toute la série (%1$d ép.) · %2$s · -%3$d %%</string>
+    <string name="series_unlock_all_busy">Déblocage…</string>
+    <string name="series_unlock_all_title">Débloquer toute la série ?</string>
+    <string name="series_unlock_all_body">Les %1$d épisodes verrouillés seront débloqués pour %2$s.</string>
+    <string name="series_unlock_all_body_discount">Les %1$d épisodes verrouillés seront débloqués pour %2$s au lieu de %3$s (-%4$d %%).</string>
+    <string name="series_unlock_all_confirm">Débloquer pour %1$s</string>
+    <plurals name="series_notice_unlocked_all">
+        <item quantity="one">%1$d épisode débloqué</item>
+        <item quantity="other">%1$d épisodes débloqués</item>
+    </plurals>
+    <string name="series_notice_unlock_all_failed">Déblocage impossible, réessayez.</string>
 </resources>

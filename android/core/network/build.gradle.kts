@@ -1,8 +1,24 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.drama.android.library)
     alias(libs.plugins.drama.hilt)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// S08-A1-01: HMAC secret of the backend's `fake` ad SSV verifier (AD_SSV_FAKE_SECRET), so a debug build can play the
+// SSV callback of the simulated ad itself. Sources: -PdramaAdSsvFakeSecret, `drama.adSsvFakeSecret` in
+// android/local.properties (gitignored), env DRAMA_AD_SSV_FAKE_SECRET. Never compiled into release builds.
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+val adSsvFakeSecret =
+    (project.findProperty("dramaAdSsvFakeSecret") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: localProperties.getProperty("drama.adSsvFakeSecret")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: System.getenv("DRAMA_AD_SSV_FAKE_SECRET")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: ""
 
 android {
     namespace = "com.drama.core.network"
@@ -24,6 +40,7 @@ android {
         buildConfigField("String", "API_BASE_URL", "\"$baseUrl\"")
         buildConfigField("String", "MEDIA_BASE_URL", "\"${mediaBaseUrl.trimEnd('/')}\"")
         buildConfigField("boolean", "USE_FAKE_CATALOG", "$useFakeCatalog")
+        buildConfigField("String", "AD_SSV_FAKE_SECRET", "\"$adSsvFakeSecret\"")
     }
 
     buildTypes {
@@ -33,11 +50,13 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"$baseUrl\"")
             buildConfigField("String", "MEDIA_BASE_URL", "\"${mediaBaseUrl.trimEnd('/')}\"")
             buildConfigField("boolean", "USE_FAKE_CATALOG", "$useFakeCatalog")
+            buildConfigField("String", "AD_SSV_FAKE_SECRET", "\"$adSsvFakeSecret\"")
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"https://api.drama.example/\"")
             buildConfigField("String", "MEDIA_BASE_URL", "\"https://cdn.drama.example\"")
             buildConfigField("boolean", "USE_FAKE_CATALOG", "false")
+            buildConfigField("String", "AD_SSV_FAKE_SECRET", "\"\"")
         }
     }
 }

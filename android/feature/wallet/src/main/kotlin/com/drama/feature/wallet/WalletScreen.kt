@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
@@ -33,16 +35,20 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -62,10 +68,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.drama.core.ui.browser.openCustomTab
 import com.drama.core.ui.component.DramaPrimaryButton
 import com.drama.core.ui.component.ErrorState
 import com.drama.core.ui.component.LoadingIndicator
@@ -86,6 +95,12 @@ data class WalletActions(
     val onRefresh: () -> Unit,
     val onLoadMore: () -> Unit,
     val onAutoUnlockChanged: (Boolean) -> Unit,
+    val onPromoOpen: () -> Unit = {},
+    val onPromoDismiss: () -> Unit = {},
+    val onPromoCodeChanged: (String) -> Unit = {},
+    val onPromoSubmit: () -> Unit = {},
+    /** "Recharger par mobile money" (M-34): opens the recharge site in a Custom Tab. */
+    val onOpenRechargeLink: (String) -> Unit = {},
 )
 
 /** "Mon portefeuille" (M-32). */
@@ -113,6 +128,11 @@ fun WalletScreen(
                 onRefresh = viewModel::refresh,
                 onLoadMore = viewModel::loadMore,
                 onAutoUnlockChanged = viewModel::onAutoUnlockChanged,
+                onPromoOpen = viewModel::onPromoOpen,
+                onPromoDismiss = viewModel::onPromoDismiss,
+                onPromoCodeChanged = viewModel::onPromoCodeChanged,
+                onPromoSubmit = viewModel::onPromoSubmit,
+                onOpenRechargeLink = { url -> context.openCustomTab(url) },
             ),
         snackbar = snackbar,
         modifier = modifier,
@@ -155,6 +175,57 @@ fun WalletContent(
             }
         }
     }
+    if (state.promo.isOpen) PromoCodeDialog(promo = state.promo, actions = actions)
+}
+
+/** "J'ai un code" (M-24): one field, the server validates; errors are shown inline. */
+@Composable
+private fun PromoCodeDialog(
+    promo: PromoUi,
+    actions: WalletActions,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!promo.isSubmitting) actions.onPromoDismiss() },
+        title = { Text(stringResource(R.string.wallet_promo_title)) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = promo.code,
+                    onValueChange = actions.onPromoCodeChanged,
+                    singleLine = true,
+                    enabled = !promo.isSubmitting,
+                    isError = promo.error != null,
+                    label = { Text(stringResource(R.string.wallet_promo_label)) },
+                    keyboardOptions =
+                        KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { actions.onPromoSubmit() }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                promo.error?.let { error ->
+                    Text(
+                        text = error.asString(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = DramaSpacing.xs),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = actions.onPromoSubmit, enabled = promo.canSubmit) {
+                Text(
+                    stringResource(
+                        if (promo.isSubmitting) R.string.wallet_promo_submitting else R.string.wallet_promo_submit,
+                    ),
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = actions.onPromoDismiss, enabled = !promo.isSubmitting) {
+                Text(stringResource(CoreR.string.action_cancel))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -193,6 +264,9 @@ private fun WalletBody(
                     wallet = state.wallet ?: Wallet.EMPTY,
                     expiring = state.bonusExpiringSoon,
                     onOpenShop = actions.onOpenShop,
+                    rechargeLink = state.rechargeLink,
+                    onOpenRechargeLink = actions.onOpenRechargeLink,
+                    onPromoOpen = actions.onPromoOpen,
                 )
             }
             item {
@@ -238,6 +312,9 @@ private fun BalanceCard(
     wallet: Wallet,
     expiring: BonusExpiry?,
     onOpenShop: () -> Unit,
+    rechargeLink: String? = null,
+    onOpenRechargeLink: (String) -> Unit = {},
+    onPromoOpen: () -> Unit = {},
 ) {
     Column(
         modifier =
@@ -283,6 +360,17 @@ private fun BalanceCard(
             onClick = onOpenShop,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (rechargeLink != null) {
+            // M-34: the mobile money recharge site (Remote Config flag), outside Google Play billing.
+            Spacer(Modifier.height(DramaSpacing.sm))
+            OutlinedButton(
+                onClick = { onOpenRechargeLink(rechargeLink) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = DramaSizes.touchTarget),
+            ) { Text(stringResource(R.string.wallet_recharge_mobile_money)) }
+        }
+        TextButton(onClick = onPromoOpen, modifier = Modifier.fillMaxWidth().heightIn(min = DramaSizes.touchTarget)) {
+            Text(stringResource(R.string.wallet_promo_entry))
+        }
     }
 }
 

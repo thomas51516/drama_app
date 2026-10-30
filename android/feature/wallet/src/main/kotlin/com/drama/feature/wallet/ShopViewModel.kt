@@ -9,6 +9,7 @@ import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.logging.Logger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.common.time.Clock
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.BillingProduct
 import com.drama.domain.model.BillingProductType
@@ -16,12 +17,17 @@ import com.drama.domain.model.BillingPrompt
 import com.drama.domain.model.BillingPromptAnswer
 import com.drama.domain.model.BillingUiHost
 import com.drama.domain.model.CoinPack
+import com.drama.domain.model.LimitedOffer
+import com.drama.domain.model.Offers
 import com.drama.domain.model.Price
 import com.drama.domain.model.ShopCatalog
 import com.drama.domain.model.Subscription
 import com.drama.domain.model.VipPlan
 import com.drama.domain.model.Wallet
+import com.drama.domain.model.WelcomeOffer
 import com.drama.domain.repository.BillingGateway
+import com.drama.domain.repository.OffersRepository
+import com.drama.domain.repository.RemoteConfigRepository
 import com.drama.domain.repository.ShopRepository
 import com.drama.domain.repository.WalletRepository
 import com.drama.domain.usecase.PurchaseProductUseCase
@@ -63,6 +69,8 @@ sealed interface PriceDisplay {
 data class PackUi(
     val pack: CoinPack,
     val price: PriceDisplay,
+    /** Time-limited bonus on this pack (M-24), when one is running. */
+    val limitedOffer: LimitedOffer? = null,
 )
 
 data class PlanUi(
@@ -86,6 +94,10 @@ data class ShopUiState(
     val isFakeBilling: Boolean = false,
     /** Question of the simulated store, rendered as a dialog (debug builds). */
     val prompt: BillingPrompt? = null,
+    /** First-purchase bonus still running (M-24); null when none or expired. */
+    val welcomeOffer: WelcomeOffer? = null,
+    /** Recharge site URL when the Remote Config flag is on (M-34); null hides the button. */
+    val rechargeLink: String? = null,
     val message: UiText? = null,
 ) {
     val isBusy: Boolean get() = purchasingSku != null || isRestoring
@@ -108,6 +120,9 @@ class ShopViewModel
         private val analytics: AnalyticsTracker,
         private val logger: Logger,
         billingConfig: BillingConfig,
+        private val offers: OffersRepository,
+        private val remoteConfig: RemoteConfigRepository,
+        private val clock: Clock,
     ) : ViewModel() {
         private val uiStateFlow =
             MutableStateFlow(
@@ -120,8 +135,29 @@ class ShopViewModel
         val uiState: StateFlow<ShopUiState> = uiStateFlow.asStateFlow()
 
         private var catalog: ShopCatalog? = null
+        private var currentOffers: Offers = Offers.NONE
 
         init {
+            viewModelScope.launch {
+                remoteConfig.flags.collect { flags ->
+                    uiStateFlow.update { it.copy(rechargeLink = flags.rechargeLink) }
+                }
+            }
+            viewModelScope.launch {
+                when (val result = offers.offers()) {
+                    is AppResult.Success -> {
+                        val now = clock.nowEpochMs()
+                        currentOffers =
+                            Offers(
+                                welcome = result.value.welcome?.takeIf { it.isActive(now) },
+                                limited = result.value.limited.filter { it.isActive(now) },
+                            )
+                        uiStateFlow.update { it.copy(welcomeOffer = currentOffers.welcome) }
+                        catalog?.let { publish(it, storeProducts) }
+                    }
+                    is AppResult.Failure -> logger.w(TAG, "GET /offers failed: ${result.error}")
+                }
+            }
             viewModelScope.launch {
                 walletRepository.wallet.collect { w ->
                     uiStateFlow.update { it.copy(wallet = w) }
@@ -293,7 +329,11 @@ class ShopViewModel
                     error = null,
                     packs =
                         catalog.coinPacks.map { pack ->
-                            PackUi(pack, priceDisplay(pack.sku, pack.price, storeProducts))
+                            PackUi(
+                                pack,
+                                priceDisplay(pack.sku, pack.price, storeProducts),
+                                currentOffers.limitedFor(pack.sku),
+                            )
                         },
                     plans =
                         catalog.vipPlans.map { plan ->

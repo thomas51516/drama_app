@@ -3,12 +3,16 @@ package com.drama.core.network.di
 import com.drama.core.common.logging.Logger
 import com.drama.core.network.BuildConfig
 import com.drama.core.network.api.AccountAuthApi
+import com.drama.core.network.api.AdsApi
 import com.drama.core.network.api.AuthApi
 import com.drama.core.network.api.CatalogApi
 import com.drama.core.network.api.EventsApi
 import com.drama.core.network.api.HelpApi
 import com.drama.core.network.api.NotificationsApi
+import com.drama.core.network.api.OffersApi
 import com.drama.core.network.api.PlaybackApi
+import com.drama.core.network.api.RankingsApi
+import com.drama.core.network.api.RewardsApi
 import com.drama.core.network.api.ShopApi
 import com.drama.core.network.api.UserApi
 import com.drama.core.network.api.WalletApi
@@ -183,6 +187,22 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideShopApi(retrofit: Retrofit): ShopApi = retrofit.create(ShopApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRewardsApi(retrofit: Retrofit): RewardsApi = retrofit.create(RewardsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAdsApi(retrofit: Retrofit): AdsApi = retrofit.create(AdsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideOffersApi(retrofit: Retrofit): OffersApi = retrofit.create(OffersApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRankingsApi(retrofit: Retrofit): RankingsApi = retrofit.create(RankingsApi::class.java)
 
     private fun retrofit(
         client: OkHttpClient,

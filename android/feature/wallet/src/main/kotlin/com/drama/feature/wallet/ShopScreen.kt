@@ -58,18 +58,22 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.drama.core.billing.ActivityBillingHost
+import com.drama.core.ui.browser.openCustomTab
 import com.drama.core.ui.component.ErrorState
 import com.drama.core.ui.component.LoadingIndicator
 import com.drama.core.ui.text.asString
 import com.drama.core.ui.theme.DramaColors
 import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
+import com.drama.core.ui.time.formatRemaining
+import com.drama.core.ui.time.rememberRemainingMs
 import com.drama.domain.model.BillingPromptAnswer
 import com.drama.domain.model.BillingUiHost
 import com.drama.domain.model.CoinPack
 import com.drama.domain.model.Subscription
 import com.drama.domain.model.VipPeriod
 import com.drama.domain.model.VipPlan
+import com.drama.domain.model.WelcomeOffer
 import java.util.Locale
 import com.drama.core.ui.R as CoreR
 
@@ -82,6 +86,8 @@ data class ShopActions(
     val onRestore: () -> Unit,
     val onRetry: () -> Unit,
     val onPromptAnswer: (BillingPromptAnswer) -> Unit,
+    /** "Recharger par mobile money" (M-34): opens the recharge site in a Custom Tab. */
+    val onOpenRechargeLink: (String) -> Unit = {},
 )
 
 /** "Boutique" (M-30/M-31): coin packs and VIP plans, purchase through the store, restore. */
@@ -112,6 +118,7 @@ fun ShopScreen(
                 onRestore = viewModel::onRestorePurchases,
                 onRetry = viewModel::retry,
                 onPromptAnswer = viewModel::onPromptAnswer,
+                onOpenRechargeLink = { url -> context.openCustomTab(url) },
             ),
         snackbar = snackbar,
         modifier = modifier,
@@ -240,6 +247,9 @@ private fun ShopBody(
                 )
             }
         }
+        state.welcomeOffer?.let { offer ->
+            item { WelcomeOfferBanner(offer) }
+        }
         if (state.missingCoins > 0 && state.tab == ShopTab.COINS) {
             item {
                 Text(
@@ -293,6 +303,20 @@ private fun ShopBody(
                 }
             }
         }
+        if (state.rechargeLink != null && state.tab == ShopTab.COINS) {
+            item {
+                // M-34: mobile money through the recharge web site (Remote Config flag), outside Google Play.
+                OutlinedButton(
+                    onClick = { actions.onOpenRechargeLink(state.rechargeLink) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(
+                                min = DramaSizes.touchTarget,
+                            ).padding(top = DramaSpacing.sm),
+                ) { Text(stringResource(R.string.shop_recharge_mobile_money)) }
+            }
+        }
         item {
             TextButton(
                 onClick = actions.onRestore,
@@ -305,6 +329,37 @@ private fun ShopBody(
                         ).padding(top = DramaSpacing.md),
             ) { Text(stringResource(R.string.shop_restore)) }
         }
+    }
+}
+
+/** Welcome offer (M-24): bonus on the first purchase with a live countdown. */
+@Composable
+private fun WelcomeOfferBanner(offer: WelcomeOffer) {
+    val remaining = rememberRemainingMs(offer.expiresAtEpochMs)
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(DramaColors.CrimsonSoft, RoundedCornerShape(12.dp))
+                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                .padding(DramaSpacing.md)
+                .semantics(mergeDescendants = true) {},
+    ) {
+        Text(
+            text = stringResource(R.string.shop_welcome_offer_title, offer.bonusPercent),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text =
+                if (offer.expiresAtEpochMs != null) {
+                    stringResource(R.string.shop_welcome_offer_until, formatRemaining(remaining))
+                } else {
+                    stringResource(R.string.shop_welcome_offer_body)
+                },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
 
@@ -364,6 +419,29 @@ private fun PackCard(
                     text = stringResource(R.string.shop_bonus_coins, pack.bonusCoins),
                     style = MaterialTheme.typography.labelMedium,
                     color = DramaColors.Success,
+                )
+            }
+            item.limitedOffer?.let { offer ->
+                // M-24: time-limited bonus badge with its countdown.
+                val remaining = rememberRemainingMs(offer.endsAtEpochMs)
+                Spacer(Modifier.height(DramaSpacing.xs))
+                Text(
+                    text =
+                        if (offer.endsAtEpochMs != null) {
+                            stringResource(
+                                R.string.shop_limited_offer_until,
+                                offer.bonusPercent,
+                                formatRemaining(remaining),
+                            )
+                        } else {
+                            stringResource(R.string.shop_limited_offer, offer.bonusPercent)
+                        },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = DramaColors.Gold,
+                    modifier =
+                        Modifier
+                            .background(DramaColors.Gold.copy(alpha = 0.18f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = DramaSpacing.sm, vertical = DramaSpacing.xxs),
                 )
             }
             pack.badge?.let { badge ->

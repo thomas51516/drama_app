@@ -122,6 +122,49 @@ sealed class AnalyticsEvent(
             mapOf("product_id" to productId, "period" to period, "amount" to amount, "currency" to currency),
         )
 
+    /** Rewarded ad flow ended (M-22). [result] = `unlocked` | `dismissed` | `pending` | `rejected` | `failed`. */
+    data class AdReward(
+        val seriesId: String,
+        val episodeId: String,
+        val provider: String?,
+        val result: String,
+    ) : AnalyticsEvent(
+            "ad_reward",
+            buildMap {
+                put("series_id", seriesId)
+                put("episode_id", episodeId)
+                put("result", result)
+                provider?.let { put("provider", it) }
+            },
+        )
+
+    /** Daily check-in claimed (M-40). */
+    data class CheckIn(
+        val day: Int,
+        val coins: Int,
+    ) : AnalyticsEvent("checkin", mapOf("day" to day, "coins" to coins))
+
+    /** Rewarded task claimed (M-41). */
+    data class TaskClaim(
+        val taskKey: String,
+        val coins: Int,
+    ) : AnalyticsEvent("task_claim", mapOf("task_key" to taskKey, "coins" to coins))
+
+    /** Whole series unlocked at a discount (M-23). */
+    data class UnlockAll(
+        val seriesId: String,
+        val episodeCount: Int,
+        val coinCost: Int,
+    ) : AnalyticsEvent(
+            "unlock_all",
+            mapOf("series_id" to seriesId, "episode_count" to episodeCount, "coin_cost" to coinCost),
+        )
+
+    /** Promo code redeemed (M-24). */
+    data class PromoRedeem(
+        val coins: Int,
+    ) : AnalyticsEvent("promo_redeem", mapOf("coins" to coins))
+
     /** "Ma liste" heart toggled (M-16). */
     data class Favorite(
         val seriesId: String,

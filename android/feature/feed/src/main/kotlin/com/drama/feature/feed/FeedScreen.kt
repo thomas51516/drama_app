@@ -74,7 +74,9 @@ import com.drama.core.ui.text.UiText
 import com.drama.core.ui.text.asString
 import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
+import com.drama.core.ui.window.SecureWindow
 import com.drama.domain.model.FeedItem
+import com.drama.domain.model.SecureScreenRules
 import kotlinx.coroutines.flow.distinctUntilChanged
 import com.drama.core.ui.R as CoreR
 
@@ -100,6 +102,8 @@ fun FeedScreen(
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
 
+    // M-18: previews are free episodes; should the feed ever show a paid one, captures are blocked as well.
+    SecureWindow(secure = SecureScreenRules.shouldSecure(state.currentItem?.episode?.access))
     // Pause when the tab leaves the screen (composition) or the app goes to the background (lifecycle).
     DisposableEffect(Unit) {
         viewModel.setVisible(true)

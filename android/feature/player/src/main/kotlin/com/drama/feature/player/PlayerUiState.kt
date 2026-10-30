@@ -66,6 +66,8 @@ data class PlayerUiState(
     val paywall: PaywallTarget? = null,
     /** Mirror of `wallet.autoUnlock` (M-21): a locked next episode is then simply played (the server debits). */
     val autoUnlock: Boolean = false,
+    /** True while the data saver lowers the rendition below the manual choice (M-17, metered network). */
+    val dataSaverCapping: Boolean = false,
 ) {
     val currentEpisode: Episode? get() = episodes.getOrNull(currentIndex)
     val lastStartup: StartupMetric? get() = startupMetrics.lastOrNull { it.index == currentIndex }

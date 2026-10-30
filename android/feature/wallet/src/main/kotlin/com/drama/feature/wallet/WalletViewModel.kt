@@ -2,6 +2,8 @@ package com.drama.feature.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.drama.core.common.analytics.AnalyticsEvent
+import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.logging.Logger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
@@ -10,6 +12,8 @@ import com.drama.core.ui.text.UiText
 import com.drama.domain.model.BonusExpiry
 import com.drama.domain.model.LedgerEntry
 import com.drama.domain.model.Wallet
+import com.drama.domain.repository.OffersRepository
+import com.drama.domain.repository.RemoteConfigRepository
 import com.drama.domain.repository.WalletRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -31,10 +35,28 @@ data class WalletUiState(
     val hasMore: Boolean = false,
     val isLoadingMore: Boolean = false,
     val isSavingAutoUnlock: Boolean = false,
+    /** "J'ai un code" dialog (M-24). */
+    val promo: PromoUi = PromoUi(),
+    /** Recharge site URL when the Remote Config flag is on (M-34); null hides the button. */
+    val rechargeLink: String? = null,
     val error: UiText? = null,
     val message: UiText? = null,
 ) {
     val showError: Boolean get() = error != null && wallet == null
+}
+
+data class PromoUi(
+    val isOpen: Boolean = false,
+    val code: String = "",
+    val isSubmitting: Boolean = false,
+    /** Inline error of the dialog (invalid, used, expired...). */
+    val error: UiText? = null,
+) {
+    val canSubmit: Boolean get() = code.trim().length >= MIN_CODE_LENGTH && !isSubmitting
+
+    companion object {
+        const val MIN_CODE_LENGTH = 3
+    }
 }
 
 /** "Mon portefeuille" (S07-A1-03, M-32): balances, expiring bonus, paginated ledger. */
@@ -45,6 +67,9 @@ class WalletViewModel
         private val walletRepository: WalletRepository,
         private val clock: Clock,
         private val logger: Logger,
+        private val offers: OffersRepository,
+        private val remoteConfig: RemoteConfigRepository,
+        private val analytics: AnalyticsTracker,
     ) : ViewModel() {
         private val uiStateFlow = MutableStateFlow(WalletUiState())
         val uiState: StateFlow<WalletUiState> = uiStateFlow.asStateFlow()
@@ -63,8 +88,70 @@ class WalletViewModel
                     }
                 }
             }
+            viewModelScope.launch {
+                remoteConfig.flags.collect { flags ->
+                    uiStateFlow.update { it.copy(rechargeLink = flags.rechargeLink) }
+                }
+            }
             refresh()
         }
+
+        // --- promo code (M-24) ---
+
+        fun onPromoOpen() = uiStateFlow.update { it.copy(promo = PromoUi(isOpen = true)) }
+
+        fun onPromoDismiss() = uiStateFlow.update { it.copy(promo = PromoUi()) }
+
+        fun onPromoCodeChanged(code: String) =
+            uiStateFlow.update { it.copy(promo = it.promo.copy(code = code.uppercase(), error = null)) }
+
+        /** `POST /promo/redeem`; the server answers the credited coins and the wallet. */
+        fun onPromoSubmit() {
+            val promo = uiStateFlow.value.promo
+            if (!promo.canSubmit) return
+            uiStateFlow.update { it.copy(promo = promo.copy(isSubmitting = true, error = null)) }
+            viewModelScope.launch {
+                when (val result = offers.redeemPromo(promo.code)) {
+                    is AppResult.Success -> {
+                        analytics.track(AnalyticsEvent.PromoRedeem(result.value.coins))
+                        uiStateFlow.update {
+                            it.copy(
+                                promo = PromoUi(),
+                                message = UiText.Plural(R.plurals.wallet_promo_credited, result.value.coins),
+                            )
+                        }
+                        refresh()
+                    }
+                    is AppResult.Failure -> {
+                        logger.w(TAG, "promo redeem failed: ${result.error}")
+                        uiStateFlow.update {
+                            it.copy(promo = it.promo.copy(isSubmitting = false, error = result.error.toPromoMessage()))
+                        }
+                    }
+                }
+            }
+        }
+
+        private fun AppError.toPromoMessage(): UiText =
+            when (this) {
+                is AppError.NotFound -> UiText.Res(R.string.wallet_promo_invalid)
+                is AppError.Http ->
+                    when (serverCode) {
+                        "PROMO_ALREADY_USED" -> UiText.Res(R.string.wallet_promo_already_used)
+                        "PROMO_EXPIRED" -> UiText.Res(R.string.wallet_promo_expired)
+                        "PROMO_EXHAUSTED" -> UiText.Res(R.string.wallet_promo_exhausted)
+                        "PROMO_INVALID" -> UiText.Res(R.string.wallet_promo_invalid)
+                        else ->
+                            if (code ==
+                                HTTP_NOT_IMPLEMENTED
+                            ) {
+                                UiText.Res(CoreR.string.state_coming_soon)
+                            } else {
+                                toMessage()
+                            }
+                    }
+                else -> toMessage()
+            }
 
         fun refresh() {
             if (uiStateFlow.value.isRefreshing) return

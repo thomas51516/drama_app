@@ -109,6 +109,7 @@ data class AccountActions(
     val onOpenNotifications: () -> Unit,
     val onOpenWallet: () -> Unit = {},
     val onOpenShop: () -> Unit = {},
+    val onOpenRewards: () -> Unit = {},
 )
 
 /**
@@ -122,6 +123,7 @@ fun AccountScreen(
     onOpenNotifications: () -> Unit,
     onOpenWallet: () -> Unit,
     onOpenShop: () -> Unit,
+    onOpenRewards: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
@@ -172,6 +174,7 @@ fun AccountScreen(
                     onOpenNotifications = onOpenNotifications,
                     onOpenWallet = onOpenWallet,
                     onOpenShop = onOpenShop,
+                    onOpenRewards = onOpenRewards,
                 ),
             settings = {
                 SettingsStep(onMessage = { text -> scope.launch { snackbar.showSnackbar(text.asString(context)) } })
@@ -324,6 +327,11 @@ private fun WalletLinks(
         title = stringResource(R.string.shop_entry),
         subtitle = stringResource(R.string.shop_entry_hint),
         onClick = actions.onOpenShop,
+    )
+    SettingsLinkRow(
+        title = stringResource(R.string.rewards_entry),
+        subtitle = stringResource(R.string.rewards_entry_hint),
+        onClick = actions.onOpenRewards,
     )
 }
 

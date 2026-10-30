@@ -7,6 +7,7 @@ import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.common.time.Clock
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.BillingOutcome
 import com.drama.domain.model.BillingProduct
@@ -19,9 +20,12 @@ import com.drama.domain.model.BillingUiHost
 import com.drama.domain.model.CoinPack
 import com.drama.domain.model.LedgerPage
 import com.drama.domain.model.LedgerType
+import com.drama.domain.model.Offers
 import com.drama.domain.model.Price
+import com.drama.domain.model.PromoRedemption
 import com.drama.domain.model.PurchaseVerification
 import com.drama.domain.model.PurchaseVerificationStatus
+import com.drama.domain.model.RemoteFlags
 import com.drama.domain.model.ShopCatalog
 import com.drama.domain.model.Subscription
 import com.drama.domain.model.SubscriptionStatus
@@ -29,6 +33,8 @@ import com.drama.domain.model.VipPeriod
 import com.drama.domain.model.VipPlan
 import com.drama.domain.model.Wallet
 import com.drama.domain.repository.BillingGateway
+import com.drama.domain.repository.OffersRepository
+import com.drama.domain.repository.RemoteConfigRepository
 import com.drama.domain.repository.ShopRepository
 import com.drama.domain.repository.WalletRepository
 import com.drama.domain.usecase.PurchaseProductUseCase
@@ -120,6 +126,9 @@ class ShopViewModelTest {
         analytics = analytics,
         logger = NoOpLogger,
         billingConfig = BillingConfig(isFake = true),
+        offers = FakeOffersRepository(),
+        remoteConfig = FakeRemoteConfigRepository(),
+        clock = Clock { 0L },
     )
 
     @Test
@@ -316,4 +325,16 @@ class ShopViewModelTest {
 
         override fun answerPrompt(answer: BillingPromptAnswer) = Unit
     }
+}
+
+private class FakeOffersRepository : OffersRepository {
+    override suspend fun offers(): AppResult<Offers> = AppResult.Success(Offers.NONE)
+
+    override suspend fun redeemPromo(code: String): AppResult<PromoRedemption> = error("not used")
+}
+
+private class FakeRemoteConfigRepository : RemoteConfigRepository {
+    override val flags: Flow<RemoteFlags> = MutableStateFlow(RemoteFlags())
+
+    override suspend fun refresh() = Unit
 }

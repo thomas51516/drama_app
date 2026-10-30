@@ -6,6 +6,7 @@ import androidx.media3.common.Player
 import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.logging.Logger
+import com.drama.core.common.network.NetworkStatusProvider
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.time.Clock
@@ -14,19 +15,23 @@ import com.drama.core.player.engine.PlaybackEngineFactory
 import com.drama.core.player.engine.PlaybackEvent
 import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.ui.text.UiText
+import com.drama.domain.model.DataSaverRules
 import com.drama.domain.model.FeedItem
 import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.SignedUrlPolicy
 import com.drama.domain.model.StreamFormat
+import com.drama.domain.model.VideoQuality
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.FeedRepository
 import com.drama.domain.repository.PlaybackRepository
+import com.drama.domain.repository.PlayerSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -93,6 +98,8 @@ class FeedViewModel
         private val clock: Clock,
         private val logger: Logger,
         engineFactory: PlaybackEngineFactory,
+        private val playerSettings: PlayerSettingsRepository,
+        private val networkStatus: NetworkStatusProvider,
     ) : ViewModel() {
         private val engine: PlaybackEngine = engineFactory.create()
         val activePlayer: StateFlow<Player?> get() = engine.activePlayer
@@ -119,6 +126,15 @@ class FeedViewModel
 
         init {
             engine.setMuted(true)
+            // M-17: previews follow the data saver cap on metered networks too (manual quality does not apply here).
+            viewModelScope.launch {
+                combine(playerSettings.dataSaver, networkStatus.isMetered) { saver, metered -> saver && metered }
+                    .collect { capped ->
+                        engine.setMaxVideoShortSide(
+                            DataSaverRules.effectiveQuality(VideoQuality.AUTO, capped, capped).maxHeight,
+                        )
+                    }
+            }
             viewModelScope.launch { engine.events.collect(::onEvent) }
             viewModelScope.launch { engine.position.collect { pos -> uiStateFlow.update { it.copy(position = pos) } } }
             viewModelScope.launch {
