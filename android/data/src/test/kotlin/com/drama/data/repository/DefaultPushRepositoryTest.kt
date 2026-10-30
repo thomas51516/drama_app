@@ -12,6 +12,7 @@ import com.drama.core.common.result.AppResult
 import com.drama.core.database.preferences.UserPreferencesDataSource
 import com.drama.core.network.ApiErrorMapper
 import com.drama.core.network.api.NotificationsApi
+import com.drama.domain.model.SessionReplacement
 import com.drama.domain.model.SessionState
 import com.drama.domain.repository.SessionRepository
 import kotlinx.coroutines.flow.Flow
@@ -166,6 +167,10 @@ class DefaultPushRepositoryTest {
         override suspend fun logout() {
             state.value = SessionState.SignedOut
         }
+
+        override val sessionReplacement: Flow<SessionReplacement?> = MutableStateFlow(null)
+
+        override fun dismissSessionReplacement() = Unit
     }
 
     private class FakeTokenProvider : PushTokenProvider {

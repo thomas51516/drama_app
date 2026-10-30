@@ -68,10 +68,11 @@ chaque push, et le job `bundle` (AAB release, signature, Firebase App Distributi
 | `:core:network` | bibliothèque | Retrofit (`AuthApi`, `AccountAuthApi`, `UserApi`, `CatalogApi`, `PlaybackApi`) + OkHttp + kotlinx.serialization, DTO de l'OpenAPI v1.2 (contrat `docs/api/public-contract-v1.2.md`), `ApiErrorMapper`, `SessionManager` (+ `adopt` pour le rattachement), `AuthInterceptor`, `TokenAuthenticator`, `RetryInterceptor`, `LocaleHeadersInterceptor`, client `@LinkClient` (porteur sans authenticator pour `/auth/*`). |
 | `:core:database` | bibliothèque | Room v4 (`watch_progress`, `watch_history`, cache catalogue, `home_banners`, `favorites`, `series.likes/liked`), DataStore `user_preferences` (vitesse, qualité, sous-titres, recherches récentes) et `session` (jetons chiffrés par le Keystore). |
 | `:core:player` | bibliothèque | Moteur Media3 partagé par le lecteur et le flux : `PlaybackEngine` / `ExoPlaybackEngine` (pool de lecteurs, préchargement, cache), `TrackSelectionMapper`. Seul module qui touche ExoPlayer. |
+| `:core:billing` | bibliothèque | Port `BillingGateway` (domaine) implémenté par `PlayBillingGateway` (Google Play Billing Library 7) et `FakeBillingGateway` (magasin simulé, builds debug/benchmark, `BuildConfig.FAKE_BILLING`). Seul module qui touche la bibliothèque Play Billing. |
 | `:domain` | Kotlin/JVM pur | Modèles `Series`, `Episode`, `PlaySession`, `FeedItem`, `SearchResult`, `UserProfile`, `LikeState`, `SignedUrlPolicy` (marge de 30 s, un seul réessai sur 403), `HomeContent`, `PlayerSettings`, `ResumeTarget`, `WatchProgress`, `SessionState`, interfaces de dépôts (`FeedRepository`, `SearchRepository`, `FavoritesRepository`, `AccountRepository`, ...) et cas d'usage. |
 | `:data` | bibliothèque | `RemoteCatalogRepository` (API + cache Room, stale-while-revalidate), `RemotePlaybackRepository`, `RemoteFeedRepository`, `RemoteSearchRepository`, `RoomFavoritesRepository` (optimiste avec retour arrière), `DefaultAccountRepository` (connexion, rattachement, profil), `DefaultSessionRepository`, dépôts Room, `FakeCatalogRepository` (tests et bascule debug). |
 | `:feature:home` | feature | Accueil M-01 : carrousel de bannières, rangées configurées (Tendances, Nouveautés, genres, manuelles), « Continuer à regarder », pull-to-refresh, squelette, bandeau hors-ligne. |
-| `:feature:player` | feature | Lecteur vertical plein écran, résolution `POST /episodes/{id}/play` par page, progression toutes les 5 s, contrôles (M-13 : vitesse, qualité), sous-titres (M-14), page « verrouillé », mesure de démarrage. |
+| `:feature:player` | feature | Lecteur vertical plein écran, résolution `POST /episodes/{id}/play` par page, progression toutes les 5 s, contrôles (M-13 : vitesse, qualité), sous-titres (M-14), paywall M-20 (`PaywallViewModel`, feuille dans la bande basse) et déblocage M-21, mesure de démarrage. |
 | `:feature:series` | feature | Fiche série M-10 : affiche, synopsis dépliable, genres, âge, grille des épisodes (gratuit / débloqué / verrouillé), « Regarder » / « Reprendre l'épisode N », cœur « Ma liste », « J'aime » avec compteur, partage, liens profonds `drama://series/{id}` et `https://<hôte>/s/{id}`. |
 | `:feature:feed` | feature | Flux « Pour vous » M-02 : `VerticalPager` plein écran sur `GET /feed`, extraits signés en lecture automatique (muet, un appui pour le son), cœur, « Regarder la série », pagination par curseur. |
 | `:feature:search` | feature | Recherche M-03 : suggestions (`GET /search/suggest`, anti-rebond 300 ms), résultats (`GET /search`), puces de genre, recherches récentes (10 max, effaçables). |
@@ -79,6 +80,7 @@ chaque push, et le job `bundle` (AAB release, signature, Firebase App Distributi
 | `:feature:account` | feature | Profil M-50/M-51/M-52 : connexion Google (Credential Manager), téléphone + OTP, e-mail ; rattachement du compte invité ; carte de profil, modification du nom, déconnexion, suppression ; **Paramètres** (`SettingsViewModel`) : langue appliquée immédiatement, préférences de notification, entrées Aide et Mes notifications. |
 | `:feature:help` | feature | Centre d'aide M-53 : FAQ (`GET /help/faq?lang`) par catégorie avec recherche, formulaire « Nous contacter » (`POST /help/contact`), « Mes demandes » (`GET /help/tickets`), état hors ligne. |
 | `:feature:notifications` | feature | Historique in-app M-54 (`GET /me/notifications`), marquage lu, routage vers la série / l'épisode / l'aide. |
+| `:feature:wallet` | feature | « Mon portefeuille » M-32 (soldes, bonus qui expirent, historique paginé, interrupteur de déblocage automatique) et « Boutique » M-30/M-31 (onglets Pièces / VIP, prix locaux ou prix du magasin, achat, restauration, dialogue du magasin simulé). |
 | `:benchmark` | test (macrobenchmark) | `BaselineProfileGenerator` et `StartupBenchmark` contre le type de build `benchmark` de `:app` (S06-A2-02). |
 | `build-logic/` | plugins de convention | `drama.android.application|library|compose|feature`, `drama.hilt`, `drama.jvm.library`. |
 
@@ -504,6 +506,88 @@ Première image vidéo : le moteur force la rendition la plus basse jusqu'à la 
 Les chiffres émulateur sont indicatifs (x86_64 virtualisé, décodage logiciel) ; la recette S06-A2 se relève sur le
 TECNO CM6 et un appareil 2 Go réel avec la même procédure (`scratchpad/android-s5/coldstart.sh` dans le compte rendu).
 
+
+## Sprint 6 : paywall, déblocage, portefeuille, boutique et facturation (S07-A1-01/02/03, S07-A2-01/02/03)
+
+Contrat : `docs/api/contract-v1.4-sprint6.md`. Le serveur fait foi : l'application n'additionne jamais de pièces,
+elle affiche le dernier `Wallet` reçu (`WalletStore` dans `:data`, alimenté par `GET /wallet`, les réponses de
+déblocage et de vérification d'achat).
+
+### Paywall et déblocage (M-20, M-21)
+
+- Quand un épisode verrouillé devient courant (grille de la fiche série, flux « Pour vous » → « Regarder », balayage
+  dans le lecteur) ou à la fin du dernier épisode gratuit, le lecteur ouvre une feuille dans la bande basse, la
+  vidéo au-dessus restant entière : solde, coût, « Débloquer pour N pièces » (actif si le solde couvre le coût),
+  « Devenir VIP » (onglet VIP de la boutique), « Regarder une pub · bientôt » (M-22, sprint 8) et l'interrupteur
+  « Débloquer automatiquement les prochains épisodes » (`PATCH /me { autoUnlock }`). Événement `paywall_view`.
+- `POST /episodes/{id}/unlock` porte une clé d'idempotence (UUID client) conservée dans DataStore par
+  (utilisateur, épisode) tant que le serveur n'a pas répondu ; une coupure réseau ne peut donc pas débiter deux fois.
+  402 `INSUFFICIENT_COINS` → boutique avec « Il vous manque N pièces ». Succès → cache catalogue basculé en
+  « débloqué » (la grille et le lecteur se mettent à jour), portefeuille rafraîchi, lecture lancée, événement `unlock`.
+- Déblocage automatique : le lecteur ne précharge jamais un épisode verrouillé via `/play` (le serveur le débiterait
+  avant qu'on y arrive) ; quand l'option est active, la fin d'un épisode enchaîne sur le suivant et `/play` répond
+  `unlocked: true`, ce que `RemotePlaybackRepository` répercute sur le cache et le portefeuille.
+- `GET /series/{id}/unlocks` est relu à l'ouverture d'une fiche série pour réconcilier les statuts.
+
+### Portefeuille (M-32) et boutique (M-30)
+
+- Profil → « Mon portefeuille » : achetées / bonus / total, bonus expirant sous 7 jours, historique
+  `GET /wallet/transactions` paginé (icône par type), « Recharger ». Puce de solde dans l'en-tête de la fiche série,
+  la boutique et le paywall.
+- « Boutique » (`GET /shop`, prix dans la devise du pays `X-Country`) : onglet Pièces (packs, badge bonus) et onglet
+  VIP (formules, essai). Le prix affiché est celui du magasin Google quand le sku y existe (ce que Google facturera),
+  sinon le prix local formaté par `PriceFormatter`.
+
+### Facturation (M-31) : architecture
+
+```
+feature:wallet (ShopViewModel) ──► domain.PurchaseProductUseCase / RestorePurchasesUseCase
+                                        │ BillingGateway.purchase(host, sku)  ──► BillingOutcome
+                                        │ ShopRepository.verifyPurchase(token) ──► POST /billing/google/verify
+                                        └ BillingGateway.finish(purchase)       (consume / acknowledge, seulement après crédit)
+core:billing : PlayBillingGateway (Play Billing 7, pendingPurchases, queryPurchases au démarrage)
+               FakeBillingGateway (debug : dialogue Réussir / En attente / Annuler, jeton fake:<sku>:<uuid>)
+```
+
+- Un achat n'est consommé (pack) ou acquitté (abonnement) qu'après un `credited` / `already_processed` du backend ;
+  un achat payé mais non vérifié (coupure, plantage) reste détenu par le magasin et est rejoué par
+  « Restaurer les achats » (Paramètres et bas de la boutique) et automatiquement à chaque démarrage (`AppStartup`).
+- Clé d'idempotence de la vérification : UUID déterministe dérivé du `purchaseToken` (même clé à chaque rejeu).
+- Événements : `purchase{product_id, amount, currency, coins}` après crédit, `subscription_start` après activation ;
+  `already_processed` ne déclenche ni message ni événement.
+
+### Tester avec la facturation simulée (debug)
+
+1. Backend avec `BILLING_VERIFIER=fake` (voir `backend/.env.example`), packs et formules créés dans le back-office.
+2. Build debug (`FAKE_BILLING=true` par défaut) : un bandeau « Facturation simulée » apparaît dans la boutique.
+3. Boutique → prix d'un pack → dialogue « Simulation d'achat » : **Réussir** (crédit immédiat, snackbar « N pièces
+   créditées »), **En attente** (paiement différé : « Restaurer les achats » le règle et le crédite), **Annuler**.
+4. Fiche série → épisode verrouillé → paywall → « Débloquer pour N pièces » → lecture ; activer l'interrupteur →
+   l'épisode verrouillé suivant se lance directement ; Profil → Mon portefeuille liste les lignes.
+
+### Passer à Google Play Billing réel
+
+1. Play Console : créer les produits consommables (packs) et les abonnements (formules VIP) avec **les mêmes
+   identifiants** (`sku`) que dans le back-office (Monétisation) ; publier une piste interne et ajouter les
+   testeurs de licence.
+2. Backend : `BILLING_VERIFIER=google`, compte de service lié à la Play Console (`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`),
+   `GOOGLE_PLAY_PACKAGE_NAME=com.drama.app`, RTDN Pub/Sub vers `POST /webhooks/google-rtdn`.
+3. Application : un build **release** utilise `PlayBillingGateway` (`FAKE_BILLING=false`). Pour forcer le magasin
+   réel sur un build debug installé depuis la piste interne : `-PdramaFakeBilling=false` ; pour simuler sur un build
+   release de test : `-PdramaFakeBilling=true` (jamais en production, le backend refuse le vérificateur `fake`).
+4. L'`applicationId` installé doit être celui publié (`com.drama.app`, sans suffixe `.debug`) pour que Play connaisse
+   les skus ; sinon `queryProductDetails` ne renvoie rien et la boutique montre les prix locaux avec un achat
+   « Play Store indisponible ».
+
+### Défauts de recette
+
+- DEF-006 : un rafraîchissement refusé (`INVALID_REFRESH_TOKEN`, `REFRESH_TOKEN_REUSED`, `REFRESH_TOKEN_EXPIRED`)
+  crée toujours un nouvel invité, mais l'application affiche désormais un bandeau « Votre session a expiré, vous
+  regardez en invité. Reconnectez-vous pour retrouver votre compte. » (fermable, « Se reconnecter » ouvre Profil) et
+  journalise le code et l'ancien identifiant (`adb logcat -s Session`).
+- DEF-007 : `Accept-Language` est relu à chaque requête depuis la langue de l'application
+  (`AndroidDeviceLocale` → `LocaleHeadersInterceptor`, test `LocaleHeadersInterceptorTest`) ; un changement de
+  langue vide le cache catalogue, les titres des rangées suivent donc l'interface.
 
 ## Release : signature, R8 et distribution interne (S03-OPS-01)
 

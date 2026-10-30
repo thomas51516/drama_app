@@ -20,6 +20,7 @@ import com.drama.core.player.engine.PlaybackEvent
 import com.drama.core.player.engine.TrackSelectionMapper
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
+import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.EpisodeNavigation
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.PlayerSettings
@@ -28,6 +29,7 @@ import com.drama.domain.model.SubtitleMode
 import com.drama.domain.model.VideoQuality
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.PlayerSettingsRepository
+import com.drama.domain.repository.WalletRepository
 import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.PlaybackStart
 import com.drama.domain.usecase.ReportProgressUseCase
@@ -49,7 +51,10 @@ import com.drama.core.ui.R as CoreR
  *
  * - Episodes come from `GET /series/{id}/episodes`; each page resolves its stream with `POST /episodes/{id}/play`
  *   when it becomes current (and the next page is resolved ahead so the engine can preload it, M-12).
- * - A locked episode (403 `EPISODE_LOCKED`) shows the paywall placeholder; playback simply does not start.
+ * - A locked episode (403 `EPISODE_LOCKED`) shows the paywall sheet (M-20) over the page; so does the end of a
+ *   free episode whose successor is locked. Locked successors are never prefetched through `/play`: with
+ *   auto-unlock on (M-21) that call would debit the viewer before they reach the episode. After an unlock the page
+ *   is resolved again and plays; with auto-unlock on, the next episode is played directly and the server debits.
  * - Progress is reported every [PROGRESS_INTERVAL_MS] while playing, on pause, on page change, on
  *   background and when the screen leaves; the end of an episode reports `completed = true` (M-15).
  * - Resume: server position wins over local (see `DefaultStartPlaybackUseCase`).
@@ -76,6 +81,7 @@ class PlayerViewModel
         private val playerSettings: PlayerSettingsRepository,
         private val deviceLocale: DeviceLocaleProvider,
         private val shareLinks: ShareLinkProvider,
+        private val walletRepository: WalletRepository,
         engineFactory: PlaybackEngineFactory,
     ) : ViewModel() {
         private val seriesId: String = checkNotNull(savedStateHandle[PlayerRoute.ARG_SERIES_ID])
@@ -102,7 +108,15 @@ class PlayerViewModel
         private var expiryRefreshJob: Job? = null
         private val forbiddenRetries = mutableMapOf<Int, Int>()
 
+        /** Page whose paywall the viewer dismissed: its next Locked resolution does not reopen the sheet. */
+        private var paywallSuppressedIndex: Int? = null
+
         init {
+            viewModelScope.launch {
+                walletRepository.wallet.collect { wallet ->
+                    if (wallet != null) uiStateFlow.update { it.copy(autoUnlock = wallet.autoUnlock) }
+                }
+            }
             viewModelScope.launch { engine.events.collect(::onEvent) }
             viewModelScope.launch { engine.position.collect { pos -> uiStateFlow.update { it.copy(position = pos) } } }
             viewModelScope.launch { engine.tracks.collect(::onTracksChanged) }
@@ -213,7 +227,7 @@ class PlayerViewModel
         }
 
         fun onTap() {
-            if (uiStateFlow.value.endOfEpisode != null) return
+            if (uiStateFlow.value.endOfEpisode != null || uiStateFlow.value.paywall != null) return
             if (uiStateFlow.value.isPlaying) flushProgress(completed = false)
             engine.togglePlayPause()
         }
@@ -286,14 +300,24 @@ class PlayerViewModel
             clearEndOfEpisode()
             startedEpisodeId = null
             lastReportedPositionMs = -1L
-            uiStateFlow.update { it.copy(currentIndex = index) }
+            if (paywallSuppressedIndex != index) paywallSuppressedIndex = null
+            uiStateFlow.update { it.copy(currentIndex = index, paywall = null) }
             val episode = uiStateFlow.value.episodes.getOrNull(index) ?: return
             resolveAndPlay(index, episode)
-            // Resolve the next page ahead so the engine can preload it (M-12).
+            // Resolve the next page ahead so the engine can preload it (M-12), unless the catalogue says it is
+            // locked: `/play` would answer 403 (or debit it when auto-unlock is on), so the page is marked locked
+            // from the catalogue and only asked for when it becomes current.
             EpisodeNavigation.nextIndex(index, uiStateFlow.value.episodes.size)?.let { next ->
-                uiStateFlow.value.episodes
-                    .getOrNull(next)
-                    ?.let { resolve(next, it, playWhenReady = false) }
+                uiStateFlow.value.episodes.getOrNull(next)?.let { nextEpisode ->
+                    if (nextEpisode.access == EpisodeAccess.LOCKED) {
+                        if (uiStateFlow.value.pageState(next) !is PageState.Ready) {
+                            val locked = PageState.Locked(nextEpisode.coinCost.takeIf { c -> c > 0 })
+                            uiStateFlow.update { it.copy(pages = it.pages + (next to locked)) }
+                        }
+                    } else {
+                        resolve(next, nextEpisode, playWhenReady = false)
+                    }
+                }
             }
         }
 
@@ -302,9 +326,8 @@ class PlayerViewModel
             episode: Episode,
         ) {
             engine.stop()
-            if (uiStateFlow.value.pageState(index) is PageState.Locked) return
-            // Always ask /play for the current page: the answer carries the server resume position (M-15);
-            // the preloaded source stays attached when the manifest URL did not change.
+            // Always ask /play for the current page, even when it was marked locked: the server is the source of
+            // truth (unlocked elsewhere, VIP, auto-unlock) and the answer carries the resume position (M-15).
             resolve(index, episode, playWhenReady = true)
         }
 
@@ -411,14 +434,66 @@ class PlayerViewModel
         ) {
             val page =
                 when (error) {
-                    is AppError.Locked -> PageState.Locked(error.coinCost ?: episode.coinCost.takeIf { it > 0 })
+                    is AppError.Locked ->
+                        PageState.Locked(error.coinCost ?: episode.coinCost.takeIf { it > 0 }, error.balance)
                     else -> PageState.Failed(error.toUserMessage(R.string.player_error_playback))
                 }
             uiStateFlow.update { it.copy(pages = it.pages + (index to page)) }
-            if (error is AppError.Locked && playWhenReady) {
-                analytics.track(AnalyticsEvent.PaywallView(episode.seriesId, episode.id, episode.index, error.coinCost))
+            if (error is AppError.Locked && playWhenReady && uiStateFlow.value.currentIndex == index) {
+                if (paywallSuppressedIndex == index) {
+                    paywallSuppressedIndex = null
+                } else {
+                    showPaywall(index, episode, page as PageState.Locked)
+                }
             }
             logger.w(TAG, "play resolution failed index=$index: $error")
+        }
+
+        // --- paywall (M-20 / M-21) ---
+
+        private fun showPaywall(
+            index: Int,
+            episode: Episode,
+            locked: PageState.Locked,
+        ) {
+            val cost = locked.coinCost ?: episode.coinCost
+            if (uiStateFlow.value.isPlaying) engine.pause()
+            uiStateFlow.update { it.copy(paywall = PaywallTarget(index, episode, cost, locked.balance)) }
+            analytics.track(AnalyticsEvent.PaywallView(episode.seriesId, episode.id, episode.index, cost))
+        }
+
+        /** "Débloquer" on a locked page whose sheet was dismissed. */
+        fun onOpenPaywall() {
+            val state = uiStateFlow.value
+            val index = state.currentIndex
+            val episode = state.currentEpisode ?: return
+            val locked = state.pageState(index) as? PageState.Locked ?: PageState.Locked(episode.coinCost)
+            showPaywall(index, episode, locked)
+        }
+
+        /** Sheet closed without unlocking: the locked page stays and offers "Débloquer" again. */
+        fun onPaywallDismissed() {
+            val target = uiStateFlow.value.paywall ?: return
+            uiStateFlow.update { it.copy(paywall = null) }
+            if (target.index != uiStateFlow.value.currentIndex) {
+                // End-of-episode case: move on to the locked page so the viewer sees where they are.
+                paywallSuppressedIndex = target.index
+                startAt(target.index)
+            }
+        }
+
+        /** The paywall unlocked [episodeId] (M-21): resolve the page again, it now plays. */
+        fun onEpisodeUnlocked(episodeId: String) {
+            val state = uiStateFlow.value
+            val index = state.episodes.indexOfFirst { it.id == episodeId }
+            if (index < 0) return
+            logger.i(TAG, "episode unlocked index=$index: resolving again")
+            uiStateFlow.update { it.copy(paywall = null, pages = it.pages - index) }
+            if (index == state.currentIndex) {
+                state.episodes.getOrNull(index)?.let { resolveAndPlay(index, it) }
+            } else {
+                startAt(index)
+            }
         }
 
         private fun trackStart(
@@ -484,6 +559,23 @@ class PlayerViewModel
                 analytics.track(AnalyticsEvent.EpisodeComplete(episode.seriesId, episode.id, episode.index))
             }
             val next = EpisodeNavigation.nextIndex(index, uiStateFlow.value.episodes.size)
+            val nextEpisode = next?.let { uiStateFlow.value.episodes.getOrNull(it) }
+            val nextLocked =
+                nextEpisode != null &&
+                    (
+                        nextEpisode.access == EpisodeAccess.LOCKED ||
+                            uiStateFlow.value.pageState(
+                                next,
+                            ) is PageState.Locked
+                    )
+            if (next != null && nextEpisode != null && nextLocked && !uiStateFlow.value.autoUnlock) {
+                // M-20: the paywall replaces the countdown at the end of the last free episode. With auto-unlock
+                // on, the countdown runs and `/play` on the next page debits and plays it (M-21).
+                val locked =
+                    uiStateFlow.value.pageState(next) as? PageState.Locked ?: PageState.Locked(nextEpisode.coinCost)
+                showPaywall(next, nextEpisode, locked)
+                return
+            }
             uiStateFlow.update { it.copy(endOfEpisode = EndOfEpisode(next, NEXT_COUNTDOWN_S)) }
             if (next == null) return
             countdownJob?.cancel()

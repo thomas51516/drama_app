@@ -6,6 +6,7 @@ import com.drama.core.network.dto.ApiErrorDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import retrofit2.HttpException
@@ -43,6 +44,13 @@ class ApiErrorMapper
                         episodeId = details?.get("episodeId")?.stringOrNull(),
                         seriesId = details?.get("seriesId")?.stringOrNull(),
                         coinCost = details?.get("coinCost")?.intOrNullSafe(),
+                        balance = details?.get("balance")?.intOrNullSafe(),
+                        canAutoUnlock = details?.get("canAutoUnlock")?.booleanOrNullSafe(),
+                    )
+                statusCode == HTTP_PAYMENT_REQUIRED || code == CODE_INSUFFICIENT_COINS ->
+                    AppError.InsufficientCoins(
+                        cost = (details?.get("cost") ?: details?.get("coinCost"))?.intOrNullSafe(),
+                        balance = details?.get("balance")?.intOrNullSafe(),
                     )
                 statusCode == HTTP_NOT_FOUND -> AppError.NotFound(code ?: dto?.path ?: "resource")
                 statusCode >= HTTP_SERVER_ERROR -> AppError.Server(statusCode, code, message)
@@ -75,9 +83,18 @@ class ApiErrorMapper
                 null
             }
 
+        private fun kotlinx.serialization.json.JsonElement.booleanOrNullSafe(): Boolean? =
+            try {
+                jsonPrimitive.booleanOrNull
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+
         companion object {
             const val CODE_EPISODE_LOCKED = "EPISODE_LOCKED"
+            const val CODE_INSUFFICIENT_COINS = "INSUFFICIENT_COINS"
             private const val HTTP_UNAUTHORIZED = 401
+            private const val HTTP_PAYMENT_REQUIRED = 402
             private const val HTTP_FORBIDDEN = 403
             private const val HTTP_NOT_FOUND = 404
             private const val HTTP_SERVER_ERROR = 500

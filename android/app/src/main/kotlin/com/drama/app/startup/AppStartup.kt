@@ -8,6 +8,7 @@ import com.drama.core.common.result.AppResult
 import com.drama.domain.model.SessionState
 import com.drama.domain.repository.PushRepository
 import com.drama.domain.repository.SessionRepository
+import com.drama.domain.usecase.RestorePurchasesUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
@@ -27,6 +28,7 @@ class AppStartup
         private val sessionRepository: SessionRepository,
         private val pushRepository: PushRepository,
         private val analytics: AnalyticsTracker,
+        private val restorePurchases: RestorePurchasesUseCase,
         private val dispatchers: DispatcherProvider,
         private val logger: Logger,
     ) {
@@ -52,6 +54,14 @@ class AppStartup
                         when (val result = pushRepository.syncToken()) {
                             is AppResult.Success -> logger.i(TAG, "push token in sync for user=$userId")
                             is AppResult.Failure -> logger.w(TAG, "push token not registered: ${result.error}")
+                        }
+                        // M-31: a purchase paid but never verified (crash, offline) is credited at the next start.
+                        when (val restored = restorePurchases()) {
+                            is AppResult.Success ->
+                                if (restored.value.isNotEmpty()) {
+                                    logger.i(TAG, "recovered ${restored.value.size} unverified purchase(s)")
+                                }
+                            is AppResult.Failure -> logger.w(TAG, "purchase recovery skipped: ${restored.error}")
                         }
                     }
             }

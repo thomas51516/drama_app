@@ -224,6 +224,25 @@ class TokenAuthenticatorTest {
         assertEquals(1, guestCalls.get())
     }
 
+    @Test
+    fun `DEF-006 - a rejected refresh publishes the replaced session with the previous user id and the code`() {
+        seedSession(access = "expired-access", refresh = "revoked-refresh-0123456789abcdef0123456789abcdef")
+        refreshAnswer = { MockResponse(code = 401, body = apiError(401, "REFRESH_TOKEN_EXPIRED")) }
+        assertNull(sessionManager.replacement.value)
+
+        assertEquals(200, get("/home").code)
+
+        val replaced = sessionManager.replacement.value
+        assertNotNull(replaced)
+        assertEquals("u1", replaced?.previousUserId)
+        assertEquals(true, replaced?.previousWasGuest)
+        assertEquals("REFRESH_TOKEN_EXPIRED", replaced?.code)
+        assertEquals(store.current?.userId, replaced?.newUserId)
+
+        sessionManager.dismissReplacement()
+        assertNull(sessionManager.replacement.value)
+    }
+
     private class InMemorySessionStore : SessionStore {
         private val flow = MutableStateFlow<StoredSession?>(null)
         val current: StoredSession? get() = flow.value

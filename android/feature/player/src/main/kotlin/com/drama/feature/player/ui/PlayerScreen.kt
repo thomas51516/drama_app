@@ -87,6 +87,9 @@ import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Episode
 import com.drama.feature.player.EndOfEpisode
 import com.drama.feature.player.PageState
+import com.drama.feature.player.PaywallEvent
+import com.drama.feature.player.PaywallUiState
+import com.drama.feature.player.PaywallViewModel
 import com.drama.feature.player.PlayerUiState
 import com.drama.feature.player.PlayerViewModel
 import com.drama.feature.player.R
@@ -105,26 +108,52 @@ data class PlayerActions(
     val onBack: () -> Unit,
     /** Returns the text to share, or null when nothing is loaded (M-16). */
     val onShare: () -> String?,
+    /** "Débloquer" on a locked page whose paywall was closed (M-20). */
+    val onOpenPaywall: () -> Unit,
     val settings: SettingsActions,
 )
 
 @Composable
 fun PlayerScreen(
     onBack: () -> Unit,
+    onOpenShop: (tab: String, missingCoins: Int) -> Unit,
     viewModel: PlayerViewModel = hiltViewModel(),
+    paywallViewModel: PaywallViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val player by viewModel.activePlayer.collectAsStateWithLifecycle()
+    val paywall by paywallViewModel.uiState.collectAsStateWithLifecycle()
 
     // Pause when the screen leaves the foreground, resume when it comes back (release happens in onCleared).
     LifecycleStartEffect(Unit) {
         viewModel.onForeground()
         onStopOrDispose { viewModel.onBackground() }
     }
+    // The player decides when the paywall shows; the paywall view model owns balance, unlock and auto-unlock.
+    LaunchedEffect(state.paywall) {
+        state.paywall?.let(paywallViewModel::show)
+    }
+    LaunchedEffect(paywallViewModel) {
+        paywallViewModel.events.collect { event ->
+            when (event) {
+                is PaywallEvent.Unlocked -> viewModel.onEpisodeUnlocked(event.episodeId)
+                is PaywallEvent.OpenShop -> onOpenShop(event.tab, event.missingCoins)
+            }
+        }
+    }
 
     PlayerContent(
         state = state,
         player = player,
+        paywall = paywall.takeIf { state.paywall != null },
+        paywallActions =
+            PaywallActions(
+                onUnlock = paywallViewModel::onUnlock,
+                onBecomeVip = paywallViewModel::onBecomeVip,
+                onRecharge = paywallViewModel::onRecharge,
+                onAutoUnlockChanged = paywallViewModel::onAutoUnlockChanged,
+                onDismiss = viewModel::onPaywallDismissed,
+            ),
         actions =
             PlayerActions(
                 onPageSettled = viewModel::onPageSettled,
@@ -136,6 +165,7 @@ fun PlayerScreen(
                 onReplay = viewModel::onReplay,
                 onBack = onBack,
                 onShare = viewModel::onShare,
+                onOpenPaywall = viewModel::onOpenPaywall,
                 settings =
                     SettingsActions(
                         onSpeedSelected = viewModel::onSpeedSelected,
@@ -157,6 +187,8 @@ fun PlayerContent(
     player: Player?,
     actions: PlayerActions,
     modifier: Modifier = Modifier,
+    paywall: PaywallUiState? = null,
+    paywallActions: PaywallActions? = null,
 ) {
     KeepScreenOn(enabled = state.isPlaying)
     ImmersiveSystemBars()
@@ -247,6 +279,14 @@ fun PlayerContent(
                 actions = actions.settings,
                 onNavigate = { sheet = it },
                 onDismiss = { sheet = null },
+            )
+        }
+        // M-20: the paywall sits in the lower band; the (paused or ended) video above stays whole.
+        if (paywall != null && paywallActions != null) {
+            PaywallSheet(
+                state = paywall,
+                actions = paywallActions,
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }
@@ -435,7 +475,8 @@ private fun EpisodePage(
         }
 
         when (pageState) {
-            is PageState.Locked -> LockedPlaceholder(episode = episode, coinCost = pageState.coinCost)
+            is PageState.Locked ->
+                LockedPlaceholder(episode = episode, coinCost = pageState.coinCost, onUnlock = actions.onOpenPaywall)
             is PageState.Failed ->
                 Text(
                     text = pageState.message.asString(),
@@ -492,10 +533,12 @@ private fun EpisodePage(
     }
 }
 
+/** Locked page behind the paywall sheet (M-20): lock, episode, cost and a button reopening the sheet. */
 @Composable
 private fun LockedPlaceholder(
     episode: Episode,
     coinCost: Int?,
+    onUnlock: () -> Unit,
 ) {
     val episodeLabel = stringResource(CoreR.string.episode_number, episode.index)
     val detail =
@@ -512,26 +555,34 @@ private fun LockedPlaceholder(
                 .fillMaxSize()
                 .background(Color(0xFF14141C))
                 .padding(DramaSpacing.lg)
-                .semantics(mergeDescendants = true) {},
+                // The sheet takes the lower band: keep the message in the upper part of the page.
+                .padding(bottom = LOCKED_BOTTOM_INSET),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Decorative glyph: the title carries the meaning.
-        Text(text = LOCK_GLYPH, fontSize = 48.sp, modifier = Modifier.clearAndSetSemantics {})
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.semantics(mergeDescendants = true) {},
+        ) {
+            // Decorative glyph: the title carries the meaning.
+            Text(text = LOCK_GLYPH, fontSize = 48.sp, modifier = Modifier.clearAndSetSemantics {})
+            Spacer(Modifier.height(DramaSpacing.md))
+            Text(
+                text = stringResource(R.string.player_locked_title),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(DramaSpacing.sm))
+            Text(
+                text = detail,
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
         Spacer(Modifier.height(DramaSpacing.md))
-        Text(
-            text = stringResource(R.string.player_locked_title),
-            color = Color.White,
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(DramaSpacing.sm))
-        Text(
-            text = detail,
-            color = Color.White.copy(alpha = 0.7f),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
+        PillButton(text = stringResource(R.string.player_locked_open), onClick = onUnlock)
     }
 }
 
@@ -648,6 +699,7 @@ private tailrec fun Context.findActivity(): Activity? =
 /** Minimum height of the top bar; it grows with the font scale. */
 private val TOP_BAR_HEIGHT = 48.dp
 private val SUBTITLE_BOTTOM_INSET = 112.dp
+private val LOCKED_BOTTOM_INSET = 160.dp
 private const val TOP_BAR_TRAVERSAL_INDEX = -1f
 private val SEEK_STEP_SECONDS = (PlayerViewModel.SEEK_STEP_MS / 1_000L).toInt()
 private const val LOCK_GLYPH = "🔒"

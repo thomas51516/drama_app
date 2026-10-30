@@ -156,6 +156,13 @@ class RoomCatalogLocalDataSource
             dao.upsertCacheMeta(CacheMetaEntity(episodesKey(seriesId), nowEpochMs))
         }
 
+        override suspend fun markEpisodesUnlocked(
+            seriesId: String,
+            episodeIds: List<String>,
+        ) {
+            if (episodeIds.isNotEmpty()) dao.markEpisodesUnlocked(episodeIds)
+        }
+
         override suspend fun clear() = dao.clearCatalogCache()
 
         private companion object {

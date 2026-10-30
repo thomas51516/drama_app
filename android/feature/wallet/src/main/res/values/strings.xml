@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Wallet (M-32) -->
+    <string name="wallet_title">Mon portefeuille</string>
+    <string name="wallet_total_label">Solde total</string>
+    <string name="wallet_purchased_label">Achetées</string>
+    <string name="wallet_bonus_label">Bonus</string>
+    <string name="wallet_bonus_expiring">%1$s bonus expirent %2$s</string>
+    <string name="wallet_recharge">Recharger</string>
+    <string name="wallet_auto_unlock">Débloquer automatiquement les prochains épisodes</string>
+    <string name="wallet_auto_unlock_hint">L\'épisode suivant est débité sans confirmation si le solde suffit.</string>
+    <string name="wallet_history_heading">Historique</string>
+    <string name="wallet_history_empty">Aucune transaction pour le moment.</string>
+    <string name="wallet_error_load">Impossible de charger le portefeuille.</string>
+    <string name="wallet_type_purchase">Achat de pièces</string>
+    <string name="wallet_type_bonus">Pièces bonus</string>
+    <string name="wallet_type_unlock">Déblocage d\'épisode</string>
+    <string name="wallet_type_adjustment">Ajustement</string>
+    <string name="wallet_type_expiry">Expiration de bonus</string>
+    <string name="wallet_type_refund">Remboursement</string>
+    <string name="wallet_type_merge">Fusion de comptes</string>
+    <string name="wallet_type_other">Opération</string>
+
+    <!-- Shop (M-30 / M-31) -->
+    <string name="shop_title">Boutique</string>
+    <string name="shop_tab_coins">Pièces</string>
+    <string name="shop_tab_vip">VIP</string>
+    <string name="shop_balance_cd">Solde : %1$s. Ouvrir le portefeuille</string>
+    <string name="shop_missing_coins">Il vous manque %1$s</string>
+    <string name="shop_no_packs">Aucun pack disponible pour le moment.</string>
+    <string name="shop_no_plans">Aucune formule VIP disponible pour le moment.</string>
+    <string name="shop_bonus_coins">+%1$d bonus</string>
+    <string name="shop_buy_cd">Acheter %1$d pièces pour %2$s</string>
+    <string name="shop_buying">Achat…</string>
+    <string name="shop_restore">Restaurer les achats</string>
+    <string name="shop_error_load">Impossible de charger la boutique.</string>
+    <string name="shop_vip_plan_title">VIP %1$s</string>
+    <string name="shop_vip_price_per">%1$s %2$s</string>
+    <string name="shop_period_week">hebdomadaire</string>
+    <string name="shop_period_month">mensuel</string>
+    <string name="shop_period_year">annuel</string>
+    <string name="shop_per_week">par semaine</string>
+    <string name="shop_per_month">par mois</string>
+    <string name="shop_per_year">par an</string>
+    <plurals name="shop_vip_trial">
+        <item quantity="one">%1$d jour d\'essai offert</item>
+        <item quantity="other">%1$d jours d\'essai offerts</item>
+    </plurals>
+    <string name="shop_vip_subscribe">S\'abonner</string>
+    <string name="shop_vip_start_trial">Commencer l\'essai</string>
+    <string name="shop_vip_hint">Tous les épisodes débloqués pendant l\'abonnement. Géré et résiliable depuis Google Play.</string>
+    <string name="shop_vip_active_title">Vous êtes VIP</string>
+    <string name="shop_vip_renews_on">Renouvellement le %1$s</string>
+    <string name="shop_vip_ends_on">Fin le %1$s</string>
+
+    <!-- Purchase messages -->
+    <plurals name="shop_msg_coins_credited">
+        <item quantity="one">%1$d pièce créditée</item>
+        <item quantity="other">%1$d pièces créditées</item>
+    </plurals>
+    <string name="shop_msg_vip_active">Abonnement VIP activé</string>
+    <string name="shop_msg_pending">Paiement en attente : les pièces arriveront dès la confirmation.</string>
+    <string name="shop_msg_already_owned">Un achat est déjà en cours pour ce produit. Utilisez « Restaurer les achats ».</string>
+    <string name="shop_msg_store_error">Achat impossible : %1$s</string>
+    <string name="shop_msg_store_unavailable">Le Play Store n\'est pas disponible sur cet appareil.</string>
+    <string name="shop_msg_verify_offline">Paiement reçu, crédit en attente de connexion. Réessayez avec « Restaurer les achats ».</string>
+    <string name="shop_msg_verify_failed">Paiement reçu mais crédit impossible pour le moment. Réessayez avec « Restaurer les achats ».</string>
+    <string name="shop_msg_owned_by_other">Cet achat appartient à un autre compte.</string>
+    <string name="shop_msg_purchase_invalid">Achat refusé par le serveur.</string>
+    <plurals name="shop_msg_restored">
+        <item quantity="one">%1$d achat restauré</item>
+        <item quantity="other">%1$d achats restaurés</item>
+    </plurals>
+    <string name="shop_msg_nothing_to_restore">Aucun achat à restaurer.</string>
+
+    <!-- Simulated store (debug builds) -->
+    <string name="shop_fake_banner">Facturation simulée (build de test) : aucun paiement réel.</string>
+    <string name="shop_fake_dialog_title">Simulation d\'achat</string>
+    <string name="shop_fake_dialog_body">Produit %1$s. Choisissez le résultat du paiement.</string>
+    <string name="shop_fake_success">Réussir</string>
+    <string name="shop_fake_pending">En attente</string>
+</resources>

@@ -16,6 +16,7 @@ import com.drama.domain.model.Episode
 import com.drama.domain.model.HomeContent
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.Series
+import com.drama.domain.model.SessionReplacement
 import com.drama.domain.model.SessionState
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.PushRepository
@@ -240,6 +241,11 @@ class DefaultAccountRepositoryTest {
             nowEpochMs: Long,
         ) = Unit
 
+        override suspend fun markEpisodesUnlocked(
+            seriesId: String,
+            episodeIds: List<String>,
+        ) = Unit
+
         override suspend fun clear() {
             clears++
         }
@@ -273,6 +279,10 @@ class DefaultAccountRepositoryTest {
         override suspend fun logout() {
             logouts++
         }
+
+        override val sessionReplacement: Flow<SessionReplacement?> = MutableStateFlow(null)
+
+        override fun dismissSessionReplacement() = Unit
     }
 
     private class FakeFavorites : FavoritesRepository {

@@ -45,8 +45,6 @@
     <string name="player_end_of_series">Fim da série</string>
     <string name="player_replay">Ver novamente</string>
 
-    <string name="player_locked_title">Episódio bloqueado — pagamento disponível no sprint 7</string>
-    <string name="player_locked_episode_cost">%1$s · %2$s</string>
 
     <string name="player_speed_title">Velocidade de reprodução</string>
     <string name="player_quality_title">Qualidade de vídeo</string>
@@ -59,4 +57,18 @@
     <string name="player_subtitle_option">%1$s (%2$s)</string>
     <string name="player_quality_auto">Auto</string>
     <string name="player_quality_auto_live">Auto · %1$dp</string>
+    <string name="player_locked_title">Episódio bloqueado</string>
+    <string name="player_locked_episode_cost">%1$s · %2$s</string>
+    <string name="player_locked_open">Desbloquear</string>
+    <string name="player_paywall_title">Episódio %1$d bloqueado</string>
+    <string name="player_paywall_balance">O seu saldo</string>
+    <string name="player_paywall_cost">Custo</string>
+    <string name="player_paywall_unlock">Desbloquear por %1$s</string>
+    <string name="player_paywall_unlocking">A desbloquear…</string>
+    <string name="player_paywall_vip">Tornar-se VIP</string>
+    <string name="player_paywall_ad_soon">Ver um anúncio · em breve</string>
+    <string name="player_paywall_auto_unlock">Desbloquear automaticamente os próximos episódios</string>
+    <string name="player_paywall_missing">Faltam-lhe %1$s</string>
+    <string name="player_paywall_recharge">Recarregar</string>
+    <string name="player_paywall_error">Não foi possível desbloquear, tente novamente.</string>
 </resources>

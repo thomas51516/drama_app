@@ -9,8 +9,10 @@ import com.drama.core.network.ApiErrorMapper
 import com.drama.core.network.api.PlaybackApi
 import com.drama.core.network.call
 import com.drama.core.network.dto.UpdateProgressDto
+import com.drama.data.local.CatalogLocalDataSource
 import com.drama.data.mapper.toDomain
 import com.drama.data.media.MediaUrlResolver
+import com.drama.data.wallet.WalletStore
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.PlaybackRepository
@@ -29,10 +31,26 @@ class RemotePlaybackRepository
         private val clock: Clock,
         private val watchProgress: WatchProgressRepository,
         private val watchHistory: WatchHistoryRepository,
+        private val catalogLocal: CatalogLocalDataSource,
+        private val walletStore: WalletStore,
         private val logger: Logger,
     ) : PlaybackRepository {
+        /**
+         * `/play` may auto-unlock the episode (M-21, `unlocked: true`): the cached status flips to UNLOCKED and the
+         * mirrored wallet is dropped so the next observer refetches the real balance (the answer carries none).
+         */
         override suspend fun startPlayback(episodeId: String): AppResult<PlaySession> =
-            errorMapper.call { api.play(episodeId) }.map { it.toDomain(media, clock.nowEpochMs()) }
+            errorMapper
+                .call { api.play(episodeId) }
+                .map { it.toDomain(media, clock.nowEpochMs()) }
+                .also { result ->
+                    val session = (result as? AppResult.Success)?.value
+                    if (session?.unlocked == true) {
+                        logger.i(TAG, "episode auto-unlocked by /play episode=$episodeId")
+                        catalogLocal.markEpisodesUnlocked(session.seriesId, listOf(session.episodeId))
+                        walletStore.clear()
+                    }
+                }
 
         override suspend fun reportProgress(progress: WatchProgress): AppResult<Unit> {
             watchProgress.save(progress)

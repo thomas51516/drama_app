@@ -31,6 +31,8 @@ data class PlaySessionDto(
     val resumePositionSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0,
     val nextEpisodeId: String? = null,
+    /** v1.4: true when this call auto-unlocked the episode (M-21). */
+    val unlocked: Boolean = false,
 )
 
 @Serializable

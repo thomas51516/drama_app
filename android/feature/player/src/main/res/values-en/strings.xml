@@ -42,8 +42,6 @@
     <string name="player_end_of_series">End of the series</string>
     <string name="player_replay">Watch again</string>
 
-    <string name="player_locked_title">Locked episode — paywall coming in sprint 7</string>
-    <string name="player_locked_episode_cost">%1$s · %2$s</string>
 
     <string name="player_speed_title">Playback speed</string>
     <string name="player_quality_title">Video quality</string>
@@ -56,4 +54,18 @@
     <string name="player_subtitle_option">%1$s (%2$s)</string>
     <string name="player_quality_auto">Auto</string>
     <string name="player_quality_auto_live">Auto · %1$dp</string>
+    <string name="player_locked_title">Locked episode</string>
+    <string name="player_locked_episode_cost">%1$s · %2$s</string>
+    <string name="player_locked_open">Unlock</string>
+    <string name="player_paywall_title">Episode %1$d is locked</string>
+    <string name="player_paywall_balance">Your balance</string>
+    <string name="player_paywall_cost">Cost</string>
+    <string name="player_paywall_unlock">Unlock for %1$s</string>
+    <string name="player_paywall_unlocking">Unlocking…</string>
+    <string name="player_paywall_vip">Become VIP</string>
+    <string name="player_paywall_ad_soon">Watch an ad · soon</string>
+    <string name="player_paywall_auto_unlock">Unlock the next episodes automatically</string>
+    <string name="player_paywall_missing">You are %1$s short</string>
+    <string name="player_paywall_recharge">Top up</string>
+    <string name="player_paywall_error">Unlock failed, try again.</string>
 </resources>

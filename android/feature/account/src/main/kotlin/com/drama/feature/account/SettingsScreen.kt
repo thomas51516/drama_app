@@ -53,6 +53,7 @@ data class SettingsActions(
     val onPreferenceChanged: (NotificationPreferenceKind, Boolean) -> Unit,
     val onRequestPermission: () -> Unit,
     val onOpenSystemSettings: () -> Unit,
+    val onRestorePurchases: () -> Unit = {},
 )
 
 /** Settings step of the Profil tab (M-52): language, notification preferences, system permission. */
@@ -97,6 +98,7 @@ fun SettingsStep(
                 onPreferenceChanged = viewModel::onPreferenceChanged,
                 onRequestPermission = viewModel::onRequestPermission,
                 onOpenSystemSettings = { context.openNotificationSettings() },
+                onRestorePurchases = viewModel::onRestorePurchases,
             ),
         modifier = modifier,
     )
@@ -180,6 +182,21 @@ fun SettingsContent(
             checked = state.isEnabled(NotificationPreferenceKind.CHECKIN_REMINDER),
             onCheckedChange = { actions.onPreferenceChanged(NotificationPreferenceKind.CHECKIN_REMINDER, it) },
         )
+        Spacer(Modifier.height(DramaSpacing.lg))
+        SectionTitle(stringResource(R.string.settings_purchases))
+        Hint(stringResource(R.string.settings_purchases_hint))
+        Spacer(Modifier.height(DramaSpacing.xs))
+        OutlinedButton(
+            onClick = actions.onRestorePurchases,
+            enabled = !state.isRestoring,
+            modifier = Modifier.heightIn(min = DramaSizes.touchTarget),
+        ) {
+            Text(
+                stringResource(
+                    if (state.isRestoring) R.string.settings_restoring else R.string.settings_restore_purchases,
+                ),
+            )
+        }
         if (state.showDataSaver) {
             // M-17 placeholder: the switch exists but the feature ships later; hidden by default.
             PreferenceSwitch(

@@ -103,4 +103,19 @@
     <string name="settings_msg_prefs_failed">Preferences not saved, try again</string>
     <string name="settings_open">Open settings</string>
     <string name="settings_language_value">Language: %1$s</string>
+    <string name="wallet_section">Coins and VIP</string>
+    <string name="wallet_entry">My wallet</string>
+    <string name="wallet_entry_balance">Balance: %1$s</string>
+    <string name="wallet_entry_hint">Balance and history</string>
+    <string name="shop_entry">Shop</string>
+    <string name="shop_entry_hint">Coin packs and VIP plans</string>
+    <string name="settings_purchases">Purchases</string>
+    <string name="settings_purchases_hint">Recovers a Google Play purchase that was paid but not credited.</string>
+    <string name="settings_restore_purchases">Restore purchases</string>
+    <string name="settings_restoring">Restoring…</string>
+    <plurals name="settings_msg_restored">
+        <item quantity="one">%1$d purchase restored</item>
+        <item quantity="other">%1$d purchases restored</item>
+    </plurals>
+    <string name="settings_msg_nothing_to_restore">No purchase to restore</string>
 </resources>

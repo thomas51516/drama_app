@@ -116,6 +116,8 @@ data class AuthUserDto(
     val deletionScheduledAt: String? = null,
     /** v1.3: push preferences (absent on servers before the sprint 5 contract = all true). */
     val notificationPreferences: NotificationPreferencesDto? = null,
+    /** v1.4: auto-unlock flag (M-21); null on older servers. */
+    val autoUnlock: Boolean? = null,
 )
 
 @Serializable

@@ -30,6 +30,14 @@ sealed interface SessionStatus {
     data object SignedOut : SessionStatus
 }
 
+/** A rejected refresh replaced [previousUserId] by the guest [newUserId] (DEF-006); [code] is the server error code. */
+data class SessionReplaced(
+    val previousUserId: String,
+    val previousWasGuest: Boolean,
+    val newUserId: String,
+    val code: String?,
+)
+
 /** Persistence of the session; implemented over DataStore in :data so :core:network stays storage-agnostic. */
 interface SessionStore {
     val session: Flow<StoredSession?>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wallet_title">My wallet</string>
+    <string name="wallet_total_label">Total balance</string>
+    <string name="wallet_purchased_label">Purchased</string>
+    <string name="wallet_bonus_label">Bonus</string>
+    <string name="wallet_bonus_expiring">%1$s bonus expire %2$s</string>
+    <string name="wallet_recharge">Top up</string>
+    <string name="wallet_auto_unlock">Unlock the next episodes automatically</string>
+    <string name="wallet_auto_unlock_hint">The next episode is charged without confirmation when the balance allows.</string>
+    <string name="wallet_history_heading">History</string>
+    <string name="wallet_history_empty">No transaction yet.</string>
+    <string name="wallet_error_load">The wallet could not be loaded.</string>
+    <string name="wallet_type_purchase">Coin purchase</string>
+    <string name="wallet_type_bonus">Bonus coins</string>
+    <string name="wallet_type_unlock">Episode unlock</string>
+    <string name="wallet_type_adjustment">Adjustment</string>
+    <string name="wallet_type_expiry">Bonus expiry</string>
+    <string name="wallet_type_refund">Refund</string>
+    <string name="wallet_type_merge">Account merge</string>
+    <string name="wallet_type_other">Operation</string>
+
+    <string name="shop_title">Shop</string>
+    <string name="shop_tab_coins">Coins</string>
+    <string name="shop_tab_vip">VIP</string>
+    <string name="shop_balance_cd">Balance: %1$s. Open the wallet</string>
+    <string name="shop_missing_coins">You are %1$s short</string>
+    <string name="shop_no_packs">No pack available right now.</string>
+    <string name="shop_no_plans">No VIP plan available right now.</string>
+    <string name="shop_bonus_coins">+%1$d bonus</string>
+    <string name="shop_buy_cd">Buy %1$d coins for %2$s</string>
+    <string name="shop_buying">Buying…</string>
+    <string name="shop_restore">Restore purchases</string>
+    <string name="shop_error_load">The shop could not be loaded.</string>
+    <string name="shop_vip_plan_title">VIP %1$s</string>
+    <string name="shop_vip_price_per">%1$s %2$s</string>
+    <string name="shop_period_week">weekly</string>
+    <string name="shop_period_month">monthly</string>
+    <string name="shop_period_year">yearly</string>
+    <string name="shop_per_week">per week</string>
+    <string name="shop_per_month">per month</string>
+    <string name="shop_per_year">per year</string>
+    <plurals name="shop_vip_trial">
+        <item quantity="one">%1$d-day free trial</item>
+        <item quantity="other">%1$d-day free trial</item>
+    </plurals>
+    <string name="shop_vip_subscribe">Subscribe</string>
+    <string name="shop_vip_start_trial">Start the trial</string>
+    <string name="shop_vip_hint">Every episode unlocked while subscribed. Managed and cancelled from Google Play.</string>
+    <string name="shop_vip_active_title">You are VIP</string>
+    <string name="shop_vip_renews_on">Renews on %1$s</string>
+    <string name="shop_vip_ends_on">Ends on %1$s</string>
+
+    <plurals name="shop_msg_coins_credited">
+        <item quantity="one">%1$d coin credited</item>
+        <item quantity="other">%1$d coins credited</item>
+    </plurals>
+    <string name="shop_msg_vip_active">VIP subscription activated</string>
+    <string name="shop_msg_pending">Payment pending: the coins arrive once it is confirmed.</string>
+    <string name="shop_msg_already_owned">A purchase of this product is already in progress. Use “Restore purchases”.</string>
+    <string name="shop_msg_store_error">Purchase failed: %1$s</string>
+    <string name="shop_msg_store_unavailable">The Play Store is not available on this device.</string>
+    <string name="shop_msg_verify_offline">Payment received, credit waiting for a connection. Retry with “Restore purchases”.</string>
+    <string name="shop_msg_verify_failed">Payment received but it could not be credited yet. Retry with “Restore purchases”.</string>
+    <string name="shop_msg_owned_by_other">This purchase belongs to another account.</string>
+    <string name="shop_msg_purchase_invalid">Purchase rejected by the server.</string>
+    <plurals name="shop_msg_restored">
+        <item quantity="one">%1$d purchase restored</item>
+        <item quantity="other">%1$d purchases restored</item>
+    </plurals>
+    <string name="shop_msg_nothing_to_restore">No purchase to restore.</string>
+
+    <string name="shop_fake_banner">Simulated billing (test build): no real payment.</string>
+    <string name="shop_fake_dialog_title">Purchase simulation</string>
+    <string name="shop_fake_dialog_body">Product %1$s. Choose how the payment ends.</string>
+    <string name="shop_fake_success">Succeed</string>
+    <string name="shop_fake_pending">Pending</string>
+</resources>

@@ -130,6 +130,7 @@ fun AuthUserDto.toDomain(): UserProfile =
         createdAtEpochMs = parseInstantMs(createdAt),
         deletionScheduledAtEpochMs = parseInstantMs(deletionScheduledAt),
         notificationPreferences = notificationPreferences.toDomain(),
+        autoUnlock = autoUnlock,
     )
 
 fun String.toEpisodeAccess(): EpisodeAccess =
@@ -192,6 +193,7 @@ fun PlaySessionDto.toDomain(
         durationMs = (durationSeconds * MS_PER_SECOND).toLong().coerceAtLeast(0L),
         nextEpisodeId = nextEpisodeId,
         subtitles = tracks,
+        unlocked = unlocked,
     )
 }
 

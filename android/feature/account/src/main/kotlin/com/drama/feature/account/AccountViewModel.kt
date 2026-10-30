@@ -17,6 +17,7 @@ import com.drama.domain.model.SignInResult
 import com.drama.domain.model.UserProfile
 import com.drama.domain.repository.AccountRepository
 import com.drama.domain.repository.SessionRepository
+import com.drama.domain.repository.WalletRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -71,6 +72,8 @@ data class AccountUiState(
     val confirmDelete: Boolean = false,
     /** One-shot snackbar text. */
     val message: UiText? = null,
+    /** Coin balance shown under "Mon portefeuille" (M-32); null until fetched. */
+    val coinBalance: Int? = null,
 ) {
     val isGuest: Boolean get() = (session as? SessionState.Authenticated)?.isGuest != false
     val isRegistered: Boolean get() = (session as? SessionState.Authenticated)?.isGuest == false
@@ -100,6 +103,7 @@ class AccountViewModel
         private val authConfig: AuthConfig,
         deviceLocale: DeviceLocaleProvider,
         private val logger: Logger,
+        private val wallet: WalletRepository,
     ) : ViewModel() {
         private val uiStateFlow =
             MutableStateFlow(
@@ -129,6 +133,13 @@ class AccountViewModel
                         )
                     }
                 }
+            }
+            viewModelScope.launch {
+                wallet.wallet.collect { w -> uiStateFlow.update { it.copy(coinBalance = w?.total ?: it.coinBalance) } }
+            }
+            viewModelScope.launch {
+                val result = wallet.refresh()
+                if (result is AppResult.Failure) logger.w(TAG, "GET /wallet failed in profile: ${result.error}")
             }
         }
 

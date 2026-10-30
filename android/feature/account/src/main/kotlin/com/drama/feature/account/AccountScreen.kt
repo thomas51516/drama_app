@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -106,6 +107,8 @@ data class AccountActions(
     val onDeleteConfirmed: () -> Unit,
     val onOpenHelp: () -> Unit,
     val onOpenNotifications: () -> Unit,
+    val onOpenWallet: () -> Unit = {},
+    val onOpenShop: () -> Unit = {},
 )
 
 /**
@@ -117,6 +120,8 @@ fun AccountScreen(
     googleWebClientId: String,
     onOpenHelp: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenWallet: () -> Unit,
+    onOpenShop: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
@@ -165,6 +170,8 @@ fun AccountScreen(
                     onDeleteConfirmed = viewModel::onDeleteConfirmed,
                     onOpenHelp = onOpenHelp,
                     onOpenNotifications = onOpenNotifications,
+                    onOpenWallet = onOpenWallet,
+                    onOpenShop = onOpenShop,
                 ),
             settings = {
                 SettingsStep(onMessage = { text -> scope.launch { snackbar.showSnackbar(text.asString(context)) } })
@@ -197,6 +204,10 @@ fun AccountContent(
                 AccountStep.OVERVIEW -> {
                     if (state.isRegistered) ProfileOverview(state, actions) else GuestOverview(state, actions)
                     Spacer(Modifier.height(DramaSpacing.lg))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(DramaSpacing.sm))
+                    WalletLinks(state, actions)
+                    Spacer(Modifier.height(DramaSpacing.sm))
                     HorizontalDivider()
                     Spacer(Modifier.height(DramaSpacing.sm))
                     SettingsLinks(actions)
@@ -277,6 +288,43 @@ private fun StepHeader(
             modifier = Modifier.semantics { heading() },
         )
     }
+}
+
+// --- Wallet and shop entries (M-30 / M-32) ---
+
+@Composable
+private fun WalletLinks(
+    state: AccountUiState,
+    actions: AccountActions,
+) {
+    Text(
+        text = stringResource(R.string.wallet_section),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier =
+            Modifier
+                .padding(vertical = DramaSpacing.xs)
+                .semantics { heading() },
+    )
+    val balance = state.coinBalance
+    SettingsLinkRow(
+        title = stringResource(R.string.wallet_entry),
+        subtitle =
+            if (balance != null) {
+                stringResource(
+                    R.string.wallet_entry_balance,
+                    pluralStringResource(CoreR.plurals.coin_count, balance, balance),
+                )
+            } else {
+                stringResource(R.string.wallet_entry_hint)
+            },
+        onClick = actions.onOpenWallet,
+    )
+    SettingsLinkRow(
+        title = stringResource(R.string.shop_entry),
+        subtitle = stringResource(R.string.shop_entry_hint),
+        onClick = actions.onOpenShop,
+    )
 }
 
 // --- Settings entries (M-52 / M-53 / M-54) ---

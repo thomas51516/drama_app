@@ -111,4 +111,20 @@
     <string name="settings_msg_prefs_failed">Préférences non enregistrées, réessayez</string>
     <string name="settings_open">Ouvrir les paramètres</string>
     <string name="settings_language_value">Langue : %1$s</string>
+    <!-- Wallet and shop entries (M-30 / M-32) and purchase restore (M-31) -->
+    <string name="wallet_section">Pièces et VIP</string>
+    <string name="wallet_entry">Mon portefeuille</string>
+    <string name="wallet_entry_balance">Solde : %1$s</string>
+    <string name="wallet_entry_hint">Solde et historique</string>
+    <string name="shop_entry">Boutique</string>
+    <string name="shop_entry_hint">Packs de pièces et formules VIP</string>
+    <string name="settings_purchases">Achats</string>
+    <string name="settings_purchases_hint">Récupère un achat Google Play payé mais non crédité.</string>
+    <string name="settings_restore_purchases">Restaurer les achats</string>
+    <string name="settings_restoring">Restauration…</string>
+    <plurals name="settings_msg_restored">
+        <item quantity="one">%1$d achat restauré</item>
+        <item quantity="other">%1$d achats restaurés</item>
+    </plurals>
+    <string name="settings_msg_nothing_to_restore">Aucun achat à restaurer</string>
 </resources>

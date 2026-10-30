@@ -47,9 +47,6 @@
     <string name="player_end_of_series">Fin de la série</string>
     <string name="player_replay">Revoir</string>
 
-    <!-- Locked episode (placeholder until the paywall, Sprint 7) -->
-    <string name="player_locked_title">Épisode verrouillé — paywall au sprint 7</string>
-    <string name="player_locked_episode_cost">%1$s · %2$s</string>
 
     <!-- Settings sheets -->
     <string name="player_speed_title">Vitesse de lecture</string>
@@ -68,4 +65,19 @@
     <string name="player_debug_startup" translatable="false">1st frame %1$d ms · %2$s · %3$d/%4$d</string>
     <string name="player_debug_preloaded" translatable="false">preloaded</string>
     <string name="player_debug_cold" translatable="false">cold</string>
+    <!-- Locked episode and paywall (M-20 / M-21) -->
+    <string name="player_locked_title">Épisode verrouillé</string>
+    <string name="player_locked_episode_cost">%1$s · %2$s</string>
+    <string name="player_locked_open">Débloquer</string>
+    <string name="player_paywall_title">Épisode %1$d verrouillé</string>
+    <string name="player_paywall_balance">Votre solde</string>
+    <string name="player_paywall_cost">Coût</string>
+    <string name="player_paywall_unlock">Débloquer pour %1$s</string>
+    <string name="player_paywall_unlocking">Déblocage…</string>
+    <string name="player_paywall_vip">Devenir VIP</string>
+    <string name="player_paywall_ad_soon">Regarder une pub · bientôt</string>
+    <string name="player_paywall_auto_unlock">Débloquer automatiquement les prochains épisodes</string>
+    <string name="player_paywall_missing">Il vous manque %1$s</string>
+    <string name="player_paywall_recharge">Recharger</string>
+    <string name="player_paywall_error">Déblocage impossible, réessayez.</string>
 </resources>

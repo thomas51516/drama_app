@@ -19,12 +19,16 @@ fun NavGraphBuilder.accountScreen(
     googleWebClientId: String,
     onOpenHelp: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenWallet: () -> Unit,
+    onOpenShop: () -> Unit,
 ) {
     composable<AccountRoute> {
         AccountScreen(
             googleWebClientId = googleWebClientId,
             onOpenHelp = onOpenHelp,
             onOpenNotifications = onOpenNotifications,
+            onOpenWallet = onOpenWallet,
+            onOpenShop = onOpenShop,
         )
     }
 }

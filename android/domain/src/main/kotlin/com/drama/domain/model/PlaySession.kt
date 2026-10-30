@@ -13,6 +13,8 @@ data class PlaySession(
     val durationMs: Long,
     val nextEpisodeId: String?,
     val subtitles: List<Subtitle>,
+    /** True when this very call auto-unlocked the episode (M-21, `user.autoUnlock`): the wallet changed. */
+    val unlocked: Boolean = false,
 ) {
     fun isExpired(nowEpochMs: Long): Boolean = nowEpochMs >= expiresAtEpochMs
 }

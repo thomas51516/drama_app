@@ -26,12 +26,25 @@ sealed interface AppError {
         val code: String? = null,
     ) : AppError
 
-    /** 403 `EPISODE_LOCKED`: the viewer must unlock the episode (paywall, Sprint 7). */
+    /**
+     * 403 `EPISODE_LOCKED`: the viewer must unlock the episode (paywall, M-20). [balance] and [canAutoUnlock]
+     * come with the contract v1.4 details and are null on older servers.
+     */
     data class Locked(
         val episodeId: String?,
         val seriesId: String?,
         val coinCost: Int?,
+        val balance: Int? = null,
+        val canAutoUnlock: Boolean? = null,
     ) : AppError
+
+    /** 402 `INSUFFICIENT_COINS` on `POST /episodes/{id}/unlock`: [missing] coins short of [cost]. */
+    data class InsufficientCoins(
+        val cost: Int?,
+        val balance: Int?,
+    ) : AppError {
+        val missing: Int? get() = if (cost != null && balance != null) (cost - balance).coerceAtLeast(0) else null
+    }
 
     /** 404: [what] is the server code (`SERIES_NOT_FOUND`) or a local description. */
     data class NotFound(

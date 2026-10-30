@@ -6,6 +6,7 @@ import com.drama.core.database.dao.WatchProgressDao
 import com.drama.core.network.auth.SessionManager
 import com.drama.core.network.auth.SessionStatus
 import com.drama.data.local.CatalogLocalDataSource
+import com.drama.domain.model.SessionReplacement
 import com.drama.domain.model.SessionState
 import com.drama.domain.repository.SessionRepository
 import com.drama.domain.repository.WatchHistoryRepository
@@ -24,6 +25,15 @@ class DefaultSessionRepository
         private val catalogLocal: CatalogLocalDataSource,
     ) : SessionRepository {
         override val state: Flow<SessionState> = sessionManager.status.map { it.toDomain() }
+
+        override val sessionReplacement: Flow<SessionReplacement?> =
+            sessionManager.replacement.map { replaced ->
+                replaced?.let {
+                    SessionReplacement(it.previousUserId, it.previousWasGuest, it.newUserId, it.code)
+                }
+            }
+
+        override fun dismissSessionReplacement() = sessionManager.dismissReplacement()
 
         override suspend fun ensureSession(): AppResult<SessionState.Authenticated> =
             sessionManager.ensureSession().map { SessionState.Authenticated(it.userId, it.isGuest) }

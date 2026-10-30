@@ -304,6 +304,8 @@ class RoomFavoritesRepositoryTest {
 
         override suspend fun clearEpisodes() = Unit
 
+        override suspend fun markEpisodesUnlocked(ids: List<String>) = Unit
+
         override suspend fun clearSeries() = series.update { emptyMap() }
 
         override suspend fun clearCacheMeta() = Unit

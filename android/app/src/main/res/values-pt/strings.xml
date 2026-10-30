@@ -14,4 +14,7 @@
     <string name="channel_reminders_description">Lembrete do seu bônus diário.</string>
     <string name="channel_support">Suporte</string>
     <string name="channel_support_description">Respostas do suporte às suas solicitações.</string>
+    <string name="session_replaced_guest">A sua sessão expirou, está a ver como convidado. Volte a iniciar sessão para recuperar a sua conta.</string>
+    <string name="session_replaced_account">A sua sessão expirou, está a ver como convidado. Volte a iniciar sessão para recuperar a sua conta.</string>
+    <string name="session_replaced_sign_in">Voltar a ligar-se</string>
 </resources>

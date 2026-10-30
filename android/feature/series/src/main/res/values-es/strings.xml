@@ -32,4 +32,5 @@
 
     <string name="series_error_not_found">Esta serie ya no está disponible.</string>
     <string name="series_error_load">No se pudo cargar la serie.</string>
+    <string name="series_balance_cd">Saldo: %1$s. Abrir el monedero</string>
 </resources>

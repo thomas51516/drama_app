@@ -13,16 +13,20 @@ import com.drama.data.repository.DefaultHelpRepository
 import com.drama.data.repository.DefaultNotificationsRepository
 import com.drama.data.repository.DefaultPushRepository
 import com.drama.data.repository.DefaultSessionRepository
+import com.drama.data.repository.DefaultShopRepository
 import com.drama.data.repository.RemoteCatalogRepository
 import com.drama.data.repository.RemoteEventsRepository
 import com.drama.data.repository.RemoteFeedRepository
 import com.drama.data.repository.RemotePlaybackRepository
 import com.drama.data.repository.RemoteSearchRepository
+import com.drama.data.repository.RemoteUnlockRepository
+import com.drama.data.repository.RemoteWalletRepository
 import com.drama.data.repository.RoomFavoritesRepository
 import com.drama.data.repository.RoomWatchHistoryRepository
 import com.drama.data.repository.RoomWatchProgressRepository
 import com.drama.data.session.DataStoreSessionStore
 import com.drama.data.session.InstallationDeviceIdProvider
+import com.drama.data.wallet.DataStoreUnlockKeyStore
 import com.drama.domain.repository.AccountRepository
 import com.drama.domain.repository.CatalogRepository
 import com.drama.domain.repository.EventsRepository
@@ -35,6 +39,10 @@ import com.drama.domain.repository.PlayerSettingsRepository
 import com.drama.domain.repository.PushRepository
 import com.drama.domain.repository.SearchRepository
 import com.drama.domain.repository.SessionRepository
+import com.drama.domain.repository.ShopRepository
+import com.drama.domain.repository.UnlockKeyStore
+import com.drama.domain.repository.UnlockRepository
+import com.drama.domain.repository.WalletRepository
 import com.drama.domain.repository.WatchHistoryRepository
 import com.drama.domain.repository.WatchProgressRepository
 import dagger.Binds
@@ -107,6 +115,22 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindEventsRepository(impl: RemoteEventsRepository): EventsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWalletRepository(impl: RemoteWalletRepository): WalletRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUnlockRepository(impl: RemoteUnlockRepository): UnlockRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUnlockKeyStore(impl: DataStoreUnlockKeyStore): UnlockKeyStore
+
+    @Binds
+    @Singleton
+    abstract fun bindShopRepository(impl: DefaultShopRepository): ShopRepository
 
     companion object {
         /** `-PdramaUseFakeCatalog=true` (debug) swaps in the Sprint 1 fake catalogue; the API otherwise. */

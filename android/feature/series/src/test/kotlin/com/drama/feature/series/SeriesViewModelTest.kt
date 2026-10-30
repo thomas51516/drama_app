@@ -9,13 +9,19 @@ import com.drama.core.common.share.HostShareLinkProvider
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.LedgerPage
+import com.drama.domain.model.LedgerType
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.ResumeTarget
 import com.drama.domain.model.Series
+import com.drama.domain.model.UnlockResult
+import com.drama.domain.model.Wallet
 import com.drama.domain.model.WatchHistoryEntry
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.PushRepository
+import com.drama.domain.repository.UnlockRepository
+import com.drama.domain.repository.WalletRepository
 import com.drama.domain.usecase.ObserveSeriesDetailUseCase
 import com.drama.domain.usecase.SeriesDetail
 import com.drama.feature.series.navigation.SeriesRoute
@@ -76,10 +82,23 @@ class SeriesViewModelTest {
             shareLinks = HostShareLinkProvider("links.drama.example"),
             analytics = analytics,
             push = push,
+            wallet = walletRepository,
+            unlocks = unlocks,
         )
 
     private val favorites = FakeFavoritesRepository()
     private val push = FakePushRepository()
+    private val walletRepository = FakeWalletRepository()
+    private val unlocks =
+        object : UnlockRepository {
+            override suspend fun unlock(
+                seriesId: String,
+                episodeId: String,
+            ): AppResult<UnlockResult> = AppResult.Failure(AppError.NotFound("not used"))
+
+            override suspend fun refreshUnlocks(seriesId: String): AppResult<Set<String>> =
+                AppResult.Success(emptySet())
+        }
 
     @Test
     fun `first favourite asks for the notification permission once`() =
@@ -100,6 +119,37 @@ class SeriesViewModelTest {
             advanceUntilIdle()
             assertFalse(viewModel.uiState.value.requestNotificationPermission)
         }
+
+    private class FakeWalletRepository : WalletRepository {
+        val state = MutableStateFlow<Wallet?>(null)
+        var refreshResult: AppResult<Wallet> =
+            AppResult.Success(
+                Wallet(purchased = 50, bonus = 0, total = 50, autoUnlock = false),
+            )
+        var autoUnlockResult: AppResult<Unit> = AppResult.Success(Unit)
+        val autoUnlockCalls = mutableListOf<Boolean>()
+        override val wallet: Flow<Wallet?> = state
+
+        override suspend fun refresh(): AppResult<Wallet> {
+            (refreshResult as? AppResult.Success)?.let { state.value = it.value }
+            return refreshResult
+        }
+
+        override suspend fun transactions(
+            page: Int,
+            pageSize: Int,
+            type: LedgerType?,
+        ): AppResult<LedgerPage> = AppResult.Success(LedgerPage(emptyList(), 0, page, pageSize))
+
+        override suspend fun setAutoUnlock(enabled: Boolean): AppResult<Unit> {
+            autoUnlockCalls += enabled
+            if (autoUnlockResult is AppResult.Success) {
+                state.value =
+                    (state.value ?: Wallet.EMPTY).copy(autoUnlock = enabled)
+            }
+            return autoUnlockResult
+        }
+    }
 
     private class FakePushRepository : PushRepository {
         val shown = MutableStateFlow(false)

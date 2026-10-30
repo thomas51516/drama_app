@@ -18,4 +18,8 @@
     <string name="channel_reminders_description">Rappel de votre bonus quotidien.</string>
     <string name="channel_support">Support</string>
     <string name="channel_support_description">Réponses du support à vos demandes.</string>
+    <!-- DEF-006: a rejected refresh replaced the session by a new guest -->
+    <string name="session_replaced_guest">Votre session a expiré, vous regardez en invité. Reconnectez-vous pour retrouver votre compte.</string>
+    <string name="session_replaced_account">Votre session a expiré, vous regardez en invité. Reconnectez-vous pour retrouver votre compte.</string>
+    <string name="session_replaced_sign_in">Se reconnecter</string>
 </resources>

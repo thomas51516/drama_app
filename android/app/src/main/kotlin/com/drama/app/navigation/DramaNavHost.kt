@@ -1,5 +1,6 @@
 package com.drama.app.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -38,6 +39,11 @@ import com.drama.feature.search.navigation.searchScreen
 import com.drama.feature.series.navigation.SeriesRoute
 import com.drama.feature.series.navigation.navigateToSeries
 import com.drama.feature.series.navigation.seriesScreen
+import com.drama.feature.wallet.ShopTab
+import com.drama.feature.wallet.navigation.navigateToShop
+import com.drama.feature.wallet.navigation.navigateToWallet
+import com.drama.feature.wallet.navigation.shopScreen
+import com.drama.feature.wallet.navigation.walletScreen
 
 /**
  * Single NavHost. The four top-level tabs share a bottom bar; series sheet, player, search, help and
@@ -49,6 +55,7 @@ import com.drama.feature.series.navigation.seriesScreen
 fun DramaNavHost(
     navController: NavHostController,
     foregroundPush: ForegroundPushBus? = null,
+    sessionBanner: @Composable () -> Unit = {},
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
@@ -84,39 +91,51 @@ fun DramaNavHost(
             } else {
                 Modifier
             }
-        NavHost(navController = navController, startDestination = HomeRoute, modifier = contentModifier) {
-            homeScreen(
-                onOpenSeries = { seriesId -> navController.navigateToSeries(seriesId) },
-                onResumeEpisode = { seriesId, episodeId -> navController.navigateToPlayer(seriesId, episodeId) },
-                onOpenSearch = navController::navigateToSearch,
-            )
-            feedScreen(
-                onOpenSeries = { seriesId -> navController.navigateToSeries(seriesId, source = SOURCE_FEED) },
-                onWatch = { seriesId, episodeId -> navController.navigateToPlayer(seriesId, episodeId) },
-            )
-            myListScreen(onOpenSeries = { seriesId ->
-                navController.navigateToSeries(seriesId, source = SOURCE_MY_LIST)
-            })
-            accountScreen(
-                googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID,
-                onOpenHelp = navController::navigateToHelp,
-                onOpenNotifications = navController::navigateToNotifications,
-            )
-            searchScreen(
-                onBack = navController::popBackStack,
-                onOpenSeries = { seriesId -> navController.navigateToSeries(seriesId, source = SOURCE_SEARCH) },
-            )
-            seriesScreen(
-                appLinksHost = BuildConfig.APP_LINKS_HOST,
-                onBack = navController::popBackStack,
-                onPlayEpisode = { seriesId, episodeId -> navController.navigateToPlayer(seriesId, episodeId) },
-            )
-            playerScreen(onBack = navController::popBackStack)
-            helpScreen(onBack = navController::popBackStack)
-            notificationsScreen(
-                onBack = navController::popBackStack,
-                onOpenTarget = navController::navigateToTarget,
-            )
+        Column(modifier = contentModifier) {
+            // DEF-006: "session expirée, vous regardez en invité" above every screen until dismissed.
+            sessionBanner()
+            NavHost(navController = navController, startDestination = HomeRoute, modifier = Modifier.weight(1f)) {
+                homeScreen(
+                    onOpenSeries = { seriesId -> navController.navigateToSeries(seriesId) },
+                    onResumeEpisode = { seriesId, episodeId -> navController.navigateToPlayer(seriesId, episodeId) },
+                    onOpenSearch = navController::navigateToSearch,
+                )
+                feedScreen(
+                    onOpenSeries = { seriesId -> navController.navigateToSeries(seriesId, source = SOURCE_FEED) },
+                    onWatch = { seriesId, episodeId -> navController.navigateToPlayer(seriesId, episodeId) },
+                )
+                myListScreen(onOpenSeries = { seriesId ->
+                    navController.navigateToSeries(seriesId, source = SOURCE_MY_LIST)
+                })
+                accountScreen(
+                    googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID,
+                    onOpenHelp = navController::navigateToHelp,
+                    onOpenNotifications = navController::navigateToNotifications,
+                    onOpenWallet = navController::navigateToWallet,
+                    onOpenShop = { navController.navigateToShop() },
+                )
+                searchScreen(
+                    onBack = navController::popBackStack,
+                    onOpenSeries = { seriesId -> navController.navigateToSeries(seriesId, source = SOURCE_SEARCH) },
+                )
+                seriesScreen(
+                    appLinksHost = BuildConfig.APP_LINKS_HOST,
+                    onBack = navController::popBackStack,
+                    onPlayEpisode = { seriesId, episodeId -> navController.navigateToPlayer(seriesId, episodeId) },
+                    onOpenWallet = navController::navigateToWallet,
+                )
+                playerScreen(
+                    onBack = navController::popBackStack,
+                    onOpenShop = { tab, missing -> navController.navigateToShop(ShopTab.fromKey(tab), missing) },
+                )
+                helpScreen(onBack = navController::popBackStack)
+                notificationsScreen(
+                    onBack = navController::popBackStack,
+                    onOpenTarget = navController::navigateToTarget,
+                )
+                walletScreen(onBack = navController::popBackStack, onOpenShop = { navController.navigateToShop() })
+                shopScreen(onBack = navController::popBackStack, onOpenWallet = navController::navigateToWallet)
+            }
         }
     }
 }

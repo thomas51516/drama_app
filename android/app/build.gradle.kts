@@ -145,6 +145,7 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:network"))
     implementation(project(":core:database"))
+    implementation(project(":core:billing"))
     implementation(project(":domain"))
     implementation(project(":data"))
     implementation(project(":feature:home"))
@@ -156,6 +157,7 @@ dependencies {
     implementation(project(":feature:mylist"))
     implementation(project(":feature:help"))
     implementation(project(":feature:notifications"))
+    implementation(project(":feature:wallet"))
 
     // Per-app locales (S05-A1-03) and the baseline profile installer (S06-A2-02).
     implementation(libs.androidx.appcompat)

@@ -308,6 +308,11 @@ class RemoteCatalogRepositoryTest {
             fetched[episodesKey(seriesId)] = nowEpochMs
         }
 
+        override suspend fun markEpisodesUnlocked(
+            seriesId: String,
+            episodeIds: List<String>,
+        ) = Unit
+
         override suspend fun clear() {
             fetched.clear()
             home.value = null

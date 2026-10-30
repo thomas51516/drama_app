@@ -46,6 +46,9 @@ firebaseBom = "35.1.0"
 googleServices = "4.5.0"
 crashlyticsPlugin = "3.0.8"
 
+# Google Play Billing (M-31). 7.x is the minimum Google accepts for new submissions since 2025.
+playBilling = "7.1.1"
+
 # Misc
 javaxInject = "1"
 
@@ -112,6 +115,9 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+
+# --- Google Play Billing (S07-A2-01): wrapped by :core:billing only ---
+play-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "playBilling" }
 
 # --- DI ---
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }

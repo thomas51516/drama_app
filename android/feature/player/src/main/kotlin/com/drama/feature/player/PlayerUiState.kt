@@ -23,9 +23,11 @@ sealed interface PageState {
 
     data object Ready : PageState
 
-    /** 403 EPISODE_LOCKED: placeholder until the paywall (Sprint 7). */
+    /** 403 EPISODE_LOCKED (or known locked from the catalogue): the page offers the paywall (M-20). */
     data class Locked(
         val coinCost: Int?,
+        /** Balance reported by the server with the 403 (contract v1.4); null otherwise. */
+        val balance: Int? = null,
     ) : PageState
 
     data class Failed(
@@ -60,6 +62,10 @@ data class PlayerUiState(
     val qualityOptions: List<VideoQuality> = VideoQuality.entries,
     /** Short side of the rendition being rendered (360, 540, ...), when known. */
     val playingShortSide: Int? = null,
+    /** Paywall sheet currently shown over the video (M-20); null when hidden. */
+    val paywall: PaywallTarget? = null,
+    /** Mirror of `wallet.autoUnlock` (M-21): a locked next episode is then simply played (the server debits). */
+    val autoUnlock: Boolean = false,
 ) {
     val currentEpisode: Episode? get() = episodes.getOrNull(currentIndex)
     val lastStartup: StartupMetric? get() = startupMetrics.lastOrNull { it.index == currentIndex }

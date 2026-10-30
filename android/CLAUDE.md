@@ -22,7 +22,7 @@ core:common                     (pure Kotlin/JVM)
   a `@HiltViewModel`, a stateful `XxxScreen` wrapper and a stateless `XxxContent`. Features expose only their
   navigation functions to `:app`.
 - `:core:ui` = theme, tokens, shared composables (`Context.shareText` opens the share sheet). `:core:network` =
-  Retrofit services (`AuthApi`, `AccountAuthApi`, `UserApi`, `CatalogApi`, `PlaybackApi`), DTOs mirroring
+  Retrofit services (`AuthApi`, `AccountAuthApi`, `UserApi`, `CatalogApi`, `PlaybackApi`, `WalletApi`, `ShopApi`), DTOs mirroring
   `docs/api/openapi.v1.json` + `docs/api/public-contract-v1.2.md`, `ApiErrorMapper` (ApiErrorDto -> `AppError`),
   `SessionManager` + `AuthInterceptor` + `TokenAuthenticator` (guest session, single-flight refresh),
   `RetryInterceptor` (GET only), `BuildConfig.API_BASE_URL/MEDIA_BASE_URL/USE_FAKE_CATALOG`. Sign-in endpoints go
@@ -110,3 +110,18 @@ core:common                     (pure Kotlin/JVM)
   text), clickable rows use `Role` + `semantics(mergeDescendants = true)`, section titles are `heading()`, touch
   targets are >= 48 dp (`DramaSizes.touchTarget`), text containers use `heightIn(min)` so 200 % font scale never clips.
 - The server is the source of truth for balances, prices and entitlements: no monetisation logic on the client.
+- Monetisation (S07-A1/A2): `WalletRepository` / `UnlockRepository` / `ShopRepository` (:domain) over `WalletApi` and
+  `ShopApi` (contract v1.4); `WalletStore` (:data) mirrors the last `Wallet` the server sent and is fed by every
+  answer that carries one (never add coins locally). Unlocks go through `UnlockEpisodeUseCase` with an idempotency
+  key persisted per (user, episode) in DataStore (`UnlockKeyStore`); success flips the Room episode status
+  (`CatalogDao.markEpisodesUnlocked`) so grids update by themselves. `/play` with `unlocked: true` does the same.
+- Billing: the domain port is `BillingGateway`; `:core:billing` holds `PlayBillingGateway` (Play Billing 7) and
+  `FakeBillingGateway` (debug/benchmark, `BuildConfig.FAKE_BILLING`, `-PdramaFakeBilling`). Purchases are consumed /
+  acknowledged only in `VerifyPurchase` after `POST /billing/google/verify` succeeded; `RestorePurchasesUseCase`
+  replays what the store still holds (settings, shop, `AppStartup`). The fake store asks through
+  `BillingGateway.prompt`, rendered by the shop screen; never branch on the fake type in a feature.
+- Paywall (M-20): `PlayerViewModel` decides *when* (`PlayerUiState.paywall`), `PaywallViewModel` decides *what*
+  (balance, unlock, auto-unlock); the sheet is drawn in the lower band over the whole video. Locked successors are
+  never prefetched through `/play` (auto-unlock would debit them).
+- Session replacement (DEF-006): `SessionManager.replacement` → `SessionRepository.sessionReplacement` →
+  `SessionReplacementBanner` in :app.

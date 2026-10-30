@@ -51,6 +51,7 @@ class SettingsViewModelTest {
             localeController = locale,
             deviceLocale = FixedDeviceLocale(deviceLanguage, "CI"),
             logger = NoOpLogger,
+            restorePurchases = { AppResult.Success(emptyList()) },
         )
 
     @Test

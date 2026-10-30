@@ -9,7 +9,9 @@ import com.drama.core.network.api.EventsApi
 import com.drama.core.network.api.HelpApi
 import com.drama.core.network.api.NotificationsApi
 import com.drama.core.network.api.PlaybackApi
+import com.drama.core.network.api.ShopApi
 import com.drama.core.network.api.UserApi
+import com.drama.core.network.api.WalletApi
 import com.drama.core.network.auth.AuthInterceptor
 import com.drama.core.network.auth.TokenAuthenticator
 import com.drama.core.network.locale.LocaleHeadersInterceptor
@@ -173,6 +175,14 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideEventsApi(retrofit: Retrofit): EventsApi = retrofit.create(EventsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideWalletApi(retrofit: Retrofit): WalletApi = retrofit.create(WalletApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideShopApi(retrofit: Retrofit): ShopApi = retrofit.create(ShopApi::class.java)
 
     private fun retrofit(
         client: OkHttpClient,

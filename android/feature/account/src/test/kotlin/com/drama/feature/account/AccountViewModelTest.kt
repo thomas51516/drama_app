@@ -10,13 +10,18 @@ import com.drama.core.common.result.AppResult
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.AccountDeletion
 import com.drama.domain.model.AuthProvider
+import com.drama.domain.model.LedgerPage
+import com.drama.domain.model.LedgerType
 import com.drama.domain.model.NotificationPreferences
 import com.drama.domain.model.OtpChallenge
+import com.drama.domain.model.SessionReplacement
 import com.drama.domain.model.SessionState
 import com.drama.domain.model.SignInResult
 import com.drama.domain.model.UserProfile
+import com.drama.domain.model.Wallet
 import com.drama.domain.repository.AccountRepository
 import com.drama.domain.repository.SessionRepository
+import com.drama.domain.repository.WalletRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -69,7 +74,10 @@ class AccountViewModelTest {
             authConfig = AuthConfig(googleClientId),
             deviceLocale = FixedDeviceLocale("fr", "CI"),
             logger = NoOpLogger,
+            wallet = walletRepository,
         )
+
+    private val walletRepository = FakeWalletRepository()
 
     @Test
     fun `guest sees the options with the device country preselected and google disabled when unconfigured`() =
@@ -206,6 +214,37 @@ class AccountViewModelTest {
             assertNull(viewModel.uiState.value.profile)
         }
 
+    private class FakeWalletRepository : WalletRepository {
+        val state = MutableStateFlow<Wallet?>(null)
+        var refreshResult: AppResult<Wallet> =
+            AppResult.Success(
+                Wallet(purchased = 50, bonus = 0, total = 50, autoUnlock = false),
+            )
+        var autoUnlockResult: AppResult<Unit> = AppResult.Success(Unit)
+        val autoUnlockCalls = mutableListOf<Boolean>()
+        override val wallet: Flow<Wallet?> = state
+
+        override suspend fun refresh(): AppResult<Wallet> {
+            (refreshResult as? AppResult.Success)?.let { state.value = it.value }
+            return refreshResult
+        }
+
+        override suspend fun transactions(
+            page: Int,
+            pageSize: Int,
+            type: LedgerType?,
+        ): AppResult<LedgerPage> = AppResult.Success(LedgerPage(emptyList(), 0, page, pageSize))
+
+        override suspend fun setAutoUnlock(enabled: Boolean): AppResult<Unit> {
+            autoUnlockCalls += enabled
+            if (autoUnlockResult is AppResult.Success) {
+                state.value =
+                    (state.value ?: Wallet.EMPTY).copy(autoUnlock = enabled)
+            }
+            return autoUnlockResult
+        }
+    }
+
     private class FakeSessionRepository : SessionRepository {
         override val state = MutableStateFlow<SessionState>(SessionState.Authenticated("guest-1", isGuest = true))
 
@@ -215,6 +254,10 @@ class AccountViewModelTest {
         override suspend fun logout() {
             state.value = SessionState.SignedOut
         }
+
+        override val sessionReplacement: Flow<SessionReplacement?> = MutableStateFlow(null)
+
+        override fun dismissSessionReplacement() = Unit
     }
 
     private class FakeAccountRepository(

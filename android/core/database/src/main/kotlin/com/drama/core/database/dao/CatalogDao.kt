@@ -66,6 +66,10 @@ interface CatalogDao {
     @Query("SELECT * FROM episodes WHERE id IN (:ids)")
     fun observeEpisodesByIds(ids: List<String>): Flow<List<EpisodeEntity>>
 
+    /** Unlock reconciliation (M-21): the viewer now owns these episodes; free ones keep their status. */
+    @Query("UPDATE episodes SET access = 'UNLOCKED' WHERE id IN (:ids) AND access = 'LOCKED'")
+    suspend fun markEpisodesUnlocked(ids: List<String>)
+
     // --- home ---
 
     @Upsert

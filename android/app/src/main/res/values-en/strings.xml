@@ -14,4 +14,7 @@
     <string name="channel_reminders_description">Reminder for your daily bonus.</string>
     <string name="channel_support">Support</string>
     <string name="channel_support_description">Replies from support to your requests.</string>
+    <string name="session_replaced_guest">Your session expired, you are watching as a guest. Sign in again to get your account back.</string>
+    <string name="session_replaced_account">Your session expired, you are watching as a guest. Sign in again to get your account back.</string>
+    <string name="session_replaced_sign_in">Sign in again</string>
 </resources>

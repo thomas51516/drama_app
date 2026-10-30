@@ -12,6 +12,7 @@ import com.drama.core.ui.text.UiText
 import com.drama.domain.model.NotificationPreferences
 import com.drama.domain.repository.AccountRepository
 import com.drama.domain.repository.PushRepository
+import com.drama.domain.usecase.RestorePurchasesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +42,8 @@ data class SettingsUiState(
     val requestPermission: Boolean = false,
     /** Hidden until M-17 ships; kept in the state so the switch can be enabled by flag later. */
     val showDataSaver: Boolean = false,
+    /** "Restaurer les achats" in progress (M-31). */
+    val isRestoring: Boolean = false,
     val message: UiText? = null,
 ) {
     fun isEnabled(kind: NotificationPreferenceKind): Boolean =
@@ -64,6 +67,7 @@ class SettingsViewModel
         private val localeController: AppLocaleController,
         deviceLocale: DeviceLocaleProvider,
         private val logger: Logger,
+        private val restorePurchases: RestorePurchasesUseCase,
     ) : ViewModel() {
         private val uiStateFlow =
             MutableStateFlow(
@@ -165,6 +169,30 @@ class SettingsViewModel
         fun onPermissionResult(granted: Boolean) {
             uiStateFlow.update { it.copy(notificationsAllowed = granted, requestPermission = false) }
             viewModelScope.launch { push.markPermissionPromptShown() }
+        }
+
+        /** "Restaurer les achats" (M-31): verifies with the backend what the store still holds. */
+        fun onRestorePurchases() {
+            if (uiStateFlow.value.isRestoring) return
+            uiStateFlow.update { it.copy(isRestoring = true) }
+            viewModelScope.launch {
+                val message =
+                    when (val result = restorePurchases()) {
+                        is AppResult.Success -> {
+                            val fresh = result.value.count { it.isNew }
+                            if (fresh > 0) {
+                                UiText.Plural(R.plurals.settings_msg_restored, fresh)
+                            } else {
+                                UiText.Res(R.string.settings_msg_nothing_to_restore)
+                            }
+                        }
+                        is AppResult.Failure -> {
+                            logger.w(TAG, "restore purchases failed: ${result.error}")
+                            result.error.toMessage()
+                        }
+                    }
+                uiStateFlow.update { it.copy(isRestoring = false, message = message) }
+            }
         }
 
         fun onMessageShown() = uiStateFlow.update { it.copy(message = null) }

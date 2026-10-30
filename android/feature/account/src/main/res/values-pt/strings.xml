@@ -103,4 +103,19 @@
     <string name="settings_msg_prefs_failed">Preferências não salvas, tente novamente</string>
     <string name="settings_open">Abrir as configurações</string>
     <string name="settings_language_value">Idioma: %1$s</string>
+    <string name="wallet_section">Moedas e VIP</string>
+    <string name="wallet_entry">A minha carteira</string>
+    <string name="wallet_entry_balance">Saldo: %1$s</string>
+    <string name="wallet_entry_hint">Saldo e histórico</string>
+    <string name="shop_entry">Loja</string>
+    <string name="shop_entry_hint">Pacotes de moedas e planos VIP</string>
+    <string name="settings_purchases">Compras</string>
+    <string name="settings_purchases_hint">Recupera uma compra Google Play paga mas não creditada.</string>
+    <string name="settings_restore_purchases">Restaurar compras</string>
+    <string name="settings_restoring">A restaurar…</string>
+    <plurals name="settings_msg_restored">
+        <item quantity="one">%1$d compra restaurada</item>
+        <item quantity="other">%1$d compras restauradas</item>
+    </plurals>
+    <string name="settings_msg_nothing_to_restore">Nenhuma compra a restaurar</string>
 </resources>

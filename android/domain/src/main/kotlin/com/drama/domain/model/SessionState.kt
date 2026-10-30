@@ -16,3 +16,11 @@ sealed interface SessionState {
     /** No session: either never created (offline first launch) or cleared by logout / rejected refresh. */
     data object SignedOut : SessionState
 }
+
+/** A refresh was rejected and a fresh guest replaced the session (DEF-006). [code] is the server error code. */
+data class SessionReplacement(
+    val previousUserId: String,
+    val previousWasGuest: Boolean,
+    val newUserId: String,
+    val code: String?,
+)

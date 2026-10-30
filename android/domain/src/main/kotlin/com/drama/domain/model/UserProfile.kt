@@ -31,6 +31,8 @@ data class UserProfile(
     val deletionScheduledAtEpochMs: Long? = null,
     /** Push preferences (M-52/M-54); the server default is all on. */
     val notificationPreferences: NotificationPreferences = NotificationPreferences(),
+    /** Auto-unlock flag (M-21); null when the server does not send it. */
+    val autoUnlock: Boolean? = null,
 ) {
     /** What the profile card shows as a name: display name, else e-mail, else phone, else a generic label. */
     val label: String get() = displayName?.takeIf { it.isNotBlank() } ?: email ?: phone ?: "Mon compte"

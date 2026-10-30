@@ -89,6 +89,39 @@ sealed class AnalyticsEvent(
             },
         )
 
+    /** Episode unlocked (M-21). [method] = `coins` | `auto` | `vip` | `free` | `ad`. */
+    data class Unlock(
+        val seriesId: String,
+        val episodeId: String,
+        val method: String,
+        val coinCost: Int,
+    ) : AnalyticsEvent(
+            "unlock",
+            mapOf("series_id" to seriesId, "episode_id" to episodeId, "method" to method, "coin_cost" to coinCost),
+        )
+
+    /** Coin pack credited after server verification (M-31). [amount] is the local price in major units. */
+    data class Purchase(
+        val productId: String,
+        val amount: Double,
+        val currency: String,
+        val coins: Int,
+    ) : AnalyticsEvent(
+            "purchase",
+            mapOf("product_id" to productId, "amount" to amount, "currency" to currency, "coins" to coins),
+        )
+
+    /** VIP subscription started (M-31/M-33). [period] = `WEEK` | `MONTH` | `YEAR`. */
+    data class SubscriptionStart(
+        val productId: String,
+        val period: String,
+        val amount: Double,
+        val currency: String,
+    ) : AnalyticsEvent(
+            "subscription_start",
+            mapOf("product_id" to productId, "period" to period, "amount" to amount, "currency" to currency),
+        )
+
     /** "Ma liste" heart toggled (M-16). */
     data class Favorite(
         val seriesId: String,

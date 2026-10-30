@@ -41,6 +41,12 @@ interface CatalogLocalDataSource {
         nowEpochMs: Long,
     )
 
+    /** Flips the cached status of [episodeIds] to UNLOCKED (M-21); observers of the series grid update at once. */
+    suspend fun markEpisodesUnlocked(
+        seriesId: String,
+        episodeIds: List<String>,
+    )
+
     suspend fun clear()
 
     companion object {

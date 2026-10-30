@@ -11,6 +11,8 @@ data class UpdateMeRequestDto(
     val country: String? = null,
     /** v1.3 (M-52/M-54): push preferences, all three sent together. */
     val notificationPreferences: NotificationPreferencesDto? = null,
+    /** v1.4 (M-21): unlock the next locked episode without confirmation when the balance allows. */
+    val autoUnlock: Boolean? = null,
 )
 
 /** `DELETE /me`: v1.2 answers `202 {scheduledFor}`, v1 answered `{status, purgeAt}`. */

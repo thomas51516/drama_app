@@ -16,6 +16,8 @@ import com.drama.domain.model.ResumeTarget
 import com.drama.domain.model.Series
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.PushRepository
+import com.drama.domain.repository.UnlockRepository
+import com.drama.domain.repository.WalletRepository
 import com.drama.domain.usecase.ObserveSeriesDetailUseCase
 import com.drama.feature.series.navigation.SeriesRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,6 +47,8 @@ data class SeriesUiState(
     val notice: UiText? = null,
     /** One-shot (M-54): ask for POST_NOTIFICATIONS right after the first favourite, never at launch. */
     val requestNotificationPermission: Boolean = false,
+    /** Coin balance for the header chip (M-32); null until `GET /wallet` answered. */
+    val coinBalance: Int? = null,
 ) {
     val showError: Boolean get() = error != null && series == null
 
@@ -72,6 +76,8 @@ class SeriesViewModel
         private val shareLinks: ShareLinkProvider,
         private val analytics: AnalyticsTracker,
         private val push: PushRepository,
+        private val wallet: WalletRepository,
+        private val unlocks: UnlockRepository,
     ) : ViewModel() {
         val seriesId: String = checkNotNull(savedStateHandle[SeriesRoute.ARG_SERIES_ID])
 
@@ -98,6 +104,12 @@ class SeriesViewModel
                     uiStateFlow.update { state -> state.copy(likeState = like ?: state.likeState) }
                 }
             }
+            viewModelScope.launch {
+                wallet.wallet.collect { w -> uiStateFlow.update { it.copy(coinBalance = w?.total ?: it.coinBalance) } }
+            }
+            // Balance chip and unlock statuses come from the server (M-21/M-32); failures leave the cache as is.
+            viewModelScope.launch { wallet.refresh() }
+            viewModelScope.launch { unlocks.refreshUnlocks(seriesId) }
             load()
         }
 

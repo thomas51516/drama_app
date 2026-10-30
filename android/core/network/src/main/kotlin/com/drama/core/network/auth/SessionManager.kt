@@ -57,6 +57,15 @@ class SessionManager
         private val statusFlow = MutableStateFlow<SessionStatus>(SessionStatus.Unknown)
         val status: StateFlow<SessionStatus> = statusFlow.asStateFlow()
 
+        private val replacementFlow = MutableStateFlow<SessionReplaced?>(null)
+
+        /** Last session silently replaced after a rejected refresh (DEF-006); cleared by [dismissReplacement]. */
+        val replacement: StateFlow<SessionReplaced?> = replacementFlow.asStateFlow()
+
+        fun dismissReplacement() {
+            replacementFlow.value = null
+        }
+
         /** Current access token without any network call; null when no session exists yet. */
         suspend fun currentAccessToken(): String? = mutex.withLock { loadLocked()?.tokens?.accessToken }
 
@@ -93,9 +102,28 @@ class SessionManager
                 when (val refreshed = refreshLocked(current)) {
                     is RefreshOutcome.Success -> refreshed.session.tokens.accessToken
                     is RefreshOutcome.Rejected -> {
-                        logger.w(TAG, "refresh rejected (${refreshed.error}): clearing session, new guest")
+                        val code = (refreshed.error as? AppError.Unauthenticated)?.code ?: refreshed.error.serverCode()
+                        logger.w(
+                            TAG,
+                            "refresh rejected code=${code ?: "unknown"} previous user=${current.userId} " +
+                                "guest=${current.isGuest}: clearing session, new guest (DEF-006)",
+                        )
                         clearLocked()
-                        (bootstrapGuestLocked() as? AppResult.Success)?.value?.tokens?.accessToken
+                        val fresh = (bootstrapGuestLocked() as? AppResult.Success)?.value
+                        if (fresh != null) {
+                            logger.w(
+                                TAG,
+                                "session replaced: previous user=${current.userId} -> new guest=${fresh.userId}",
+                            )
+                            replacementFlow.value =
+                                SessionReplaced(
+                                    previousUserId = current.userId,
+                                    previousWasGuest = current.isGuest,
+                                    newUserId = fresh.userId,
+                                    code = code,
+                                )
+                        }
+                        fresh?.tokens?.accessToken
                     }
                     is RefreshOutcome.Transient -> null
                 }
@@ -206,6 +234,13 @@ class SessionManager
             loaded = true
             statusFlow.value = SessionStatus.SignedOut
         }
+
+        private fun AppError.serverCode(): String? =
+            when (this) {
+                is AppError.Http -> serverCode
+                is AppError.Server -> serverCode
+                else -> null
+            }
 
         private sealed interface RefreshOutcome {
             data class Success(

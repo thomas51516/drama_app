@@ -27,10 +27,14 @@ fun NavController.navigateToPlayer(
     episodeId: String? = null,
 ) = navigate(PlayerRoute(seriesId, episodeId))
 
-fun NavGraphBuilder.playerScreen(onBack: () -> Unit) {
+/** [onOpenShop] receives the shop tab (`coins` | `vip`) and the coins missing for the unlock (0 when none). */
+fun NavGraphBuilder.playerScreen(
+    onBack: () -> Unit,
+    onOpenShop: (tab: String, missingCoins: Int) -> Unit,
+) {
     composable<PlayerRoute>(
         deepLinks = listOf(navDeepLink<PlayerRoute>(basePath = PlayerRoute.DEEP_LINK_BASE)),
     ) {
-        PlayerScreen(onBack = onBack)
+        PlayerScreen(onBack = onBack, onOpenShop = onOpenShop)
     }
 }

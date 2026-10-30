@@ -13,9 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.core.util.Consumer
 import androidx.navigation.compose.rememberNavController
 import com.drama.app.navigation.DramaNavHost
+import com.drama.app.navigation.SessionReplacementBanner
+import com.drama.app.navigation.TopLevelTab
+import com.drama.app.navigation.navigateToTab
 import com.drama.app.push.ForegroundPushBus
 import com.drama.app.push.PushOpenHandler
 import com.drama.core.ui.theme.DramaTheme
+import com.drama.domain.repository.SessionRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -30,6 +34,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var foregroundPush: ForegroundPushBus
+
+    @Inject
+    lateinit var sessionRepository: SessionRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -56,7 +63,16 @@ class MainActivity : AppCompatActivity() {
                         pushOpenHandler.onIntent(intent)
                         onDispose { }
                     }
-                    DramaNavHost(navController = navController, foregroundPush = foregroundPush)
+                    DramaNavHost(
+                        navController = navController,
+                        foregroundPush = foregroundPush,
+                        sessionBanner = {
+                            SessionReplacementBanner(
+                                sessionRepository = sessionRepository,
+                                onSignIn = { navController.navigateToTab(TopLevelTab.PROFILE) },
+                            )
+                        },
+                    )
                 }
             }
         }

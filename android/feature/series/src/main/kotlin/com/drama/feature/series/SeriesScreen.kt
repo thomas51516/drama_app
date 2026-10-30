@@ -99,6 +99,7 @@ import com.drama.core.ui.R as CoreR
 fun SeriesScreen(
     onBack: () -> Unit,
     onPlayEpisode: (episodeId: String) -> Unit,
+    onOpenWallet: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
@@ -132,6 +133,7 @@ fun SeriesScreen(
                     onToggleFavorite = viewModel::onToggleFavorite,
                     onToggleLike = viewModel::onToggleLike,
                     onShare = { context.shareText(viewModel.onShare()) },
+                    onOpenWallet = onOpenWallet,
                 ),
         )
         SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
@@ -146,6 +148,7 @@ data class SeriesActions(
     val onToggleFavorite: () -> Unit,
     val onToggleLike: () -> Unit,
     val onShare: () -> Unit,
+    val onOpenWallet: () -> Unit = {},
 )
 
 @Composable
@@ -186,6 +189,7 @@ fun SeriesContent(
             }
             Spacer(Modifier.weight(1f))
             if (state.series != null) {
+                BalanceChip(balance = state.coinBalance, onClick = actions.onOpenWallet)
                 RoundIconButton(onClick = actions.onShare) {
                     Icon(
                         Icons.Default.Share,
@@ -206,6 +210,37 @@ fun SeriesContent(
 }
 
 private val roundButtonBackground = Color.Black.copy(alpha = 0.45f)
+
+/** Coin balance pill of the header (M-32): "N pièces", opens the wallet; "—" until the server answered. */
+@Composable
+private fun BalanceChip(
+    balance: Int?,
+    onClick: () -> Unit,
+) {
+    val text = balance?.let { pluralStringResource(CoreR.plurals.coin_count, it, it) } ?: "—"
+    val description = stringResource(R.string.series_balance_cd, text)
+    Box(
+        modifier =
+            Modifier
+                .padding(horizontal = DramaSpacing.xxs)
+                .heightIn(min = DramaSizes.touchTarget)
+                .clip(CircleShape)
+                .clickable(onClick = onClick, role = Role.Button)
+                .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = Color.White,
+            maxLines = 1,
+            modifier =
+                Modifier
+                    .background(roundButtonBackground, CircleShape)
+                    .padding(horizontal = DramaSpacing.sm + DramaSpacing.xs, vertical = DramaSpacing.sm),
+        )
+    }
+}
 
 @Composable
 private fun RoundIconButton(

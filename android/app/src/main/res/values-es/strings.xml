@@ -14,4 +14,7 @@
     <string name="channel_reminders_description">Recordatorio de tu bono diario.</string>
     <string name="channel_support">Soporte</string>
     <string name="channel_support_description">Respuestas del soporte a tus solicitudes.</string>
+    <string name="session_replaced_guest">Tu sesión ha caducado, estás viendo como invitado. Vuelve a iniciar sesión para recuperar tu cuenta.</string>
+    <string name="session_replaced_account">Tu sesión ha caducado, estás viendo como invitado. Vuelve a iniciar sesión para recuperar tu cuenta.</string>
+    <string name="session_replaced_sign_in">Volver a conectarse</string>
 </resources>

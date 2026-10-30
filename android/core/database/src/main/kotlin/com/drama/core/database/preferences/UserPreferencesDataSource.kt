@@ -26,6 +26,8 @@ data class UserPreferences(
     val pushTokenUserId: String? = null,
     /** True once the POST_NOTIFICATIONS prompt was shown. */
     val notificationPromptShown: Boolean = false,
+    /** Unlock idempotency keys still awaiting a successful answer, keyed by `userId/episodeId` (M-21). */
+    val unlockKeys: Map<String, String> = emptyMap(),
 )
 
 /** DataStore-backed user preferences (M-13 speed and quality, M-14 subtitles, M-17 data saver). */
@@ -46,8 +48,35 @@ class UserPreferencesDataSource
                     pushToken = prefs[Keys.PUSH_TOKEN],
                     pushTokenUserId = prefs[Keys.PUSH_TOKEN_USER_ID],
                     notificationPromptShown = prefs[Keys.NOTIFICATION_PROMPT_SHOWN] ?: false,
+                    unlockKeys = prefs[Keys.UNLOCK_KEYS].toKeyMap(),
                 )
             }
+
+        /** Stores (or removes when [key] is null) the unlock idempotency key of [entry] (`userId/episodeId`). */
+        suspend fun setUnlockKey(
+            entry: String,
+            key: String?,
+        ) {
+            dataStore.edit { prefs ->
+                val map = prefs[Keys.UNLOCK_KEYS].toKeyMap().toMutableMap()
+                if (key == null) map.remove(entry) else map[entry] = key
+                if (map.isEmpty()) {
+                    prefs.remove(Keys.UNLOCK_KEYS)
+                } else {
+                    prefs[Keys.UNLOCK_KEYS] =
+                        map.entries.joinToString(RECENT_SEPARATOR) { (k, v) -> "$k$PAIR_SEPARATOR$v" }
+                }
+            }
+        }
+
+        private fun String?.toKeyMap(): Map<String, String> =
+            this
+                ?.split(RECENT_SEPARATOR)
+                ?.mapNotNull { pair ->
+                    val index = pair.indexOf(PAIR_SEPARATOR)
+                    if (index <= 0) null else pair.substring(0, index) to pair.substring(index + 1)
+                }?.toMap()
+                .orEmpty()
 
         suspend fun setRegisteredPushToken(
             token: String?,
@@ -96,10 +125,14 @@ class UserPreferencesDataSource
             val PUSH_TOKEN = stringPreferencesKey("push_token")
             val PUSH_TOKEN_USER_ID = stringPreferencesKey("push_token_user_id")
             val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
+            val UNLOCK_KEYS = stringPreferencesKey("unlock_idempotency_keys")
         }
 
         private companion object {
             /** ASCII unit separator: never typed in a search box. */
             const val RECENT_SEPARATOR = "\u001F"
+
+            /** ASCII record separator between an entry and its key. */
+            const val PAIR_SEPARATOR = '\u001E'
         }
     }

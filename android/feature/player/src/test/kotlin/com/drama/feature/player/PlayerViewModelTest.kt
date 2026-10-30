@@ -18,6 +18,8 @@ import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.LedgerPage
+import com.drama.domain.model.LedgerType
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.PlayerSettings
@@ -25,8 +27,10 @@ import com.drama.domain.model.StreamFormat
 import com.drama.domain.model.Subtitle
 import com.drama.domain.model.SubtitleMode
 import com.drama.domain.model.VideoQuality
+import com.drama.domain.model.Wallet
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.PlayerSettingsRepository
+import com.drama.domain.repository.WalletRepository
 import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.PlaybackStart
 import com.drama.domain.usecase.ReportProgressUseCase
@@ -34,6 +38,7 @@ import com.drama.domain.usecase.StartPlaybackUseCase
 import com.drama.feature.player.navigation.PlayerRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -86,7 +91,11 @@ class PlayerViewModelTest {
     private val expiresAtByEpisode = mutableMapOf<String, Long>()
     private val subtitlesByEpisode = mutableMapOf<String, List<Subtitle>>()
     private val playFailures = mutableMapOf<String, AppError>()
+
+    /** Locked episodes the fake server auto-unlocks on `/play` (answer `unlocked: true`, M-21). */
+    private val autoUnlockedEpisodes = mutableSetOf<String>()
     private val settingsRepository = FakePlayerSettingsRepository()
+    private val walletRepository = FakeWalletRepository()
     private var deviceLanguage = "fr"
     private val playCalls = mutableListOf<String>()
     private val startPlayback =
@@ -96,7 +105,7 @@ class PlayerViewModelTest {
             val failure = playFailures[episodeId]
             if (failure != null) {
                 AppResult.Failure(failure)
-            } else if (episode.access == EpisodeAccess.LOCKED) {
+            } else if (episode.access == EpisodeAccess.LOCKED && episodeId !in autoUnlockedEpisodes) {
                 AppResult.Failure(AppError.Locked(episodeId, "s1", 10))
             } else {
                 val resume = resumePositions[episodeId] ?: 0L
@@ -155,6 +164,7 @@ class PlayerViewModelTest {
             playerSettings = settingsRepository,
             deviceLocale = FixedDeviceLocale(deviceLanguage, "FR"),
             shareLinks = HostShareLinkProvider("links.drama.example"),
+            walletRepository = walletRepository,
             engineFactory = PlaybackEngineFactory { engine },
         )
 
@@ -408,17 +418,90 @@ class PlayerViewModelTest {
         }
 
     @Test
-    fun `last episode offers replay instead of next`() =
+    fun `end of the last free episode shows the paywall for the locked next one instead of the countdown`() =
         runTest(dispatcher) {
             val viewModel = createViewModel(episodeId = "ep2")
             advanceUntilIdle()
-            // ep3 is locked, so from the user's point of view ep2 can still advance; make the list end at ep2.
+            // ep3 is locked per the catalogue: never prefetched through /play (auto-unlock would debit it).
+            assertEquals(listOf("ep2"), playCalls)
+            assertEquals(PageState.Locked(10), viewModel.uiState.value.pageState(2))
+
             engine.emit(PlaybackEvent.Ended(1))
             advanceTimeBy(100)
+            val state = viewModel.uiState.value
+            assertNull(state.endOfEpisode)
+            assertEquals(2, state.paywall?.index)
+            assertEquals("ep3", state.paywall?.episode?.id)
+            assertEquals(10, state.paywall?.coinCost)
+            assertTrue(analytics.events.contains(AnalyticsEvent.PaywallView("s1", "ep3", 3, 10)))
+            // Nothing advances while the sheet is up.
+            advanceTimeBy(5_000)
+            assertEquals(1, viewModel.uiState.value.currentIndex)
+        }
+
+    @Test
+    fun `with auto-unlock on, the locked next episode is simply played and the server debits`() =
+        runTest(dispatcher) {
+            walletRepository.state.value = Wallet(purchased = 50, bonus = 0, total = 50, autoUnlock = true)
+            // The server auto-unlocks on /play: ep3 answers a session instead of a 403.
+            autoUnlockedEpisodes += "ep3"
+            val viewModel = createViewModel(episodeId = "ep2")
+            advanceUntilIdle()
+
+            engine.emit(PlaybackEvent.Ended(1))
+            advanceTimeBy(100)
+            assertNull(viewModel.uiState.value.paywall)
             assertEquals(
                 2,
                 viewModel.uiState.value.endOfEpisode
                     ?.nextIndex,
+            )
+            advanceTimeBy(3_100)
+            advanceUntilIdle()
+            assertEquals(2, viewModel.uiState.value.currentIndex)
+            assertEquals(PageState.Ready, viewModel.uiState.value.pageState(2))
+            assertEquals(listOf(1, 2), engine.played.map { it.first })
+        }
+
+    @Test
+    fun `unlocking from the paywall resolves the page again and plays it`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onPageSettled(2)
+            advanceUntilIdle()
+            assertEquals(
+                2,
+                viewModel.uiState.value.paywall
+                    ?.index,
+            )
+
+            autoUnlockedEpisodes += "ep3" // the server now answers a session for ep3
+            viewModel.onEpisodeUnlocked("ep3")
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.paywall)
+            assertEquals(PageState.Ready, viewModel.uiState.value.pageState(2))
+            assertEquals(2, engine.played.last().first)
+        }
+
+    @Test
+    fun `dismissing the paywall keeps the locked page and the button reopens it`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onPageSettled(2)
+            advanceUntilIdle()
+
+            viewModel.onPaywallDismissed()
+            assertNull(viewModel.uiState.value.paywall)
+            assertEquals(PageState.Locked(10), viewModel.uiState.value.pageState(2))
+
+            viewModel.onOpenPaywall()
+            assertEquals(
+                2,
+                viewModel.uiState.value.paywall
+                    ?.index,
             )
         }
 
@@ -606,6 +689,37 @@ class PlayerViewModelTest {
             assertNull(viewModel.uiState.value.manualQualityLabel)
             assertEquals(360, viewModel.uiState.value.playingShortSide)
         }
+
+    private class FakeWalletRepository : WalletRepository {
+        val state = MutableStateFlow<Wallet?>(null)
+        var refreshResult: AppResult<Wallet> =
+            AppResult.Success(
+                Wallet(purchased = 50, bonus = 0, total = 50, autoUnlock = false),
+            )
+        var autoUnlockResult: AppResult<Unit> = AppResult.Success(Unit)
+        val autoUnlockCalls = mutableListOf<Boolean>()
+        override val wallet: Flow<Wallet?> = state
+
+        override suspend fun refresh(): AppResult<Wallet> {
+            (refreshResult as? AppResult.Success)?.let { state.value = it.value }
+            return refreshResult
+        }
+
+        override suspend fun transactions(
+            page: Int,
+            pageSize: Int,
+            type: LedgerType?,
+        ): AppResult<LedgerPage> = AppResult.Success(LedgerPage(emptyList(), 0, page, pageSize))
+
+        override suspend fun setAutoUnlock(enabled: Boolean): AppResult<Unit> {
+            autoUnlockCalls += enabled
+            if (autoUnlockResult is AppResult.Success) {
+                state.value =
+                    (state.value ?: Wallet.EMPTY).copy(autoUnlock = enabled)
+            }
+            return autoUnlockResult
+        }
+    }
 
     private class FakePlayerSettingsRepository : PlayerSettingsRepository {
         val state = MutableStateFlow(PlayerSettings())
