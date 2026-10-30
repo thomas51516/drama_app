@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ApiError } from '#base/utils/api-error'
 import { mockAccounts, mockCredentials } from '#base/mocks'
+import { isCompleteTotpCode, loginErrorKey } from '#base/utils/auth-errors'
 
 definePageMeta({ layout: 'auth', public: true })
 
@@ -16,20 +16,18 @@ const rememberDevice = ref(false)
 const error = ref<string | null>(null)
 const notify = useNotify()
 
-const codeIsValid = computed(() => /^\d{6}$/.test(code.value))
+const codeIsValid = computed(() => isCompleteTotpCode(code.value))
 
 onMounted(() => {
   // A refresh in the middle of the flow restarts from the credentials.
   auth.resetChallenge()
 })
 
-function describeError(err: unknown, fallbackKey: string): string {
-  if (ApiError.is(err)) {
-    if (err.status === 401) return t(fallbackKey)
-    if (err.status === 0) return t('auth.errors.network')
-    return t('auth.errors.generic', { status: err.status })
-  }
-  return t('auth.errors.generic', { status: '?' })
+/** DEF-005: every failure has a French message; the status only appears for unexpected ones. */
+function describeError(err: unknown, step: 'credentials' | 'totp'): string {
+  const key = loginErrorKey(err, step)
+  const status = err instanceof Error && 'status' in err ? String(err.status) : '?'
+  return t(key, { status })
 }
 
 async function goToApp(): Promise<void> {
@@ -50,18 +48,22 @@ async function submitCredentials(): Promise<void> {
       await goToApp()
     }
   } catch (err) {
-    error.value = describeError(err, 'auth.errors.invalidCredentials')
+    error.value = describeError(err, 'credentials')
   }
 }
 
 async function submitCode(): Promise<void> {
-  if (!codeIsValid.value) return
+  if (!codeIsValid.value) {
+    // Enter pressed with an incomplete code: say so instead of calling the API (DEF-005).
+    error.value = t('auth.errors.totpIncomplete')
+    return
+  }
   error.value = null
   try {
     await auth.verifyTotp(code.value, rememberDevice.value)
     await goToApp()
   } catch (err) {
-    error.value = describeError(err, 'auth.errors.invalidTotp')
+    error.value = describeError(err, 'totp')
     code.value = ''
   }
 }
@@ -191,6 +193,9 @@ function backToCredentials(): void {
         <div class="flex flex-col gap-1.5">
           <label for="totp" class="text-sm font-medium">{{ t('auth.totpCode') }}</label>
           <InputOtp id="totp" v-model="code" :length="6" integer-only autofocus />
+          <small v-if="!codeIsValid && code.length > 0" class="text-xs text-muted-color">
+            {{ t('auth.errors.totpIncomplete') }}
+          </small>
         </div>
 
         <div class="flex flex-col gap-1">
@@ -206,6 +211,7 @@ function backToCredentials(): void {
           :label="t('auth.verify')"
           :loading="auth.pending"
           :disabled="!codeIsValid"
+          data-testid="verify-totp"
           fluid
         />
         <Button

@@ -2,6 +2,23 @@ import { ApiError } from '../utils/api-error'
 import type {
   AdminAccount,
   AdminAccountCreateInput,
+  AdminUserDetail,
+  AdminUserPurchase,
+  AdminUserSummary,
+  AdminUserUnlock,
+  AppUser,
+  CheckinScale,
+  CoinAdjustmentInput,
+  CoinPackAdmin,
+  CoinPackInput,
+  LedgerEntry,
+  MonetizationOrderInput,
+  MonetizationSettings,
+  Price,
+  UserBlockInput,
+  VipPlanAdmin,
+  VipPlanInput,
+  Wallet,
   AdminAccountResetPasswordInput,
   AdminAccountUpdateInput,
   AdminEpisode,
@@ -50,6 +67,7 @@ import type {
 } from '../types/api'
 import {
   ADMIN_ROLES,
+  COIN_BUCKETS,
   CAMPAIGN_SEGMENT_TYPES,
   FAQ_LANGUAGES,
   TRUSTED_DEVICE_MAX_AGE_SECONDS,
@@ -81,6 +99,18 @@ import statsFixture from './stats.json'
 import campaignsFixture from './campaigns.json'
 import faqFixture from './faq.json'
 import ticketsFixture from './tickets.json'
+import monetizationFixture from './monetization.json'
+import usersFixture from './users.json'
+import {
+  isCurrency,
+  isValidSku,
+  isVipPeriod,
+  samePrices,
+  sortVipPlans,
+  validateSettings,
+} from '../utils/monetization'
+import { normalizeCheckinDays, validateCheckinScale, hasCheckinErrors } from '../utils/rewards'
+import { ADJUSTMENT_REASON_MIN, sortLedger } from '../utils/users'
 import { isStatsPeriod } from '../utils/stats'
 import {
   bodyRemaining,
@@ -122,6 +152,10 @@ import { mockAssetUrlFor, mockUploadUrlFor, registerMockAsset } from './assets'
  * Contract v1.3 (sprint 5): trusted devices (login with a valid `deviceToken` skips TOTP),
  * push campaigns (estimate from a fake audience table, SENDING → SENT after
  * `mockTiming.campaignSendMs`), FAQ with the public `/help/faq` fallback and support tickets.
+ *
+ * Contract v1.4 (sprint 6): monetization settings, coin packs and VIP plans (B-06), the
+ * check-in scale (B-08) and end users with a wallet projected from an in-memory ledger (B-09):
+ * a manual adjustment appends an ADJUSTMENT line, blocking changes the status.
  */
 
 export type MockMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -176,7 +210,7 @@ interface MockAccount {
 }
 
 /** Trusted device of an account (the raw token is kept here; the backend stores a hash). */
-interface MockDevice extends TrustedDevice {
+interface MockDevice extends Omit<TrustedDevice, 'current'> {
   accountId: string
   token: string
 }
@@ -200,6 +234,21 @@ interface MockState {
   campaigns: Campaign[]
   faq: FaqEntry[]
   tickets: SupportTicket[]
+  monetizationSettings: MonetizationSettings
+  packs: CoinPackAdmin[]
+  vipPlans: VipPlanAdmin[]
+  checkin: CheckinScale
+  users: MockUser[]
+}
+
+/** End user of the app with the raw material of the detail (ledger → wallet projection). */
+interface MockUser {
+  user: AppUser
+  ledger: LedgerEntry[]
+  unlocks: AdminUserUnlock[]
+  purchases: AdminUserPurchase[]
+  subscription: AdminUserDetail['subscription']
+  devices: number
 }
 
 function clone<T>(value: T): T {
@@ -247,7 +296,45 @@ function initialState(): MockState {
     campaigns: seedCampaigns(clone(campaignsFixture) as Campaign[]),
     faq: clone(faqFixture) as FaqEntry[],
     tickets: clone(ticketsFixture) as SupportTicket[],
+    monetizationSettings: clone(monetizationFixture.settings) as MonetizationSettings,
+    packs: clone(monetizationFixture.packs) as CoinPackAdmin[],
+    vipPlans: clone(monetizationFixture.vipPlans) as VipPlanAdmin[],
+    checkin: clone(monetizationFixture.checkin) as CheckinScale,
+    users: seedUsers(clone(usersFixture.users) as unknown as MockUserFixture[]),
   }
+}
+
+interface MockUserFixture extends Omit<MockUser, 'ledger'> {
+  ledger: LedgerEntry[]
+  bonusExpiring?: { amount: number; expiresAt: string }[]
+}
+
+/** `__FUTURE_<n>D__` placeholders of the users fixture become dates n days ahead. */
+function futurePlaceholder(value: unknown): unknown {
+  if (typeof value !== 'string') return value
+  const match = /^__FUTURE_(\d+)D__$/.exec(value)
+  if (!match) return value
+  return new Date(Date.now() + Number(match[1]) * 86_400_000).toISOString()
+}
+
+function resolveFutureDates<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(resolveFutureDates) as T
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        resolveFutureDates(item),
+      ]),
+    ) as T
+  }
+  return futurePlaceholder(value) as T
+}
+
+function seedUsers(fixtures: MockUserFixture[]): MockUser[] {
+  return fixtures.map((fixture) => {
+    const { bonusExpiring: _ignored, ...rest } = resolveFutureDates(fixture)
+    return rest
+  })
 }
 
 /** The scheduled fixture campaign is always in the future (placeholder replaced at load). */
@@ -621,7 +708,7 @@ route('POST', '/admin/auth/totp/verify', ({ body, path }): TotpVerifyResponse =>
   const { challengeToken, code, rememberDevice } = (body ?? {}) as Partial<TotpVerifyRequest>
   const account = challengeToken ? state.challenges.get(challengeToken) : undefined
   if (!account || code !== authFixture.credentials.totpCode) {
-    fail(401, 'INVALID_TOTP', 'Invalid TOTP code', path)
+    fail(401, 'INVALID_TOTP_CODE', 'Invalid TOTP code', path)
   }
   state.challenges.delete(challengeToken as string)
   account.totpEnrolled = true
@@ -2099,6 +2186,484 @@ route('POST', '/admin/support/tickets/:id/close', (context): SupportTicket => {
     { status: next },
   )
   return clone(ticket)
+})
+
+// ---------------------------------------------------------------------------
+// Monetization (B-06), rewards (B-08) and users (B-09) — contract v1.4
+// ---------------------------------------------------------------------------
+
+const MONETIZATION_ROLES: AdminRole[] = ['MONETIZATION', 'ADMIN']
+const USERS_ROLES: AdminRole[] = ['SUPPORT', 'ADMIN']
+
+route('GET', '/admin/monetization/settings', (context): MonetizationSettings => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(state.monetizationSettings)
+})
+
+route('PUT', '/admin/monetization/settings', (context): MonetizationSettings => {
+  requireRole(context, MONETIZATION_ROLES)
+  const input = { ...state.monetizationSettings, ...((context.body ?? {}) as object) }
+  const errors = validateSettings(input as MonetizationSettings)
+  if (Object.keys(errors).length > 0) {
+    fail(
+      400,
+      'VALIDATION_ERROR',
+      `Invalid settings: ${Object.keys(errors).join(', ')}`,
+      context.path,
+    )
+  }
+  const before = clone(state.monetizationSettings)
+  state.monetizationSettings = {
+    defaultFreeEpisodes: input.defaultFreeEpisodes,
+    defaultCoinCost: input.defaultCoinCost,
+    seriesUnlockDiscountPercent: input.seriesUnlockDiscountPercent,
+    adDailyCap: input.adDailyCap,
+    autoUnlockDefault: input.autoUnlockDefault,
+    bonusValidityDays: input.bonusValidityDays,
+  }
+  audit(
+    context,
+    'monetization_settings.update',
+    'monetization_settings',
+    null,
+    before,
+    state.monetizationSettings,
+  )
+  return clone(state.monetizationSettings)
+})
+
+function readPrices(context: MockContext, value: unknown): Price[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail(400, 'VALIDATION_ERROR', 'prices must contain at least one price', context.path)
+  }
+  const prices = value.map((item): Price => {
+    const raw = item as Partial<Price>
+    if (!isCurrency(raw.currency)) {
+      fail(400, 'VALIDATION_ERROR', `Unknown currency ${String(raw.currency)}`, context.path)
+    }
+    if (!Number.isInteger(raw.amountMinor) || (raw.amountMinor as number) <= 0) {
+      fail(400, 'VALIDATION_ERROR', 'amountMinor must be a positive integer', context.path)
+    }
+    return { currency: raw.currency, amountMinor: raw.amountMinor as number }
+  })
+  const currencies = new Set(prices.map((price) => price.currency))
+  if (currencies.size !== prices.length) {
+    fail(400, 'VALIDATION_ERROR', 'Duplicate currency in prices', context.path)
+  }
+  return prices
+}
+
+function readSku(context: MockContext, value: unknown, taken: readonly { sku: string }[]): string {
+  const sku = String(value ?? '').trim()
+  if (!isValidSku(sku)) {
+    fail(400, 'VALIDATION_ERROR', 'sku must match the Play Console product id format', context.path)
+  }
+  if (taken.some((item) => item.sku === sku)) {
+    fail(409, 'SKU_ALREADY_USED', `A product already uses the sku ${sku}`, context.path)
+  }
+  return sku
+}
+
+function readCount(context: MockContext, name: string, value: unknown, min: number): number {
+  if (!Number.isInteger(value) || (value as number) < min) {
+    fail(400, 'VALIDATION_ERROR', `${name} must be an integer >= ${min}`, context.path)
+  }
+  return value as number
+}
+
+function readBadge(context: MockContext, value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  const badge = String(value).trim()
+  if (badge.length > 30) fail(400, 'VALIDATION_ERROR', 'badge is too long (30)', context.path)
+  return badge || null
+}
+
+/** The app shows one `price`: the XOF one by default (what `GET /shop` does per country). */
+function withDisplayPrice<T extends { prices: Price[]; price?: Price }>(item: T): T {
+  const price =
+    item.prices.find((entry) => entry.currency === 'XOF') ??
+    item.prices.find((entry) => entry.currency === 'USD') ??
+    item.prices[0]
+  return { ...item, price: price as Price }
+}
+
+function sortedPacks(): CoinPackAdmin[] {
+  return [...state.packs].sort((a, b) => a.position - b.position).map(withDisplayPrice)
+}
+
+function findPack(context: MockContext, id: string): CoinPackAdmin {
+  const pack = state.packs.find((item) => item.id === id)
+  if (!pack) fail(404, 'PACK_NOT_FOUND', `Coin pack ${id} not found`, context.path)
+  return pack
+}
+
+route('GET', '/admin/monetization/packs', (context): CoinPackAdmin[] => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(sortedPacks())
+})
+
+route('POST', '/admin/monetization/packs', (context): CoinPackAdmin => {
+  requireRole(context, MONETIZATION_ROLES)
+  const input = (context.body ?? {}) as CoinPackInput
+  const sku = readSku(context, input.sku, state.packs)
+  const prices = readPrices(context, input.prices)
+  const pack: CoinPackAdmin = withDisplayPrice({
+    id: newId('pack'),
+    sku,
+    coins: readCount(context, 'coins', input.coins, 1),
+    bonusCoins: readCount(context, 'bonusCoins', input.bonusCoins ?? 0, 0),
+    badge: readBadge(context, input.badge),
+    position: state.packs.length + 1,
+    isActive: input.isActive ?? true,
+    createdAt: now(),
+    prices,
+    price: prices[0] as Price,
+  })
+  state.packs.push(pack)
+  audit(context, 'coin_pack.create', 'coin_pack', pack.id, null, pack)
+  return clone(pack)
+})
+
+route('PUT', '/admin/monetization/packs/order', (context): CoinPackAdmin[] => {
+  requireRole(context, MONETIZATION_ROLES)
+  const { ids } = (context.body ?? {}) as Partial<MonetizationOrderInput>
+  const known = new Set(state.packs.map((pack) => pack.id))
+  if (!Array.isArray(ids) || ids.length !== known.size || ids.some((id) => !known.has(id))) {
+    fail(400, 'VALIDATION_ERROR', 'ids must list every pack exactly once', context.path)
+  }
+  const before = sortedPacks().map((pack) => pack.id)
+  ids.forEach((id, index) => {
+    const pack = state.packs.find((item) => item.id === id) as CoinPackAdmin
+    pack.position = index + 1
+  })
+  audit(context, 'coin_pack.reorder', 'coin_pack', null, { ids: before }, { ids })
+  return clone(sortedPacks())
+})
+
+route('PATCH', '/admin/monetization/packs/:id', (context): CoinPackAdmin => {
+  requireRole(context, MONETIZATION_ROLES)
+  const pack = findPack(context, context.params.id as string)
+  const input = (context.body ?? {}) as CoinPackInput
+  if (input.sku !== undefined && input.sku !== pack.sku) {
+    fail(400, 'SKU_IMMUTABLE', 'sku cannot be changed after creation', context.path)
+  }
+  const before = clone(pack)
+  if (input.coins !== undefined) pack.coins = readCount(context, 'coins', input.coins, 1)
+  if (input.bonusCoins !== undefined) {
+    pack.bonusCoins = readCount(context, 'bonusCoins', input.bonusCoins, 0)
+  }
+  if (input.badge !== undefined) pack.badge = readBadge(context, input.badge)
+  if (input.isActive !== undefined) pack.isActive = Boolean(input.isActive)
+  if (input.prices !== undefined) {
+    const prices = readPrices(context, input.prices)
+    if (!samePrices(prices, pack.prices)) pack.prices = prices
+  }
+  Object.assign(pack, withDisplayPrice(pack))
+  audit(context, 'coin_pack.update', 'coin_pack', pack.id, before, pack)
+  return clone(pack)
+})
+
+route('DELETE', '/admin/monetization/packs/:id', (context) => {
+  requireRole(context, MONETIZATION_ROLES)
+  const pack = findPack(context, context.params.id as string)
+  state.packs = state.packs.filter((item) => item.id !== pack.id)
+  sortedPacks().forEach((item, index) => {
+    const target = state.packs.find((candidate) => candidate.id === item.id) as CoinPackAdmin
+    target.position = index + 1
+  })
+  audit(context, 'coin_pack.delete', 'coin_pack', pack.id, pack, null)
+  return null
+})
+
+function findVipPlan(context: MockContext, id: string): VipPlanAdmin {
+  const plan = state.vipPlans.find((item) => item.id === id)
+  if (!plan) fail(404, 'VIP_PLAN_NOT_FOUND', `VIP plan ${id} not found`, context.path)
+  return plan
+}
+
+route('GET', '/admin/monetization/vip-plans', (context): VipPlanAdmin[] => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(sortVipPlans(state.vipPlans).map(withDisplayPrice))
+})
+
+route('POST', '/admin/monetization/vip-plans', (context): VipPlanAdmin => {
+  requireRole(context, MONETIZATION_ROLES)
+  const input = (context.body ?? {}) as VipPlanInput
+  const sku = readSku(context, input.sku, state.vipPlans)
+  if (!isVipPeriod(input.period)) {
+    fail(400, 'VALIDATION_ERROR', 'period must be WEEK, MONTH or YEAR', context.path)
+  }
+  const prices = readPrices(context, input.prices)
+  const plan: VipPlanAdmin = withDisplayPrice({
+    id: newId('vip'),
+    sku,
+    period: input.period,
+    trialDays: readCount(context, 'trialDays', input.trialDays ?? 0, 0),
+    badge: readBadge(context, input.badge),
+    position: state.vipPlans.length + 1,
+    isActive: input.isActive ?? true,
+    createdAt: now(),
+    prices,
+    price: prices[0] as Price,
+  })
+  state.vipPlans.push(plan)
+  audit(context, 'vip_plan.create', 'vip_plan', plan.id, null, plan)
+  return clone(plan)
+})
+
+route('PATCH', '/admin/monetization/vip-plans/:id', (context): VipPlanAdmin => {
+  requireRole(context, MONETIZATION_ROLES)
+  const plan = findVipPlan(context, context.params.id as string)
+  const input = (context.body ?? {}) as VipPlanInput
+  if (input.sku !== undefined && input.sku !== plan.sku) {
+    fail(400, 'SKU_IMMUTABLE', 'sku cannot be changed after creation', context.path)
+  }
+  const before = clone(plan)
+  if (input.period !== undefined) {
+    if (!isVipPeriod(input.period)) {
+      fail(400, 'VALIDATION_ERROR', 'period must be WEEK, MONTH or YEAR', context.path)
+    }
+    plan.period = input.period
+  }
+  if (input.trialDays !== undefined) {
+    plan.trialDays = readCount(context, 'trialDays', input.trialDays, 0)
+  }
+  if (input.badge !== undefined) plan.badge = readBadge(context, input.badge)
+  if (input.isActive !== undefined) plan.isActive = Boolean(input.isActive)
+  if (input.prices !== undefined) plan.prices = readPrices(context, input.prices)
+  Object.assign(plan, withDisplayPrice(plan))
+  audit(context, 'vip_plan.update', 'vip_plan', plan.id, before, plan)
+  return clone(plan)
+})
+
+route('DELETE', '/admin/monetization/vip-plans/:id', (context) => {
+  requireRole(context, MONETIZATION_ROLES)
+  const plan = findVipPlan(context, context.params.id as string)
+  state.vipPlans = state.vipPlans.filter((item) => item.id !== plan.id)
+  audit(context, 'vip_plan.delete', 'vip_plan', plan.id, plan, null)
+  return null
+})
+
+// --- rewards (B-08) ----------------------------------------------------------
+
+route('GET', '/admin/rewards/checkin', (context): CheckinScale => {
+  requireRole(context, MONETIZATION_ROLES)
+  return clone(state.checkin)
+})
+
+route('PUT', '/admin/rewards/checkin', (context): CheckinScale => {
+  requireRole(context, MONETIZATION_ROLES)
+  const input = (context.body ?? {}) as Partial<CheckinScale>
+  if (!Array.isArray(input.days) || input.days.length !== 7) {
+    fail(400, 'VALIDATION_ERROR', 'days must contain exactly 7 integers', context.path)
+  }
+  const scale: CheckinScale = {
+    days: normalizeCheckinDays(input.days),
+    resetOnMiss: Boolean(input.resetOnMiss),
+  }
+  if (
+    input.days.some((value) => !Number.isInteger(value) || (value as number) < 0) ||
+    hasCheckinErrors(validateCheckinScale(scale))
+  ) {
+    fail(400, 'VALIDATION_ERROR', 'days must be 7 non-negative integers', context.path)
+  }
+  const before = clone(state.checkin)
+  state.checkin = scale
+  audit(context, 'checkin_scale.update', 'checkin_scale', null, before, scale)
+  return clone(scale)
+})
+
+// --- users (B-09) ------------------------------------------------------------
+
+function walletOf(entry: MockUser): Wallet {
+  const purchased = entry.ledger
+    .filter((line) => line.bucket === 'PURCHASED')
+    .reduce((sum, line) => sum + line.amount, 0)
+  const bonus = entry.ledger
+    .filter((line) => line.bucket === 'BONUS')
+    .reduce((sum, line) => sum + line.amount, 0)
+  const bonusExpiring = entry.ledger
+    .filter((line) => line.bucket === 'BONUS' && line.amount > 0 && line.expiresAt)
+    .filter((line) => new Date(line.expiresAt as string).getTime() > Date.now())
+    .map((line) => ({ amount: line.amount, expiresAt: line.expiresAt as string }))
+    .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt))
+  return {
+    purchased,
+    bonus,
+    total: purchased + bonus,
+    autoUnlock: entry.user.autoUnlock,
+    bonusExpiring,
+  }
+}
+
+function toUserSummary(entry: MockUser): AdminUserSummary {
+  const { user } = entry
+  return {
+    id: user.id,
+    type: user.type,
+    status: user.status,
+    displayName: user.displayName,
+    email: user.email,
+    phone: user.phone,
+    country: user.country,
+    language: user.language,
+    vipStatus: user.vipStatus,
+    balance: (({ purchased, bonus, total }) => ({ purchased, bonus, total }))(walletOf(entry)),
+    lastSeenAt: user.lastSeenAt ?? null,
+    createdAt: user.createdAt,
+  }
+}
+
+function findUser(context: MockContext, id: string): MockUser {
+  const entry = state.users.find((item) => item.user.id === id)
+  if (!entry) fail(404, 'USER_NOT_FOUND', `User ${id} not found`, context.path)
+  return entry
+}
+
+route('GET', '/admin/users', (context): Paginated<AdminUserSummary> => {
+  requireRole(context, USERS_ROLES)
+  const q = (context.query.get('q') ?? '').trim().toLowerCase()
+  const page = Math.max(1, Number(context.query.get('page') ?? 1))
+  const pageSize = Math.min(100, Math.max(1, Number(context.query.get('pageSize') ?? 20)))
+  const digits = q.replace(/[^\d+]/g, '')
+  const matches = state.users.filter(({ user }) => {
+    if (!q) return true
+    return (
+      user.id.toLowerCase().startsWith(q) ||
+      (user.email ?? '').toLowerCase().includes(q) ||
+      (user.displayName ?? '').toLowerCase().includes(q) ||
+      (digits.length >= 4 && (user.phone ?? '').replace(/[^\d+]/g, '').includes(digits))
+    )
+  })
+  const sorted = [...matches].sort((a, b) =>
+    (b.user.lastSeenAt ?? '').localeCompare(a.user.lastSeenAt ?? ''),
+  )
+  const start = (page - 1) * pageSize
+  return {
+    items: sorted.slice(start, start + pageSize).map(toUserSummary),
+    total: sorted.length,
+    page,
+    pageSize,
+  }
+})
+
+route('GET', '/admin/users/:id', (context): AdminUserDetail => {
+  requireRole(context, USERS_ROLES)
+  const entry = findUser(context, context.params.id as string)
+  return clone({
+    user: entry.user,
+    wallet: walletOf(entry),
+    subscription: entry.subscription,
+    unlocks: [...entry.unlocks].sort((a, b) => b.at.localeCompare(a.at)),
+    purchases: [...entry.purchases].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    recentLedger: sortLedger(entry.ledger),
+    devices: entry.devices,
+    lastSeenAt: entry.user.lastSeenAt ?? null,
+  })
+})
+
+function readReason(context: MockContext, value: unknown): string {
+  const reason = String(value ?? '').trim()
+  if (reason.length < ADJUSTMENT_REASON_MIN) {
+    fail(
+      400,
+      'REASON_REQUIRED',
+      `reason must have at least ${ADJUSTMENT_REASON_MIN} characters`,
+      context.path,
+    )
+  }
+  return reason
+}
+
+route('POST', '/admin/users/:id/coins', (context): Wallet => {
+  const actor = requireRole(context, USERS_ROLES)
+  const entry = findUser(context, context.params.id as string)
+  const input = (context.body ?? {}) as Partial<CoinAdjustmentInput>
+  if (!Number.isInteger(input.amount) || input.amount === 0) {
+    fail(400, 'VALIDATION_ERROR', 'amount must be a non-zero integer', context.path)
+  }
+  if (!input.bucket || !COIN_BUCKETS.includes(input.bucket)) {
+    fail(400, 'VALIDATION_ERROR', 'bucket must be PURCHASED or BONUS', context.path)
+  }
+  const reason = readReason(context, input.reason)
+  if (entry.user.status === 'DELETED' || entry.user.status === 'MERGED') {
+    fail(409, 'USER_DELETED', 'This account no longer accepts coins', context.path)
+  }
+  const before = walletOf(entry)
+  const amount = input.amount as number
+  const projected = input.bucket === 'PURCHASED' ? before.purchased + amount : before.bonus + amount
+  if (amount < 0 && projected < 0) {
+    fail(409, 'INSUFFICIENT_COINS', 'The debit exceeds the balance of this bucket', context.path)
+  }
+  const line: LedgerEntry = {
+    id: newId('led'),
+    amount,
+    bucket: input.bucket,
+    type: 'ADJUSTMENT',
+    reference: `admin:${actor.id}`,
+    description: reason,
+    expiresAt:
+      input.bucket === 'BONUS' && amount > 0
+        ? new Date(
+            Date.now() + state.monetizationSettings.bonusValidityDays * 86_400_000,
+          ).toISOString()
+        : null,
+    createdAt: now(),
+  }
+  entry.ledger.push(line)
+  const after = walletOf(entry)
+  audit(
+    context,
+    'user.coins_adjust',
+    'user',
+    entry.user.id,
+    { purchased: before.purchased, bonus: before.bonus },
+    { purchased: after.purchased, bonus: after.bonus, amount, bucket: input.bucket, reason },
+  )
+  return clone(after)
+})
+
+route('POST', '/admin/users/:id/block', (context): AppUser => {
+  requireRole(context, USERS_ROLES)
+  const entry = findUser(context, context.params.id as string)
+  const reason = readReason(context, ((context.body ?? {}) as Partial<UserBlockInput>).reason)
+  if (entry.user.status === 'BLOCKED') {
+    fail(409, 'USER_ALREADY_BLOCKED', 'This user is already blocked', context.path)
+  }
+  if (entry.user.status === 'DELETED' || entry.user.status === 'MERGED') {
+    fail(409, 'USER_DELETED', 'This account cannot be blocked', context.path)
+  }
+  const before = entry.user.status
+  entry.user.status = 'BLOCKED'
+  entry.devices = 0
+  audit(
+    context,
+    'user.block',
+    'user',
+    entry.user.id,
+    { status: before },
+    { status: 'BLOCKED', reason },
+  )
+  return clone(entry.user)
+})
+
+route('POST', '/admin/users/:id/unblock', (context): AppUser => {
+  requireRole(context, USERS_ROLES)
+  const entry = findUser(context, context.params.id as string)
+  const reason = readReason(context, ((context.body ?? {}) as Partial<UserBlockInput>).reason)
+  if (entry.user.status !== 'BLOCKED') {
+    fail(409, 'USER_NOT_BLOCKED', 'This user is not blocked', context.path)
+  }
+  entry.user.status = 'ACTIVE'
+  audit(
+    context,
+    'user.unblock',
+    'user',
+    entry.user.id,
+    { status: 'BLOCKED' },
+    { status: 'ACTIVE', reason },
+  )
+  return clone(entry.user)
 })
 
 function stripQuery(path: string): string {

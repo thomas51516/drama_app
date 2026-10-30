@@ -1,0 +1,134 @@
+{
+  "settings": {
+    "defaultFreeEpisodes": 3,
+    "defaultCoinCost": 10,
+    "seriesUnlockDiscountPercent": 20,
+    "adDailyCap": 5,
+    "autoUnlockDefault": false,
+    "bonusValidityDays": 30
+  },
+  "packs": [
+    {
+      "id": "pack_01J0M0N3T1Z4T10N000000001",
+      "sku": "coins_100",
+      "coins": 100,
+      "bonusCoins": 0,
+      "badge": null,
+      "position": 1,
+      "isActive": true,
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "prices": [
+        { "currency": "XOF", "amountMinor": 500 },
+        { "currency": "NGN", "amountMinor": 125000 },
+        { "currency": "GHS", "amountMinor": 1250 },
+        { "currency": "EUR", "amountMinor": 79 },
+        { "currency": "USD", "amountMinor": 89 }
+      ]
+    },
+    {
+      "id": "pack_01J0M0N3T1Z4T10N000000002",
+      "sku": "coins_300",
+      "coins": 300,
+      "bonusCoins": 30,
+      "badge": "Populaire",
+      "position": 2,
+      "isActive": true,
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "prices": [
+        { "currency": "XOF", "amountMinor": 1500 },
+        { "currency": "NGN", "amountMinor": 375000 },
+        { "currency": "GHS", "amountMinor": 3750 },
+        { "currency": "EUR", "amountMinor": 229 },
+        { "currency": "USD", "amountMinor": 249 }
+      ]
+    },
+    {
+      "id": "pack_01J0M0N3T1Z4T10N000000003",
+      "sku": "coins_700",
+      "coins": 700,
+      "bonusCoins": 100,
+      "badge": "Meilleure offre",
+      "position": 3,
+      "isActive": true,
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "prices": [
+        { "currency": "XOF", "amountMinor": 3000 },
+        { "currency": "NGN", "amountMinor": 750000 },
+        { "currency": "GHS", "amountMinor": 7500 },
+        { "currency": "EUR", "amountMinor": 459 },
+        { "currency": "USD", "amountMinor": 499 }
+      ]
+    },
+    {
+      "id": "pack_01J0M0N3T1Z4T10N000000004",
+      "sku": "coins_2000",
+      "coins": 2000,
+      "bonusCoins": 400,
+      "badge": null,
+      "position": 4,
+      "isActive": false,
+      "createdAt": "2026-10-12T14:30:00.000Z",
+      "prices": [
+        { "currency": "XOF", "amountMinor": 8000 },
+        { "currency": "USD", "amountMinor": 1299 }
+      ]
+    }
+  ],
+  "vipPlans": [
+    {
+      "id": "vip_01J0M0N3T1Z4T10N000000001",
+      "sku": "vip_week",
+      "period": "WEEK",
+      "trialDays": 0,
+      "badge": null,
+      "position": 1,
+      "isActive": true,
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "prices": [
+        { "currency": "XOF", "amountMinor": 1000 },
+        { "currency": "NGN", "amountMinor": 250000 },
+        { "currency": "GHS", "amountMinor": 2500 },
+        { "currency": "EUR", "amountMinor": 149 },
+        { "currency": "USD", "amountMinor": 169 }
+      ]
+    },
+    {
+      "id": "vip_01J0M0N3T1Z4T10N000000002",
+      "sku": "vip_month",
+      "period": "MONTH",
+      "trialDays": 3,
+      "badge": "Recommandé",
+      "position": 2,
+      "isActive": true,
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "prices": [
+        { "currency": "XOF", "amountMinor": 3000 },
+        { "currency": "NGN", "amountMinor": 750000 },
+        { "currency": "GHS", "amountMinor": 7500 },
+        { "currency": "EUR", "amountMinor": 459 },
+        { "currency": "USD", "amountMinor": 499 }
+      ]
+    },
+    {
+      "id": "vip_01J0M0N3T1Z4T10N000000003",
+      "sku": "vip_year",
+      "period": "YEAR",
+      "trialDays": 7,
+      "badge": "-40 %",
+      "position": 3,
+      "isActive": true,
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "prices": [
+        { "currency": "XOF", "amountMinor": 22000 },
+        { "currency": "NGN", "amountMinor": 5500000 },
+        { "currency": "GHS", "amountMinor": 55000 },
+        { "currency": "EUR", "amountMinor": 3399 },
+        { "currency": "USD", "amountMinor": 3699 }
+      ]
+    }
+  ],
+  "checkin": {
+    "days": [5, 5, 10, 10, 15, 15, 30],
+    "resetOnMiss": true
+  }
+}

@@ -3,8 +3,8 @@
 Ce guide s'adresse à l'équipe éditoriale et aux personnes qui administrent le back-office de
 DRAMA, l'application de micro-séries verticales. Il décrit, écran par écran, comment publier une
 série de A à Z : connexion, catalogue, épisodes, sous-titres, mise en avant, planification des
-sorties, tableau de bord, comptes internes, appareils de confiance, notifications push et centre
-d'aide. Il est aussi accessible depuis le bouton **Aide** de
+sorties, tableau de bord, comptes internes, appareils de confiance, monétisation, récompenses,
+utilisateurs, notifications push et centre d'aide. Il est aussi accessible depuis le bouton **Aide** de
 la barre du haut.
 
 > Règle d'or : le serveur fait foi. Les prix, les droits et les dates de publication sont appliqués
@@ -37,8 +37,8 @@ Points à connaître :
 | Rôle           | Ce qu'il peut faire                                                           |
 | -------------- | ----------------------------------------------------------------------------- |
 | Éditeur        | Créer et modifier séries, épisodes, sous-titres, mise en avant, planification |
-| Monétisation   | Modifier les épisodes gratuits et le coût par épisode ; le reste en lecture   |
-| Support        | Tout consulter, rien modifier                                                 |
+| Monétisation   | Paramètres de monétisation, packs, formules VIP, récompenses, notifications   |
+| Support        | Tout consulter ; utilisateurs (pièces, blocage) et tickets de support         |
 | Administrateur | Tout, plus les comptes internes et le journal d'audit                         |
 
 Le rôle de votre compte est affiché sous votre nom, en haut à droite. Un bouton grisé ou un message
@@ -252,6 +252,75 @@ Sur l'écran du code à 6 chiffres, la case **« Se souvenir de cet appareil pen
   icône téléphone) ; réinitialiser la double authentification le fait aussi.
 - En cas de doute (ordinateur partagé, perdu), révoquez : un code sera demandé à la connexion suivante.
 
+## Monétisation (paramètres, packs, formules VIP)
+
+Menu **Monétisation**, réservé aux rôles Monétisation et Administrateur. Chaque enregistrement est
+tracé dans le journal d'audit (auteur, date, ancienne valeur).
+
+### Paramètres
+
+Valeurs par défaut appliquées à l'application : **épisodes gratuits** par série, **coût par
+épisode** (pièces), **remise série complète** (%), **plafond de pubs récompensées par jour**
+(0 = désactivé), **déblocage automatique** activé ou non pour les nouveaux comptes, **validité des
+pièces bonus** (jours). Une série peut surcharger les deux premiers dans sa fiche. « Enregistrer »
+résume les champs modifiés et demande confirmation : la nouvelle valeur s'applique immédiatement.
+
+### Packs de pièces
+
+1. **Nouveau pack** : l'**identifiant produit (SKU)** doit être **exactement celui du produit créé
+   dans la Google Play Console** (ex. `coins_300`) ; il ne pourra plus être modifié ensuite (créez un
+   autre produit si besoin).
+2. Saisissez les **pièces**, les **pièces bonus** (offertes en plus, soumises à la validité des
+   bonus), un **badge** facultatif (« Populaire ») et l'état **Actif**.
+3. **Prix par devise** : le prix en **F CFA (XOF) est obligatoire** ; NGN, GHS, EUR et USD sont
+   facultatifs. « **Compléter depuis le F CFA** » remplit les devises vides avec des taux
+   indicatifs que vous pouvez corriger (dépliez « Taux indicatifs ») ; cochez « Écraser » pour
+   recalculer des prix déjà saisis. Ce sont les prix **affichés** dans l'application ; le montant
+   réellement facturé est celui configuré dans le Play Store pour ce produit.
+4. **Glissez les lignes** pour changer l'ordre de la boutique ; l'interrupteur **Actif** retire un
+   pack sans le supprimer. La suppression conserve les achats passés dans l'historique.
+
+### Formules VIP
+
+Même principe avec une **période** (hebdomadaire, mensuelle, annuelle) et des **jours d'essai**
+(0 = pas d'essai ; l'essai doit aussi exister sur le produit Play Console).
+
+### Simulateur
+
+Choisissez un **pays** et un **pack** : l'onglet montre la **devise** retenue (celle du pays ;
+dollar à défaut), le **prix affiché**, les **pièces + bonus** et le prix par pièce, puis la boutique
+complète du pays telle que l'application la liste. Un avertissement signale un repli sur le dollar
+(pas de prix dans la devise du pays) ou un pack qui ne s'affichera pas (aucun prix).
+
+## Récompenses (check-in)
+
+Menu **Récompenses**, rôles Monétisation et Administrateur. L'onglet **Check-in** fixe le barème
+des **7 jours consécutifs** : pièces bonus offertes chaque jour, **total sur 7 jours** affiché en
+direct, et l'option **« Un jour manqué remet la série à zéro »** (décochée : l'utilisateur reprend
+où il s'était arrêté). L'aperçu téléphone montre le rendu dans l'application. L'onglet **Tâches**
+arrive au sprint 8.
+
+## Utilisateurs (support)
+
+Menu **Utilisateurs**, rôles Support et Administrateur.
+
+1. **Rechercher** par e-mail, téléphone (avec l'indicatif, `+228…`), nom ou identifiant (2
+   caractères au moins), puis cliquez sur la ligne.
+2. La **fiche** présente le **profil** (type invité / inscrit, moyens de connexion, pays, langue,
+   statut, dernière activité), le **portefeuille** (pièces achetées, bonus, total, déblocage
+   automatique, bonus qui expirent ; un solde négatif après remboursement bloque tout déblocage),
+   l'**abonnement VIP**, et trois onglets : **Déblocages**, **Achats**, **Grand livre** (chaque
+   ligne est une variation de pièces ; le solde est leur somme).
+3. **Créditer / Débiter des pièces** : choisissez le sens, le nombre de pièces, la catégorie
+   (**Bonus** : expirent et sont consommées en premier ; **Achetées** : n'expirent pas), et un
+   **motif d'au moins 10 caractères** (visible dans le journal d'audit). Le tableau « Solde après
+   l'opération » montre le résultat avant confirmation ; un débit supérieur au solde est refusé.
+4. **Bloquer** (motif obligatoire) déconnecte l'utilisateur de tous ses appareils et interdit la
+   connexion ; pièces et historique sont conservés. **Débloquer** rétablit l'accès.
+
+> Les montants et statuts affichés viennent du serveur : après une action, la fiche se recharge
+> pour montrer la ligne du grand livre réellement enregistrée.
+
 ## Notifications push (campagnes)
 
 Menu **Notifications**, réservé aux rôles Monétisation et Administrateur.
@@ -302,7 +371,9 @@ Menu **Centre d'aide** : onglet **FAQ** pour les rôles Éditeur, Support et Adm
 
 | Message ou symptôme                                                    | Cause probable                                                                  | Que faire                                                                                                                  |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| « Code invalide » à la connexion                                       | Horloge du téléphone décalée, ou code déjà expiré                               | Attendez le code suivant ; vérifiez l'heure automatique du téléphone                                                       |
+| « Code incorrect ou expiré » à la connexion                            | Horloge du téléphone décalée, ou code déjà expiré                               | Attendez le code suivant ; vérifiez l'heure automatique du téléphone                                                       |
+| « Saisissez les 6 chiffres du code »                                   | Code incomplet (le bouton Vérifier reste gris tant qu'il manque un chiffre)     | Complétez les 6 cases                                                                                                      |
+| « Solde insuffisant : le serveur a refusé le débit »                   | Débit de pièces supérieur au solde de la catégorie choisie                      | Réduisez le montant ou changez de catégorie (achetées / bonus)                                                             |
 | « Trop de tentatives »                                                 | 5 mots de passe erronés en 15 minutes                                           | Patientez 15 minutes ; en cas d'oubli, demandez une réinitialisation à un administrateur                                   |
 | Renvoi vers la page de connexion en plein travail                      | Session de 8 heures expirée                                                     | Reconnectez-vous : vous revenez sur la page où vous étiez                                                                  |
 | « Droits insuffisants »                                                | Action non ouverte à votre rôle                                                 | Demandez à un éditeur ou un administrateur                                                                                 |

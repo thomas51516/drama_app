@@ -28,7 +28,11 @@
       "invalidCredentials": "Identifiants incorrects.",
       "invalidTotp": "Code incorrect ou expiré.",
       "network": "Le serveur est injoignable. Réessayez dans un instant.",
-      "generic": "Une erreur est survenue ({status})."
+      "generic": "Une erreur est survenue ({status}).",
+      "totpIncomplete": "Saisissez les 6 chiffres du code.",
+      "tooManyAttempts": "Trop de tentatives. Patientez 15 minutes avant de réessayer.",
+      "accountDisabled": "Ce compte est désactivé. Contactez un administrateur.",
+      "challengeExpired": "La connexion a expiré : recommencez depuis le mot de passe."
     },
     "roles": {
       "ADMIN": "Administrateur",
@@ -125,7 +129,9 @@
     "deepLink": "Lien invalide : il doit commencer par drama:// (ex. drama://series/{id}).",
     "positiveInteger": "Saisissez un nombre entier supérieur ou égal à 1.",
     "translationPair": "Une traduction doit comporter la question et la réponse.",
-    "bodyTooLong": "Le message dépasse {max} caractères."
+    "bodyTooLong": "Le message dépasse {max} caractères.",
+    "min": "La valeur minimale est {min}.",
+    "integer": "Saisissez un nombre entier."
   },
   "series": {
     "title": "Catalogue — séries",
@@ -622,7 +628,12 @@
         "home_banner": "Bannière",
         "home_row": "Rangée",
         "admin_account": "Compte interne",
-        "upload": "Envoi de fichier"
+        "upload": "Envoi de fichier",
+        "monetization_settings": "Paramètres de monétisation",
+        "coin_pack": "Pack de pièces",
+        "vip_plan": "Formule VIP",
+        "checkin_scale": "Barème du check-in",
+        "user": "Utilisateur"
       },
       "diff": {
         "field": "Champ",
@@ -985,6 +996,391 @@
         "closed": "Ticket fermé.",
         "failed": "Action impossible."
       }
+    }
+  },
+  "monetization": {
+    "title": "Monétisation",
+    "subtitle": "Épisodes gratuits, coût par épisode, packs de pièces, formules VIP et plafond de pubs (B-06).",
+    "restricted": "Cette page est réservée aux rôles Monétisation et Administrateur.",
+    "loadError": "Impossible de charger les données de monétisation.",
+    "audited": "Chaque modification est enregistrée dans le journal d'audit avec votre nom, la date et l'ancienne valeur.",
+    "tabs": {
+      "settings": "Paramètres",
+      "packs": "Packs de pièces",
+      "vip": "Formules VIP",
+      "simulator": "Simulateur"
+    },
+    "settings": {
+      "title": "Paramètres par défaut",
+      "hint": "Valeurs appliquées aux nouvelles séries et à l'application ; une série peut surcharger les épisodes gratuits et le coût par épisode dans sa fiche.",
+      "defaultFreeEpisodes": "Épisodes gratuits par défaut",
+      "defaultFreeEpisodesHint": "Premiers épisodes de chaque série lisibles sans pièces.",
+      "defaultCoinCost": "Coût par épisode (pièces)",
+      "defaultCoinCostHint": "Prix d'un épisode verrouillé, en pièces.",
+      "seriesUnlockDiscountPercent": "Remise série complète (%)",
+      "seriesUnlockDiscountPercentHint": "Remise appliquée quand l'utilisateur débloque tous les épisodes restants d'un coup.",
+      "adDailyCap": "Plafond de pubs récompensées par jour",
+      "adDailyCapHint": "Nombre maximal d'épisodes débloqués par une pub par utilisateur et par jour (0 = désactivé).",
+      "autoUnlockDefault": "Déblocage automatique activé par défaut",
+      "autoUnlockDefaultHint": "Valeur initiale du réglage « débloquer automatiquement l'épisode suivant » des nouveaux comptes.",
+      "bonusValidityDays": "Validité des pièces bonus (jours)",
+      "bonusValidityDaysHint": "Les pièces bonus (packs, check-in, tâches) expirent après ce délai ; les achetées n'expirent pas.",
+      "confirmHeader": "Enregistrer les paramètres ?",
+      "confirmMessage": "{count} paramètre sera modifié et s'appliquera immédiatement à l'application. | {count} paramètres seront modifiés et s'appliqueront immédiatement à l'application.",
+      "changed": "Modifié : {fields}",
+      "nothingToSave": "Aucun paramètre modifié.",
+      "saved": "Paramètres enregistrés.",
+      "saveFailed": "Enregistrement impossible",
+      "reset": "Annuler les modifications"
+    },
+    "packs": {
+      "summary": "{count} pack, {active} actif | {count} packs, {active} actifs",
+      "create": "Nouveau pack",
+      "edit": "Modifier le pack",
+      "delete": "Supprimer le pack",
+      "deleteConfirm": "Supprimer le pack « {sku} » ? Il disparaît de la boutique ; les achats passés restent dans l'historique.",
+      "empty": {
+        "title": "Aucun pack de pièces",
+        "hint": "Créez un premier pack avec le même identifiant produit que dans la Play Console."
+      },
+      "columns": {
+        "position": "#",
+        "sku": "Identifiant produit",
+        "coins": "Pièces",
+        "bonus": "Bonus",
+        "total": "Total",
+        "badge": "Badge",
+        "prices": "Prix",
+        "active": "Actif"
+      },
+      "inactiveHint": "Un pack inactif n'est pas proposé dans l'application."
+    },
+    "vip": {
+      "summary": "{count} formule, {active} active | {count} formules, {active} actives",
+      "create": "Nouvelle formule",
+      "edit": "Modifier la formule",
+      "delete": "Supprimer la formule",
+      "deleteConfirm": "Supprimer la formule « {sku} » ? Les abonnés en cours conservent leur accès jusqu'à l'échéance.",
+      "empty": {
+        "title": "Aucune formule VIP",
+        "hint": "Créez une formule hebdomadaire, mensuelle ou annuelle avec son identifiant Play Console."
+      },
+      "columns": {
+        "sku": "Identifiant produit",
+        "period": "Période",
+        "trial": "Essai",
+        "badge": "Badge",
+        "prices": "Prix",
+        "active": "Active"
+      },
+      "trialDaysValue": "{count} jour | {count} jours",
+      "noTrial": "Sans essai"
+    },
+    "period": {
+      "WEEK": "Hebdomadaire",
+      "MONTH": "Mensuelle",
+      "YEAR": "Annuelle"
+    },
+    "form": {
+      "sku": "Identifiant produit (SKU)",
+      "skuHint": "Identique au produit créé dans la Play Console (minuscules, chiffres, _ et .). Immuable après création.",
+      "skuLocked": "L'identifiant produit ne peut plus être modifié : créez un autre produit si besoin.",
+      "coins": "Pièces",
+      "bonusCoins": "Pièces bonus",
+      "bonusHint": "Offertes en plus, soumises à la validité des pièces bonus.",
+      "badge": "Badge",
+      "badgePlaceholder": "ex. Populaire, Meilleure offre",
+      "active": "Actif (proposé dans l'application)",
+      "period": "Période",
+      "trialDays": "Jours d'essai gratuit",
+      "trialHint": "0 = pas d'essai. L'essai doit aussi être configuré sur le produit Play Console.",
+      "prices": "Prix par devise",
+      "pricesHint": "Saisissez le prix affiché dans l'application pour chaque devise (le prix réellement facturé est celui du Play Store). Le F CFA est obligatoire ; les autres devises reprennent le dollar à défaut.",
+      "priceIn": "Prix en {currency}",
+      "fillFromXof": "Compléter depuis le F CFA",
+      "fillFromXofHint": "Remplit les devises vides à partir du prix en F CFA avec des taux indicatifs, modifiables ci-dessous.",
+      "overwrite": "Écraser les prix déjà saisis",
+      "rates": "Taux indicatifs (1 F CFA =)",
+      "rateFor": "Taux {currency}",
+      "resetRates": "Taux par défaut",
+      "total": "Total : {total} pièces"
+    },
+    "validation": {
+      "sku": "Identifiant invalide : 2 à 80 caractères, minuscules, chiffres, _ et . (ex. coins_300).",
+      "coinsMin": "Un pack contient au moins une pièce.",
+      "priceRequired": "Saisissez au moins un prix.",
+      "pricePositive": "Chaque prix saisi doit être supérieur à zéro.",
+      "priceXofRequired": "Le prix en F CFA (XOF) est obligatoire."
+    },
+    "toasts": {
+      "packCreated": "Pack « {sku} » créé.",
+      "packSaved": "Pack mis à jour.",
+      "packDeleted": "Pack supprimé.",
+      "planCreated": "Formule « {sku} » créée.",
+      "planSaved": "Formule mise à jour.",
+      "planDeleted": "Formule supprimée.",
+      "reordered": "Ordre enregistré.",
+      "activated": "Activé.",
+      "deactivated": "Désactivé.",
+      "saveFailed": "Enregistrement impossible",
+      "deleteFailed": "Suppression impossible",
+      "skuTaken": "Cet identifiant produit est déjà utilisé.",
+      "skuImmutable": "L'identifiant produit ne peut pas être modifié."
+    },
+    "simulator": {
+      "title": "Simulateur d'affichage",
+      "hint": "Ce que l'application affiche pour un pays donné : devise du pays (repli dollar), prix et pièces du pack.",
+      "country": "Pays de l'utilisateur",
+      "pack": "Pack",
+      "plan": "Formule VIP",
+      "noPacks": "Aucun pack à simuler.",
+      "result": "Affichage dans l'application",
+      "currency": "Devise",
+      "price": "Prix affiché",
+      "noPrice": "Aucun prix dans cette devise ni en dollar : le pack ne s'affiche pas.",
+      "fallback": "Repli sur le dollar : aucun prix en {currency}.",
+      "coins": "Pièces",
+      "coinsDetail": "{coins} + {bonus} bonus",
+      "perCoin": "Soit {price} par pièce",
+      "inactive": "Ce pack est inactif : il n'apparaît pas dans l'application.",
+      "allPacks": "Tous les packs actifs pour ce pays",
+      "phoneTitle": "Boutique",
+      "buy": "Acheter",
+      "phoneFrame": "Aperçu téléphone de la boutique"
+    }
+  },
+  "rewards": {
+    "title": "Récompenses",
+    "subtitle": "Barème du check-in quotidien, tâches et validité des pièces bonus (B-08).",
+    "restricted": "Cette page est réservée aux rôles Monétisation et Administrateur.",
+    "loadError": "Impossible de charger le barème.",
+    "tabs": {
+      "checkin": "Check-in",
+      "tasks": "Tâches"
+    },
+    "checkin": {
+      "title": "Barème du check-in (7 jours)",
+      "hint": "Pièces bonus offertes à chaque jour consécutif d'ouverture de l'application. Le jour 7 est généralement le plus généreux ; au-delà, la série recommence au jour 1.",
+      "day": "Jour {day}",
+      "coins": "{count} pièce | {count} pièces",
+      "total": "Total sur 7 jours",
+      "totalHint": "Ce qu'un utilisateur assidu reçoit chaque semaine, en pièces bonus (validité : {days} jours).",
+      "resetOnMiss": "Un jour manqué remet la série à zéro",
+      "resetOnMissHint": "Désactivé : l'utilisateur reprend au jour où il s'était arrêté.",
+      "confirmHeader": "Enregistrer le barème ?",
+      "confirmMessage": "Le nouveau barème ({total} pièces sur 7 jours) s'appliquera dès le prochain check-in des utilisateurs.",
+      "saved": "Barème enregistré.",
+      "saveFailed": "Enregistrement impossible",
+      "reset": "Annuler les modifications",
+      "nothingToSave": "Aucune modification.",
+      "preview": "Aperçu dans l'application",
+      "claimed": "Reçu",
+      "today": "Aujourd'hui"
+    },
+    "tasks": {
+      "title": "Tâches récompensées",
+      "hint": "Regarder N épisodes, partager une série, inviter un ami… Ce module arrive au sprint 8 (M-41).",
+      "placeholder": "Sprint 8"
+    },
+    "validation": {
+      "sevenDays": "Le barème comporte exactement 7 jours.",
+      "allZero": "Au moins un jour doit offrir des pièces."
+    }
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "subtitle": "Recherche d'un compte, portefeuille, historique et actions de support (B-09).",
+    "restricted": "Cette page est réservée aux rôles Support et Administrateur.",
+    "search": {
+      "label": "Rechercher un utilisateur",
+      "placeholder": "E-mail, téléphone, nom ou identifiant",
+      "hint": "Au moins {min} caractères. Le téléphone se cherche avec l'indicatif (+228…).",
+      "results": "{count} résultat | {count} résultats",
+      "empty": "Aucun utilisateur ne correspond à « {q} ».",
+      "start": "Saisissez un e-mail, un téléphone, un nom ou un identifiant pour commencer.",
+      "failed": "Recherche impossible"
+    },
+    "columns": {
+      "user": "Utilisateur",
+      "contact": "Contact",
+      "type": "Type",
+      "status": "Statut",
+      "country": "Pays",
+      "coins": "Pièces",
+      "lastSeen": "Dernière activité",
+      "createdAt": "Inscrit le"
+    },
+    "type": {
+      "GUEST": "Invité",
+      "REGISTERED": "Inscrit"
+    },
+    "status": {
+      "ACTIVE": "Actif",
+      "BLOCKED": "Bloqué",
+      "DELETION_PENDING": "Suppression programmée",
+      "MERGED": "Fusionné",
+      "DELETED": "Supprimé"
+    },
+    "providers": {
+      "google": "Google",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "none": "Aucun (invité)"
+    },
+    "vip": {
+      "none": "Non abonné",
+      "active": "VIP actif",
+      "expired": "VIP expiré"
+    },
+    "detail": {
+      "back": "Retour à la recherche",
+      "notFound": "Utilisateur introuvable.",
+      "loadError": "Impossible de charger cet utilisateur.",
+      "id": "Identifiant",
+      "profile": "Profil",
+      "wallet": "Portefeuille",
+      "subscription": "Abonnement VIP",
+      "type": "Type de compte",
+      "providers": "Moyens de connexion",
+      "country": "Pays",
+      "language": "Langue",
+      "status": "Statut",
+      "lastSeen": "Dernière activité",
+      "createdAt": "Inscription",
+      "devices": "Appareils",
+      "deletionScheduled": "Anonymisation prévue le {date}",
+      "purchased": "Achetées",
+      "bonus": "Bonus",
+      "total": "Total",
+      "autoUnlock": "Déblocage automatique",
+      "negativeBalance": "Solde négatif après remboursement : aucun déblocage possible tant qu'il n'est pas régularisé.",
+      "bonusExpiring": "{amount} bonus expirent le {date}",
+      "noSubscription": "Aucun abonnement.",
+      "plan": "Formule",
+      "startedAt": "Début",
+      "expiresAt": "Échéance",
+      "autoRenew": "Renouvellement automatique",
+      "store": "Boutique",
+      "subscriptionStatus": {
+        "none": "Aucun",
+        "active": "Actif",
+        "cancelled": "Résilié (actif jusqu'à l'échéance)",
+        "expired": "Expiré",
+        "grace": "Période de grâce (paiement en attente)"
+      }
+    },
+    "tabs": {
+      "unlocks": "Déblocages",
+      "purchases": "Achats",
+      "ledger": "Grand livre"
+    },
+    "unlocks": {
+      "empty": "Aucun épisode débloqué.",
+      "columns": {
+        "series": "Série",
+        "episode": "Épisode",
+        "method": "Méthode",
+        "at": "Date"
+      },
+      "episodeNumber": "Épisode {number}",
+      "method": {
+        "coins": "Pièces",
+        "ad": "Pub récompensée",
+        "vip": "VIP",
+        "free": "Gratuit",
+        "auto": "Automatique",
+        "other": "Autre"
+      }
+    },
+    "purchases": {
+      "empty": "Aucun achat.",
+      "columns": {
+        "product": "Produit",
+        "amount": "Montant",
+        "coins": "Pièces",
+        "status": "Statut",
+        "at": "Date"
+      },
+      "subscription": "Abonnement"
+    },
+    "ledger": {
+      "empty": "Aucun mouvement.",
+      "hint": "Chaque ligne est une variation de pièces ; le solde est la somme des lignes.",
+      "columns": {
+        "at": "Date",
+        "type": "Type",
+        "bucket": "Catégorie",
+        "amount": "Pièces",
+        "description": "Détail",
+        "expiresAt": "Expire le"
+      },
+      "type": {
+        "PURCHASE": "Achat",
+        "BONUS": "Bonus",
+        "UNLOCK": "Déblocage",
+        "ADJUSTMENT": "Ajustement",
+        "EXPIRY": "Expiration",
+        "REFUND": "Remboursement",
+        "MERGE": "Fusion"
+      }
+    },
+    "bucket": {
+      "PURCHASED": "Achetées",
+      "BONUS": "Bonus"
+    },
+    "actions": {
+      "adjust": "Créditer / Débiter des pièces",
+      "block": "Bloquer",
+      "unblock": "Débloquer"
+    },
+    "adjust": {
+      "title": "Créditer ou débiter des pièces",
+      "hint": "Une ligne d'ajustement est ajoutée au grand livre et au journal d'audit avec votre nom et le motif. Le serveur refuse un débit supérieur au solde.",
+      "direction": "Opération",
+      "credit": "Créditer",
+      "debit": "Débiter",
+      "amount": "Nombre de pièces",
+      "bucket": "Catégorie",
+      "bucketHint": "Les pièces bonus expirent ({days} jours) et sont consommées en premier ; les achetées n'expirent pas.",
+      "reason": "Motif (obligatoire)",
+      "reasonPlaceholder": "ex. Geste commercial suite au ticket #1234",
+      "reasonHint": "{min} caractères au minimum, visible dans le journal d'audit.",
+      "preview": "Solde après l'opération",
+      "current": "Solde actuel",
+      "delta": "Variation",
+      "confirmHeader": "Confirmer l'ajustement ?",
+      "confirmCredit": "Créditer {amount} pièces ({bucket}) à {user} ? Nouveau solde : {total} pièces.",
+      "confirmDebit": "Débiter {amount} pièces ({bucket}) à {user} ? Nouveau solde : {total} pièces.",
+      "done": "Portefeuille mis à jour : {total} pièces.",
+      "failed": "Ajustement impossible"
+    },
+    "block": {
+      "title": "Bloquer l'utilisateur",
+      "hint": "L'utilisateur est déconnecté de tous ses appareils et ne peut plus se connecter ni lire. Ses pièces et son historique sont conservés.",
+      "unblockTitle": "Débloquer l'utilisateur",
+      "unblockHint": "L'utilisateur pourra de nouveau se connecter. Le motif est enregistré dans le journal d'audit.",
+      "reason": "Motif (obligatoire)",
+      "reasonPlaceholder": "ex. Fraude au remboursement confirmée le 30/10",
+      "confirmBlock": "Bloquer {user} ?",
+      "confirmUnblock": "Débloquer {user} ?",
+      "blocked": "Utilisateur bloqué.",
+      "unblocked": "Utilisateur débloqué.",
+      "failed": "Action impossible"
+    },
+    "validation": {
+      "amountPositive": "Saisissez un nombre entier de pièces supérieur à zéro.",
+      "insufficient": "Le débit dépasse le solde de cette catégorie.",
+      "reasonMin": "Le motif doit faire au moins 10 caractères."
+    },
+    "errors": {
+      "notFound": "Utilisateur introuvable (il a peut-être été supprimé).",
+      "insufficientCoins": "Solde insuffisant : le serveur a refusé le débit.",
+      "alreadyBlocked": "Cet utilisateur est déjà bloqué.",
+      "notBlocked": "Cet utilisateur n'est pas bloqué.",
+      "deleted": "Ce compte est supprimé ou fusionné : aucune action possible.",
+      "reasonRequired": "Le motif est obligatoire (10 caractères au minimum).",
+      "validation": "Données refusées par le serveur : vérifiez le montant, la catégorie et le motif.",
+      "conflict": "L'opération est en conflit avec l'état actuel du compte : rechargez la fiche."
     }
   }
 }

@@ -28,7 +28,11 @@
       "invalidCredentials": "Invalid credentials.",
       "invalidTotp": "Invalid or expired code.",
       "network": "The server cannot be reached. Please retry shortly.",
-      "generic": "Something went wrong ({status})."
+      "generic": "Something went wrong ({status}).",
+      "totpIncomplete": "Enter the 6 digits of the code.",
+      "tooManyAttempts": "Too many attempts. Wait 15 minutes before retrying.",
+      "accountDisabled": "This account is deactivated. Contact an administrator.",
+      "challengeExpired": "The sign-in expired: start again from the password."
     },
     "roles": {
       "ADMIN": "Administrator",
@@ -125,7 +129,9 @@
     "deepLink": "Invalid link: it must start with drama:// (e.g. drama://series/{id}).",
     "positiveInteger": "Enter a whole number of at least 1.",
     "translationPair": "A translation needs both the question and the answer.",
-    "bodyTooLong": "The message exceeds {max} characters."
+    "bodyTooLong": "The message exceeds {max} characters.",
+    "min": "The minimum value is {min}.",
+    "integer": "Enter a whole number."
   },
   "series": {
     "title": "Catalogue — series",
@@ -622,7 +628,12 @@
         "home_banner": "Banner",
         "home_row": "Row",
         "admin_account": "Internal account",
-        "upload": "File upload"
+        "upload": "File upload",
+        "monetization_settings": "Monetization settings",
+        "coin_pack": "Coin pack",
+        "vip_plan": "VIP plan",
+        "checkin_scale": "Check-in scale",
+        "user": "User"
       },
       "diff": {
         "field": "Field",
@@ -985,6 +996,391 @@
         "closed": "Ticket closed.",
         "failed": "Action failed."
       }
+    }
+  },
+  "monetization": {
+    "title": "Monetization",
+    "subtitle": "Free episodes, coin cost, coin packs, VIP plans and ad cap (B-06).",
+    "restricted": "This page is restricted to the Monetization and Administrator roles.",
+    "loadError": "Could not load the monetization data.",
+    "audited": "Every change is written to the audit log with your name, the date and the previous value.",
+    "tabs": {
+      "settings": "Settings",
+      "packs": "Coin packs",
+      "vip": "VIP plans",
+      "simulator": "Simulator"
+    },
+    "settings": {
+      "title": "Default settings",
+      "hint": "Applied to new series and to the app; a series can override free episodes and coin cost in its form.",
+      "defaultFreeEpisodes": "Default free episodes",
+      "defaultFreeEpisodesHint": "First episodes of every series playable without coins.",
+      "defaultCoinCost": "Cost per episode (coins)",
+      "defaultCoinCostHint": "Price of a locked episode, in coins.",
+      "seriesUnlockDiscountPercent": "Whole-series discount (%)",
+      "seriesUnlockDiscountPercentHint": "Discount applied when the user unlocks every remaining episode at once.",
+      "adDailyCap": "Rewarded ads per day",
+      "adDailyCapHint": "Maximum episodes unlocked by an ad per user and per day (0 = disabled).",
+      "autoUnlockDefault": "Auto-unlock enabled by default",
+      "autoUnlockDefaultHint": "Initial value of the \"auto-unlock next episode\" setting of new accounts.",
+      "bonusValidityDays": "Bonus coins validity (days)",
+      "bonusValidityDaysHint": "Bonus coins (packs, check-in, tasks) expire after this delay; purchased coins never expire.",
+      "confirmHeader": "Save the settings?",
+      "confirmMessage": "{count} setting will change and apply to the app immediately. | {count} settings will change and apply to the app immediately.",
+      "changed": "Changed: {fields}",
+      "nothingToSave": "No setting changed.",
+      "saved": "Settings saved.",
+      "saveFailed": "Could not save",
+      "reset": "Discard changes"
+    },
+    "packs": {
+      "summary": "{count} pack, {active} active | {count} packs, {active} active",
+      "create": "New pack",
+      "edit": "Edit pack",
+      "delete": "Delete pack",
+      "deleteConfirm": "Delete the pack \"{sku}\"? It leaves the shop; past purchases stay in the history.",
+      "empty": {
+        "title": "No coin pack",
+        "hint": "Create a first pack with the same product id as in the Play Console."
+      },
+      "columns": {
+        "position": "#",
+        "sku": "Product id",
+        "coins": "Coins",
+        "bonus": "Bonus",
+        "total": "Total",
+        "badge": "Badge",
+        "prices": "Prices",
+        "active": "Active"
+      },
+      "inactiveHint": "An inactive pack is not offered in the app."
+    },
+    "vip": {
+      "summary": "{count} plan, {active} active | {count} plans, {active} active",
+      "create": "New plan",
+      "edit": "Edit plan",
+      "delete": "Delete plan",
+      "deleteConfirm": "Delete the plan \"{sku}\"? Current subscribers keep their access until the end of the period.",
+      "empty": {
+        "title": "No VIP plan",
+        "hint": "Create a weekly, monthly or yearly plan with its Play Console id."
+      },
+      "columns": {
+        "sku": "Product id",
+        "period": "Period",
+        "trial": "Trial",
+        "badge": "Badge",
+        "prices": "Prices",
+        "active": "Active"
+      },
+      "trialDaysValue": "{count} day | {count} days",
+      "noTrial": "No trial"
+    },
+    "period": {
+      "WEEK": "Weekly",
+      "MONTH": "Monthly",
+      "YEAR": "Yearly"
+    },
+    "form": {
+      "sku": "Product id (SKU)",
+      "skuHint": "Same as the product created in the Play Console (lowercase, digits, _ and .). Immutable after creation.",
+      "skuLocked": "The product id can no longer be changed: create another product if needed.",
+      "coins": "Coins",
+      "bonusCoins": "Bonus coins",
+      "bonusHint": "Offered on top, subject to the bonus coins validity.",
+      "badge": "Badge",
+      "badgePlaceholder": "e.g. Popular, Best value",
+      "active": "Active (offered in the app)",
+      "period": "Period",
+      "trialDays": "Free trial days",
+      "trialHint": "0 = no trial. The trial must also be configured on the Play Console product.",
+      "prices": "Prices per currency",
+      "pricesHint": "Enter the price shown in the app for each currency (the amount actually charged is the Play Store one). XOF is required; other currencies fall back to USD.",
+      "priceIn": "Price in {currency}",
+      "fillFromXof": "Fill from XOF",
+      "fillFromXofHint": "Fills the empty currencies from the XOF price with indicative rates, editable below.",
+      "overwrite": "Overwrite prices already entered",
+      "rates": "Indicative rates (1 XOF =)",
+      "rateFor": "{currency} rate",
+      "resetRates": "Default rates",
+      "total": "Total: {total} coins"
+    },
+    "validation": {
+      "sku": "Invalid id: 2 to 80 characters, lowercase, digits, _ and . (e.g. coins_300).",
+      "coinsMin": "A pack holds at least one coin.",
+      "priceRequired": "Enter at least one price.",
+      "pricePositive": "Every price entered must be above zero.",
+      "priceXofRequired": "The XOF price is required."
+    },
+    "toasts": {
+      "packCreated": "Pack \"{sku}\" created.",
+      "packSaved": "Pack updated.",
+      "packDeleted": "Pack deleted.",
+      "planCreated": "Plan \"{sku}\" created.",
+      "planSaved": "Plan updated.",
+      "planDeleted": "Plan deleted.",
+      "reordered": "Order saved.",
+      "activated": "Activated.",
+      "deactivated": "Deactivated.",
+      "saveFailed": "Could not save",
+      "deleteFailed": "Could not delete",
+      "skuTaken": "This product id is already used.",
+      "skuImmutable": "The product id cannot be changed."
+    },
+    "simulator": {
+      "title": "Display simulator",
+      "hint": "What the app shows for a given country: the country's currency (USD fallback), price and coins of the pack.",
+      "country": "User's country",
+      "pack": "Pack",
+      "plan": "VIP plan",
+      "noPacks": "No pack to simulate.",
+      "result": "Display in the app",
+      "currency": "Currency",
+      "price": "Displayed price",
+      "noPrice": "No price in this currency nor in USD: the pack is hidden.",
+      "fallback": "USD fallback: no price in {currency}.",
+      "coins": "Coins",
+      "coinsDetail": "{coins} + {bonus} bonus",
+      "perCoin": "That is {price} per coin",
+      "inactive": "This pack is inactive: it does not appear in the app.",
+      "allPacks": "Every active pack for this country",
+      "phoneTitle": "Shop",
+      "buy": "Buy",
+      "phoneFrame": "Phone preview of the shop"
+    }
+  },
+  "rewards": {
+    "title": "Rewards",
+    "subtitle": "Daily check-in scale, tasks and bonus coins validity (B-08).",
+    "restricted": "This page is restricted to the Monetization and Administrator roles.",
+    "loadError": "Could not load the scale.",
+    "tabs": {
+      "checkin": "Check-in",
+      "tasks": "Tasks"
+    },
+    "checkin": {
+      "title": "Check-in scale (7 days)",
+      "hint": "Bonus coins granted for each consecutive day the app is opened. Day 7 is usually the most generous; afterwards the streak restarts at day 1.",
+      "day": "Day {day}",
+      "coins": "{count} coin | {count} coins",
+      "total": "Total over 7 days",
+      "totalHint": "What a regular user receives every week, in bonus coins (validity: {days} days).",
+      "resetOnMiss": "A missed day resets the streak",
+      "resetOnMissHint": "Disabled: the user resumes at the day they stopped.",
+      "confirmHeader": "Save the scale?",
+      "confirmMessage": "The new scale ({total} coins over 7 days) applies from the users' next check-in.",
+      "saved": "Scale saved.",
+      "saveFailed": "Could not save",
+      "reset": "Discard changes",
+      "nothingToSave": "No change.",
+      "preview": "Preview in the app",
+      "claimed": "Claimed",
+      "today": "Today"
+    },
+    "tasks": {
+      "title": "Rewarded tasks",
+      "hint": "Watch N episodes, share a series, invite a friend… This module arrives in sprint 8 (M-41).",
+      "placeholder": "Sprint 8"
+    },
+    "validation": {
+      "sevenDays": "The scale has exactly 7 days.",
+      "allZero": "At least one day must grant coins."
+    }
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Account search, wallet, history and support actions (B-09).",
+    "restricted": "This page is restricted to the Support and Administrator roles.",
+    "search": {
+      "label": "Search a user",
+      "placeholder": "Email, phone, name or id",
+      "hint": "At least {min} characters. Phones are searched with the dialling code (+228…).",
+      "results": "{count} result | {count} results",
+      "empty": "No user matches \"{q}\".",
+      "start": "Enter an email, a phone, a name or an id to start.",
+      "failed": "Search failed"
+    },
+    "columns": {
+      "user": "User",
+      "contact": "Contact",
+      "type": "Type",
+      "status": "Status",
+      "country": "Country",
+      "coins": "Coins",
+      "lastSeen": "Last activity",
+      "createdAt": "Joined"
+    },
+    "type": {
+      "GUEST": "Guest",
+      "REGISTERED": "Registered"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "BLOCKED": "Blocked",
+      "DELETION_PENDING": "Deletion scheduled",
+      "MERGED": "Merged",
+      "DELETED": "Deleted"
+    },
+    "providers": {
+      "google": "Google",
+      "phone": "Phone",
+      "email": "Email",
+      "none": "None (guest)"
+    },
+    "vip": {
+      "none": "Not subscribed",
+      "active": "Active VIP",
+      "expired": "Expired VIP"
+    },
+    "detail": {
+      "back": "Back to search",
+      "notFound": "User not found.",
+      "loadError": "Could not load this user.",
+      "id": "Id",
+      "profile": "Profile",
+      "wallet": "Wallet",
+      "subscription": "VIP subscription",
+      "type": "Account type",
+      "providers": "Sign-in methods",
+      "country": "Country",
+      "language": "Language",
+      "status": "Status",
+      "lastSeen": "Last activity",
+      "createdAt": "Joined",
+      "devices": "Devices",
+      "deletionScheduled": "Anonymisation scheduled on {date}",
+      "purchased": "Purchased",
+      "bonus": "Bonus",
+      "total": "Total",
+      "autoUnlock": "Auto-unlock",
+      "negativeBalance": "Negative balance after a refund: no unlock until it is settled.",
+      "bonusExpiring": "{amount} bonus expire on {date}",
+      "noSubscription": "No subscription.",
+      "plan": "Plan",
+      "startedAt": "Started",
+      "expiresAt": "Expires",
+      "autoRenew": "Auto-renew",
+      "store": "Store",
+      "subscriptionStatus": {
+        "none": "None",
+        "active": "Active",
+        "cancelled": "Cancelled (active until expiry)",
+        "expired": "Expired",
+        "grace": "Grace period (payment pending)"
+      }
+    },
+    "tabs": {
+      "unlocks": "Unlocks",
+      "purchases": "Purchases",
+      "ledger": "Ledger"
+    },
+    "unlocks": {
+      "empty": "No unlocked episode.",
+      "columns": {
+        "series": "Series",
+        "episode": "Episode",
+        "method": "Method",
+        "at": "Date"
+      },
+      "episodeNumber": "Episode {number}",
+      "method": {
+        "coins": "Coins",
+        "ad": "Rewarded ad",
+        "vip": "VIP",
+        "free": "Free",
+        "auto": "Automatic",
+        "other": "Other"
+      }
+    },
+    "purchases": {
+      "empty": "No purchase.",
+      "columns": {
+        "product": "Product",
+        "amount": "Amount",
+        "coins": "Coins",
+        "status": "Status",
+        "at": "Date"
+      },
+      "subscription": "Subscription"
+    },
+    "ledger": {
+      "empty": "No movement.",
+      "hint": "Each line is a coin variation; the balance is the sum of the lines.",
+      "columns": {
+        "at": "Date",
+        "type": "Type",
+        "bucket": "Bucket",
+        "amount": "Coins",
+        "description": "Detail",
+        "expiresAt": "Expires"
+      },
+      "type": {
+        "PURCHASE": "Purchase",
+        "BONUS": "Bonus",
+        "UNLOCK": "Unlock",
+        "ADJUSTMENT": "Adjustment",
+        "EXPIRY": "Expiry",
+        "REFUND": "Refund",
+        "MERGE": "Merge"
+      }
+    },
+    "bucket": {
+      "PURCHASED": "Purchased",
+      "BONUS": "Bonus"
+    },
+    "actions": {
+      "adjust": "Credit / debit coins",
+      "block": "Block",
+      "unblock": "Unblock"
+    },
+    "adjust": {
+      "title": "Credit or debit coins",
+      "hint": "An adjustment line is added to the ledger and to the audit log with your name and the reason. The server refuses a debit above the balance.",
+      "direction": "Operation",
+      "credit": "Credit",
+      "debit": "Debit",
+      "amount": "Number of coins",
+      "bucket": "Bucket",
+      "bucketHint": "Bonus coins expire ({days} days) and are spent first; purchased coins never expire.",
+      "reason": "Reason (required)",
+      "reasonPlaceholder": "e.g. Goodwill gesture after ticket #1234",
+      "reasonHint": "At least {min} characters, visible in the audit log.",
+      "preview": "Balance after the operation",
+      "current": "Current balance",
+      "delta": "Change",
+      "confirmHeader": "Confirm the adjustment?",
+      "confirmCredit": "Credit {amount} coins ({bucket}) to {user}? New balance: {total} coins.",
+      "confirmDebit": "Debit {amount} coins ({bucket}) from {user}? New balance: {total} coins.",
+      "done": "Wallet updated: {total} coins.",
+      "failed": "Adjustment failed"
+    },
+    "block": {
+      "title": "Block the user",
+      "hint": "The user is signed out of every device and can no longer sign in or play. Coins and history are kept.",
+      "unblockTitle": "Unblock the user",
+      "unblockHint": "The user will be able to sign in again. The reason is written to the audit log.",
+      "reason": "Reason (required)",
+      "reasonPlaceholder": "e.g. Refund fraud confirmed on 30/10",
+      "confirmBlock": "Block {user}?",
+      "confirmUnblock": "Unblock {user}?",
+      "blocked": "User blocked.",
+      "unblocked": "User unblocked.",
+      "failed": "Action failed"
+    },
+    "validation": {
+      "amountPositive": "Enter a whole number of coins above zero.",
+      "insufficient": "The debit exceeds the balance of this bucket.",
+      "reasonMin": "The reason must have at least 10 characters."
+    },
+    "errors": {
+      "notFound": "User not found (it may have been deleted).",
+      "insufficientCoins": "Insufficient balance: the server refused the debit.",
+      "alreadyBlocked": "This user is already blocked.",
+      "notBlocked": "This user is not blocked.",
+      "deleted": "This account is deleted or merged: no action possible.",
+      "reasonRequired": "The reason is required (at least 10 characters).",
+      "validation": "Data refused by the server: check the amount, the bucket and the reason.",
+      "conflict": "The operation conflicts with the current state of the account: reload the page."
     }
   }
 }

@@ -3,11 +3,11 @@
 Espace de travail npm (workspaces) regroupant les applications web du projet, conformément au
 cahier des charges (§11) : **une base Nuxt 3 commune, deux applications distinctes**.
 
-| Dossier         | Rôle                                                                                                                                                                                                                          | Tickets                                                               |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `layers/base`   | Couche Nuxt partagée : Tailwind CSS, PrimeVue (thème Aura), Pinia, i18n (FR par défaut), client API typé `useApi()`, store d'authentification, layouts et composants de mise en page, fixtures de démonstration               | S03-WEB-01                                                            |
-| `apps/admin`    | Back-office (comptes internes, JWT + TOTP obligatoire, appareil de confiance) : catalogue B-01, épisodes et upload B-02, sous-titres B-03, mise en avant B-05, notifications B-10, centre d'aide B-03bis, administration B-13 | S03-WEB-01 à 03, S04-WEB-01 à 03, S05-WEB-01/02, B-13+, B-10, B-03bis |
-| `apps/recharge` | Site de recharge mobile money — emplacement réservé, créé au Sprint 9                                                                                                                                                         | S09-WEB-*                                                             |
+| Dossier         | Rôle                                                                                                                                                                                                                                                                                  | Tickets                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `layers/base`   | Couche Nuxt partagée : Tailwind CSS, PrimeVue (thème Aura), Pinia, i18n (FR par défaut), client API typé `useApi()`, store d'authentification, layouts et composants de mise en page, fixtures de démonstration                                                                       | S03-WEB-01                                                                              |
+| `apps/admin`    | Back-office (comptes internes, JWT + TOTP obligatoire, appareil de confiance) : catalogue B-01, épisodes et upload B-02, sous-titres B-03, mise en avant B-05, monétisation B-06, récompenses B-08, utilisateurs B-09, notifications B-10, centre d'aide B-03bis, administration B-13 | S03-WEB-01 à 03, S04-WEB-01 à 03, S05-WEB-01/02, B-13+, B-10, B-03bis, B-06, B-08, B-09 |
+| `apps/recharge` | Site de recharge mobile money — emplacement réservé, créé au Sprint 9                                                                                                                                                                                                                 | S09-WEB-*                                                                               |
 
 ## Versions retenues
 
@@ -66,7 +66,8 @@ web/
 │   ├── composables/         # useApi, useCatalogueApi (B-01/B-02), useSubtitlesApi (B-03), useFeaturedApi (B-05),
 │   │                        # useScheduleApi (B-04), useStatsApi (B-11), useAdministrationApi (B-13),
 │   │                        # useAccountApi (appareils de confiance), useCampaignsApi (B-10),
-│   │                        # useHelpCenterApi (FAQ, tickets), useNotify (toasts), useMediaUrl, useEpisodeUploads,
+│   │                        # useHelpCenterApi (FAQ, tickets), useMonetizationApi (B-06, B-08),
+│   │                        # useUsersApi (B-09), useNotify (toasts), useMediaUrl, useEpisodeUploads,
 │   │                        # usePosterUpload
 │   ├── stores/auth.ts       # login() (jeton d'appareil), verifyTotp(code, rememberDevice), fetchMe(), logout(),
 │   │                        # forgetDevice() ; stores/support-inbox.ts (badge des tickets ouverts)
@@ -86,15 +87,23 @@ web/
 │   ├── components/account/  # TrustedDevicesPanel (B-13+)
 │   ├── components/campaigns/# CampaignDialog, CampaignDetailDrawer, CampaignStatusTag (B-10)
 │   ├── components/help-center/ # FaqPanel, FaqEntryDialog, FaqPreview, SupportInbox (B-03bis)
+│   ├── components/monetization/ # SettingsPanel, PacksPanel, PackDialog, VipPlansPanel, VipPlanDialog,
+│   │                        # PricesEditor (prix par devise, complétion depuis le F CFA), ShopSimulator (B-06)
+│   ├── components/rewards/  # CheckinScaleEditor (B-08)
+│   ├── components/users/    # ProfileCard, WalletCard, SubscriptionCard, HistoryTabs,
+│   │                        # CoinAdjustmentDialog, BlockUserDialog (B-09)
 │   ├── i18n/locales/        # fr.json (référence), en.json
 │   ├── mocks/               # index.ts (API simulée avec état), assets.ts, fixtures JSON (stats, campaigns,
-│   │                        # faq, tickets…)
+│   │                        # faq, tickets, monetization, users…)
 │   ├── types/api.ts         # contrats de l'API admin (= docs/api/admin-contract-v1.md + section back-office
-│   │                        # de public-contract-v1.2.md + docs/api/contract-v1.3-sprint5.md)
+│   │                        # de public-contract-v1.2.md + docs/api/contract-v1.3-sprint5.md
+│   │                        # + docs/api/contract-v1.4-sprint6.md)
 │   ├── utils/               # ApiError, upload-queue, upload-transport, polling, series-form,
 │   │                        # subtitles, featured, accounts, audit-diff, schedule (fuseau, calendrier,
 │   │                        # sortie quotidienne), stats (tuiles, taux), markdown (aide), countries,
 │   │                        # format, episode-files, campaigns (B-10), help-center (FAQ, tickets),
+│   │                        # monetization (devises, prix, simulateur, formulaires B-06), rewards (barème B-08),
+│   │                        # users (ajustement de pièces, erreurs 4xx B-09), auth-errors (DEF-005),
 │   │                        # registre des modules B-01…B-13 (+ B-03bis, rôles, badge)
 │   └── tests/
 ├── docs/guide-back-office.md # guide v1 de l'équipe éditoriale (S06-WEB-02), rendu sur /help
@@ -146,7 +155,17 @@ Les contrats sont ceux de `docs/api/admin-contract-v1.md`, retranscrits dans `la
   courant si l'API l'identifie, puis vide le cookie). Administration → Comptes propose
   `POST /admin/accounts/{id}/revoke-devices` ; la réinitialisation TOTP révoque aussi tout.
 - Mock : jetons aléatoires liés au compte, 30 jours, `current` calculé, réinitialisation TOTP et
-  `revoke-devices` purgent la liste.
+  `revoke-devices` purgent la liste. Depuis le contrat v1.4, `current` est toujours renvoyé par
+  l'API : le type `TrustedDevice.current` est obligatoire et « Révoquer cet appareil » s'appuie dessus.
+
+### Messages de connexion (DEF-005)
+
+`utils/auth-errors.ts` (`loginErrorKey()`, testé) traduit chaque échec de connexion : à l'étape du
+code, le bouton **Vérifier** reste inactif tant que 6 chiffres ne sont pas saisis, la touche Entrée
+sur un code incomplet affiche « Saisissez les 6 chiffres du code », `INVALID_TOTP_CODE` (401) donne
+« Code incorrect ou expiré », un 400 de validation « Saisissez les 6 chiffres », un défi expiré
+« La connexion a expiré ». À l'étape du mot de passe, 401 et 400 (mot de passe trop court) donnent
+« Identifiants incorrects », 429 « Trop de tentatives », `ACCOUNT_DISABLED` « compte désactivé ».
 
 ## Catalogue et épisodes (S03-WEB-03, S04-WEB-01)
 
@@ -306,6 +325,68 @@ INACTIVE (jours 1-365)` avec champs conditionnels, date d'envoi facultative sais
 - Mock : FAQ et tickets avec état, `GET /help/faq` public servi par `faqPreview()`, 403 pour les
   rôles non autorisés, 409 sur un ticket fermé.
 
+### Monétisation (B-06, contrat v1.4)
+
+- `/monetization` (barre latérale « Monétisation »), réservé à MONETIZATION et ADMIN (les autres
+  rôles voient « Droits insuffisants » sans appel API ; l'entrée est masquée du menu). Quatre
+  onglets (dans l'URL `?tab=`) :
+  - **Paramètres** : `GET`/`PUT /admin/monetization/settings` — épisodes gratuits par défaut, coût
+    par épisode, remise série complète (%), plafond de pubs par jour, déblocage automatique par
+    défaut, validité des pièces bonus (jours). Bornes dans `SETTINGS_LIMITS`, enregistrement
+    après confirmation listant les champs modifiés, rappel « tout est audité ».
+  - **Packs de pièces** : `GET/POST/PATCH/DELETE /admin/monetization/packs` et `PUT /order`
+    (glisser-déposer). Dialogue de création / édition : **SKU immuable après création**
+    (« identique au produit Play Console », `SKU_RE`), pièces, pièces bonus, badge, actif, **prix
+    par devise** XOF / NGN / GHS / EUR / USD saisis en unités majeures et envoyés en
+    `amountMinor` (XOF sans décimale, 2 décimales ailleurs). Le bouton **« Compléter depuis le
+    F CFA »** remplit les devises vides à partir du prix XOF avec des **taux indicatifs affichés et
+    modifiables** (`DEFAULT_RATES_FROM_XOF`), arrondis « boutique » (`roundShopAmount`). Le prix
+    XOF est obligatoire ; le `PATCH` n'envoie que les champs modifiés (`packFormToInput`).
+  - **Formules VIP** : même schéma (`/admin/monetization/vip-plans`) avec période
+    `WEEK | MONTH | YEAR` et jours d'essai ; tri semaine → mois → an.
+  - **Simulateur** : pour un pays et un pack, ce que l'application affichera — devise du pays
+    (`COUNTRY_CURRENCY`, repli USD), prix, pièces + bonus, prix par pièce, avertissement « repli
+    dollar » ou « aucun prix » — et la boutique complète du pays dans un cadre téléphone.
+    Logique pure dans `utils/monetization.ts` (`currencyForCountry`, `priceFor`,
+    `simulateShopDisplay`, testées).
+- Mock : paramètres, packs et formules avec état, `SKU_ALREADY_USED` (409), `SKU_IMMUTABLE`
+  (400), ordre recalculé à la suppression, lignes d'audit `monetization_settings.update`,
+  `coin_pack.*`, `vip_plan.*`.
+
+### Récompenses (B-08, contrat v1.4)
+
+- `/rewards` (barre latérale « Récompenses »), MONETIZATION et ADMIN. Onglet **Check-in** :
+  `GET`/`PUT /admin/rewards/checkin` — barème sur 7 jours (`days`), **total sur 7 jours** calculé
+  en direct (`checkinTotal`), interrupteur **« Un jour manqué remet la série à zéro »**
+  (`resetOnMiss`), aperçu téléphone (jours reçus / aujourd'hui / à venir), confirmation avant
+  enregistrement, validation (7 entiers ≥ 0, au moins un jour non nul). Onglet **Tâches** :
+  emplacement « Sprint 8 ».
+- Mock : barème avec état, 400 sur un barème invalide, audit `checkin_scale.update`.
+
+### Utilisateurs (B-09, contrat v1.4)
+
+- `/users` (barre latérale « Utilisateurs »), SUPPORT et ADMIN. Recherche
+  `GET /admin/users?q&page&pageSize` par e-mail, téléphone, nom ou identifiant (2 caractères au
+  moins, requête dans l'URL), table paginée (20) → fiche `/users/{id}`.
+- **Fiche** (`GET /admin/users/{id}`) : carte **Profil** (type, moyens de connexion, pays, langue,
+  statut, dernière activité, inscription, appareils, VIP, anonymisation programmée), carte
+  **Portefeuille** (achetées / bonus / total, déblocage automatique, bonus qui expirent, alerte
+  solde négatif), carte **Abonnement**, onglets **Déblocages / Achats / Grand livre** (paginés
+  côté client par 20 à partir des listes de la fiche ; `method` accepté en majuscules ou
+  minuscules).
+- Actions : **« Créditer / Débiter des pièces »** (`POST /admin/users/{id}/coins`) — sens,
+  montant, catégorie (achetées / bonus), **motif obligatoire ≥ 10 caractères**, **aperçu du solde
+  résultant** par catégorie (`adjustmentPreview`), refus local d'un débit supérieur au solde,
+  confirmation récapitulative ; **« Bloquer / Débloquer »** (`POST /block` · `/unblock`) avec
+  motif. Toute erreur 4xx est affichée en français (`userErrorKey` : `INSUFFICIENT_COINS`,
+  `USER_ALREADY_BLOCKED`, `USER_NOT_BLOCKED`, `USER_NOT_FOUND`, `REASON_REQUIRED`,
+  `VALIDATION_ERROR`, 409 générique).
+- Mock : cinq utilisateurs (dont un bloqué, un VIP, un invité, un en suppression, un solde
+  négatif) ; le **portefeuille est une projection du grand livre** en mémoire — un ajustement
+  ajoute une ligne `ADJUSTMENT` (bonus avec expiration à `bonusValidityDays`), un débit excessif
+  renvoie 409 `INSUFFICIENT_COINS`, le blocage met `devices` à 0 ; audit `user.coins_adjust`,
+  `user.block`, `user.unblock` avec le motif.
+
 ### Administration (S05-WEB-01, B-13)
 
 - `/administration`, réservé au rôle ADMIN (les autres voient « Droits insuffisants » sans appel API).
@@ -331,7 +412,8 @@ pour l'aperçu, SRT converti), bannières et rangées avec un aperçu calculé c
 réinitialisation TOTP → nouvel enrôlement, compte créé qui peut se connecter avec son mot de passe)
 et journal d'audit alimenté par chaque mutation du mock, appareils de confiance (connexion sans code),
 campagnes push (estimation, envoi simulé, programmation, annulation), FAQ (avec le `GET /help/faq`
-public) et tickets de support. Les URL d'upload sont des `mock://upload/...`
+public), tickets de support, paramètres de monétisation, packs et formules VIP, barème du check-in
+et utilisateurs finaux (portefeuille projeté du grand livre, ajustements, blocage). Les URL d'upload sont des `mock://upload/...`
 traitées par `mockUploadTransport` (progression simulée, fichier conservé pour l'aperçu des affiches) ;
 `POST /uploaded` fait passer l'épisode `UPLOADED` → `PROCESSING` (1,5 s) → `READY` (4 s), avec un
 manifeste HLS pointant vers les échantillons `hls/samples/epN/` de `infra/media-samples` dans MinIO,

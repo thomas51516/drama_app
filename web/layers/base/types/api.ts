@@ -1,8 +1,8 @@
 /**
  * Contracts of the admin API consumed by the web apps.
  * Source of truth: docs/api/admin-contract-v1.md, the back-office section of
- * docs/api/public-contract-v1.2.md and docs/api/contract-v1.3-sprint5.md (binding for backend
- * and back-office).
+ * docs/api/public-contract-v1.2.md, docs/api/contract-v1.3-sprint5.md and
+ * docs/api/contract-v1.4-sprint6.md (binding for backend and back-office).
  * These types drive both the real client and the mock mode.
  */
 
@@ -78,8 +78,8 @@ export interface TrustedDevice {
   createdAt: string
   lastUsedAt: string | null
   expiresAt: string
-  /** Optional hint of the backend: the device whose token opened the current session. */
-  current?: boolean
+  /** The device whose token opened the current session (contract v1.4: always sent). */
+  current: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -670,6 +670,258 @@ export interface SupportTicketQuery {
   status?: SupportTicketStatus
   page?: number
   pageSize?: number
+}
+
+// ---------------------------------------------------------------------------
+// Monetization (B-06) — contract v1.4
+// ---------------------------------------------------------------------------
+
+/** Currencies of the shop (contract v1.4 `Price`). XOF has no minor unit; the others have 2. */
+export const CURRENCIES = ['XOF', 'NGN', 'GHS', 'EUR', 'USD'] as const
+export type Currency = (typeof CURRENCIES)[number]
+
+/** Amount in the minor unit of the currency (cents; FCFA without decimals). */
+export interface Price {
+  currency: Currency
+  amountMinor: number
+}
+
+/** GET / PUT /admin/monetization/settings */
+export interface MonetizationSettings {
+  defaultFreeEpisodes: number
+  defaultCoinCost: number
+  seriesUnlockDiscountPercent: number
+  adDailyCap: number
+  autoUnlockDefault: boolean
+  bonusValidityDays: number
+}
+
+/** Pack as the app receives it in `GET /shop` (price in the country's currency). */
+export interface CoinPack {
+  id: string
+  /** Product id of the Play Console; immutable after creation. */
+  sku: string
+  coins: number
+  bonusCoins: number
+  price: Price
+  badge?: string | null
+  position: number
+}
+
+/** `CoinPackAdmin = CoinPack + { prices, isActive, createdAt }` of GET /admin/monetization/packs. */
+export interface CoinPackAdmin extends CoinPack {
+  prices: Price[]
+  isActive: boolean
+  createdAt: string
+}
+
+/** POST /admin/monetization/packs (every field) and PATCH /{id} (partial, never `sku`). */
+export interface CoinPackInput {
+  sku?: string
+  coins?: number
+  bonusCoins?: number
+  badge?: string | null
+  isActive?: boolean
+  prices?: Price[]
+}
+
+export const VIP_PERIODS = ['WEEK', 'MONTH', 'YEAR'] as const
+export type VipPeriod = (typeof VIP_PERIODS)[number]
+
+export interface VipPlan {
+  id: string
+  sku: string
+  period: VipPeriod
+  price: Price
+  trialDays: number
+  badge?: string | null
+}
+
+/** `VipPlanAdmin = VipPlan + { prices, isActive }` of GET /admin/monetization/vip-plans. */
+export interface VipPlanAdmin extends VipPlan {
+  prices: Price[]
+  isActive: boolean
+  position?: number
+  createdAt?: string
+}
+
+export interface VipPlanInput {
+  sku?: string
+  period?: VipPeriod
+  trialDays?: number
+  badge?: string | null
+  isActive?: boolean
+  prices?: Price[]
+}
+
+/** PUT /admin/monetization/packs/order */
+export interface MonetizationOrderInput {
+  ids: string[]
+}
+
+/** Play Console product ids: lowercase letters, digits, underscores and dots (2 to 80 chars). */
+export const SKU_RE = /^[a-z0-9][a-z0-9_.]{1,79}$/
+
+// ---------------------------------------------------------------------------
+// Rewards (B-08) — contract v1.4
+// ---------------------------------------------------------------------------
+
+export const CHECKIN_DAYS = 7
+
+/** GET / PUT /admin/rewards/checkin: coins granted on day 1..7 of a streak (M-40). */
+export interface CheckinScale {
+  days: number[]
+  /** A missed day restarts the streak at day 1. */
+  resetOnMiss: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Wallet, ledger and end users (B-09) — contract v1.4
+// ---------------------------------------------------------------------------
+
+export type CoinBucket = 'PURCHASED' | 'BONUS'
+export const COIN_BUCKETS: readonly CoinBucket[] = ['PURCHASED', 'BONUS']
+
+export type LedgerEntryType =
+  'PURCHASE' | 'BONUS' | 'UNLOCK' | 'ADJUSTMENT' | 'EXPIRY' | 'REFUND' | 'MERGE'
+export const LEDGER_ENTRY_TYPES: readonly LedgerEntryType[] = [
+  'PURCHASE',
+  'BONUS',
+  'UNLOCK',
+  'ADJUSTMENT',
+  'EXPIRY',
+  'REFUND',
+  'MERGE',
+]
+
+export interface Wallet {
+  purchased: number
+  bonus: number
+  total: number
+  autoUnlock: boolean
+  bonusExpiring: { amount: number; expiresAt: string }[]
+}
+
+export interface LedgerEntry {
+  id: string
+  /** Signed amount (+ credit, - debit). */
+  amount: number
+  bucket: CoinBucket
+  type: LedgerEntryType
+  reference: string | null
+  description: string | null
+  expiresAt: string | null
+  createdAt: string
+}
+
+export type AppUserType = 'GUEST' | 'REGISTERED'
+export type AppUserStatus = 'ACTIVE' | 'BLOCKED' | 'DELETION_PENDING' | 'MERGED' | 'DELETED'
+export type AppAuthProvider = 'google' | 'phone' | 'email'
+
+/** `UserDto` of the public contract (end user of the app), as returned to the back-office. */
+export interface AppUser {
+  id: string
+  type: AppUserType
+  status: AppUserStatus
+  displayName: string | null
+  email: string | null
+  phone: string | null
+  country: string | null
+  language: string
+  vipStatus: 'none' | 'active' | 'expired'
+  vipExpiresAt: string | null
+  providers: AppAuthProvider[]
+  autoUnlock: boolean
+  deletionScheduledAt?: string | null
+  createdAt: string
+  lastSeenAt?: string | null
+}
+
+/** Item of GET /admin/users?q (search by id, e-mail, phone or name). */
+export interface AdminUserSummary {
+  id: string
+  type: AppUserType
+  status: AppUserStatus
+  displayName: string | null
+  email: string | null
+  phone: string | null
+  country: string | null
+  language?: string
+  vipStatus?: 'none' | 'active' | 'expired'
+  /** Wallet projection as the backend sends it (sprint 6). */
+  balance?: { purchased: number; bonus: number; total: number }
+  /** Flat total, accepted as a fallback. */
+  coins?: number
+  lastSeenAt: string | null
+  createdAt: string
+}
+
+export interface AdminUsersQuery {
+  q?: string
+  page?: number
+  pageSize?: number
+}
+
+export type SubscriptionState = 'none' | 'active' | 'cancelled' | 'expired' | 'grace'
+
+/** `GET /me/subscription` shape, embedded in the admin user detail. */
+export interface UserSubscription {
+  status: SubscriptionState
+  plan: VipPeriod | string | null
+  startedAt: string | null
+  expiresAt: string | null
+  autoRenew: boolean
+  store: 'google' | string | null
+}
+
+export type UnlockMethod = 'coins' | 'ad' | 'vip' | 'free' | 'auto'
+
+export interface AdminUserUnlock {
+  episodeId: string
+  seriesId?: string
+  seriesTitle: string
+  episodeNumber: number
+  /** The backend may send the enum in upper case; `normalizeUnlockMethod()` lowercases it. */
+  method: UnlockMethod | Uppercase<UnlockMethod> | string
+  at: string
+}
+
+export interface AdminUserPurchase {
+  id: string
+  productId: string
+  /** `inapp` (coin pack) or `subs` (VIP). */
+  type?: 'inapp' | 'subs' | string
+  coins: number
+  bonusCoins: number
+  amountMinor: number | null
+  currency: string | null
+  status: string
+  createdAt: string
+}
+
+/** GET /admin/users/{id} */
+export interface AdminUserDetail {
+  user: AppUser
+  wallet: Wallet
+  subscription: UserSubscription | null
+  unlocks: AdminUserUnlock[]
+  purchases: AdminUserPurchase[]
+  recentLedger: LedgerEntry[]
+  /** Number of push devices / sessions. */
+  devices: number
+  lastSeenAt: string | null
+}
+
+/** POST /admin/users/{id}/coins — one ADJUSTMENT ledger line, audited with the reason. */
+export interface CoinAdjustmentInput {
+  amount: number
+  bucket: CoinBucket
+  reason: string
+}
+
+/** POST /admin/users/{id}/block and /unblock */
+export interface UserBlockInput {
+  reason: string
 }
 
 // ---------------------------------------------------------------------------

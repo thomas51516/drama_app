@@ -43,4 +43,23 @@ describe('back-office modules registry', () => {
     expect(moduleAllowsRole(findModuleByPath('/series')!, 'SUPPORT')).toBe(true)
     expect(moduleAllowsRole(findModuleByPath('/series')!, null)).toBe(true)
   })
+
+  it('points the sprint 6 modules to their real pages with their role gating', () => {
+    for (const path of ['/monetization', '/rewards']) {
+      const module = findModuleByPath(path)!
+      expect(moduleAllowsRole(module, 'MONETIZATION')).toBe(true)
+      expect(moduleAllowsRole(module, 'ADMIN')).toBe(true)
+      expect(moduleAllowsRole(module, 'EDITOR')).toBe(false)
+      expect(moduleAllowsRole(module, 'SUPPORT')).toBe(false)
+    }
+    expect(findModuleByPath('/monetization')?.ticket).toBe('B-06')
+    expect(findModuleByPath('/rewards')?.ticket).toBe('B-08')
+
+    const users = findModuleByPath('/users')!
+    expect(users.ticket).toBe('B-09')
+    expect(moduleAllowsRole(users, 'SUPPORT')).toBe(true)
+    expect(moduleAllowsRole(users, 'ADMIN')).toBe(true)
+    expect(moduleAllowsRole(users, 'MONETIZATION')).toBe(false)
+    expect(moduleAllowsRole(users, 'EDITOR')).toBe(false)
+  })
 })

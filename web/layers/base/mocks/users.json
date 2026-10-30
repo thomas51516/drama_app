@@ -1,0 +1,394 @@
+{
+  "users": [
+    {
+      "user": {
+        "id": "0192f3a0-7c1e-7a10-8e00-000000000001",
+        "type": "REGISTERED",
+        "status": "ACTIVE",
+        "displayName": "Awa Koné",
+        "email": "awa.kone@example.com",
+        "phone": "+22890123456",
+        "country": "TG",
+        "language": "fr",
+        "vipStatus": "none",
+        "vipExpiresAt": null,
+        "providers": ["google"],
+        "autoUnlock": true,
+        "deletionScheduledAt": null,
+        "createdAt": "2026-09-02T08:12:00.000Z",
+        "lastSeenAt": "2026-10-29T21:40:00.000Z"
+      },
+      "wallet": { "purchased": 180, "bonus": 45 },
+      "bonusExpiring": [{ "amount": 30, "expiresAt": "__FUTURE_12D__" }],
+      "subscription": null,
+      "devices": 2,
+      "unlocks": [
+        {
+          "episodeId": "ep_01HZX0E0000000000000000013",
+          "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+          "seriesTitle": "Mariage sous contrat",
+          "episodeNumber": 4,
+          "method": "COINS",
+          "at": "2026-10-28T19:02:00.000Z"
+        },
+        {
+          "episodeId": "ep_01HZX0E0000000000000000014",
+          "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+          "seriesTitle": "Mariage sous contrat",
+          "episodeNumber": 5,
+          "method": "COINS",
+          "at": "2026-10-28T19:20:00.000Z"
+        },
+        {
+          "episodeId": "ep_01HZX0E0000000000000000021",
+          "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K3",
+          "seriesTitle": "Le Secret du Lagon",
+          "episodeNumber": 4,
+          "method": "AD",
+          "at": "2026-10-26T20:11:00.000Z"
+        }
+      ],
+      "purchases": [
+        {
+          "id": "pur_01J0USR0000000000000000001",
+          "productId": "coins_300",
+          "type": "inapp",
+          "coins": 300,
+          "bonusCoins": 30,
+          "amountMinor": 1500,
+          "currency": "XOF",
+          "status": "CREDITED",
+          "createdAt": "2026-10-20T10:05:00.000Z"
+        }
+      ],
+      "ledger": [
+        {
+          "id": "led_01J0USR0000000000000000001",
+          "amount": 300,
+          "bucket": "PURCHASED",
+          "type": "PURCHASE",
+          "reference": "purchase:pur_01J0USR0000000000000000001",
+          "description": "Pack coins_300",
+          "expiresAt": null,
+          "createdAt": "2026-10-20T10:05:01.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000002",
+          "amount": 30,
+          "bucket": "BONUS",
+          "type": "BONUS",
+          "reference": "purchase:pur_01J0USR0000000000000000001",
+          "description": "Bonus du pack coins_300",
+          "expiresAt": "__FUTURE_12D__",
+          "createdAt": "2026-10-20T10:05:01.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000003",
+          "amount": 15,
+          "bucket": "BONUS",
+          "type": "BONUS",
+          "reference": "checkin:2026-10-25",
+          "description": "Check-in jour 5",
+          "expiresAt": "__FUTURE_25D__",
+          "createdAt": "2026-10-25T07:30:00.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000004",
+          "amount": -10,
+          "bucket": "PURCHASED",
+          "type": "UNLOCK",
+          "reference": "unlock:ep_01HZX0E0000000000000000013",
+          "description": "Mariage sous contrat — épisode 4",
+          "expiresAt": null,
+          "createdAt": "2026-10-28T19:02:00.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000005",
+          "amount": -10,
+          "bucket": "PURCHASED",
+          "type": "UNLOCK",
+          "reference": "unlock:ep_01HZX0E0000000000000000014",
+          "description": "Mariage sous contrat — épisode 5",
+          "expiresAt": null,
+          "createdAt": "2026-10-28T19:20:00.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000006",
+          "amount": -100,
+          "bucket": "PURCHASED",
+          "type": "UNLOCK",
+          "reference": "unlock:series:ser_01HZX0A1B2C3D4E5F6G7H8J9K3",
+          "description": "Le Secret du Lagon — série complète (-20 %)",
+          "expiresAt": null,
+          "createdAt": "2026-10-22T18:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "user": {
+        "id": "0192f3a0-7c1e-7a10-8e00-000000000002",
+        "type": "REGISTERED",
+        "status": "ACTIVE",
+        "displayName": "Kofi Mensah",
+        "email": "kofi.mensah@example.com",
+        "phone": null,
+        "country": "GH",
+        "language": "en",
+        "vipStatus": "active",
+        "vipExpiresAt": "__FUTURE_20D__",
+        "providers": ["email"],
+        "autoUnlock": false,
+        "deletionScheduledAt": null,
+        "createdAt": "2026-08-15T12:00:00.000Z",
+        "lastSeenAt": "2026-10-30T06:10:00.000Z"
+      },
+      "wallet": { "purchased": 0, "bonus": 60 },
+      "bonusExpiring": [{ "amount": 60, "expiresAt": "__FUTURE_20D__" }],
+      "subscription": {
+        "status": "active",
+        "plan": "MONTH",
+        "startedAt": "2026-10-10T09:00:00.000Z",
+        "expiresAt": "__FUTURE_20D__",
+        "autoRenew": true,
+        "store": "google"
+      },
+      "devices": 1,
+      "unlocks": [
+        {
+          "episodeId": "ep_01HZX0E0000000000000000013",
+          "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+          "seriesTitle": "Mariage sous contrat",
+          "episodeNumber": 4,
+          "method": "VIP",
+          "at": "2026-10-12T21:00:00.000Z"
+        }
+      ],
+      "purchases": [
+        {
+          "id": "pur_01J0USR0000000000000000002",
+          "productId": "vip_month",
+          "type": "subs",
+          "coins": 0,
+          "bonusCoins": 0,
+          "amountMinor": 7500,
+          "currency": "GHS",
+          "status": "CREDITED",
+          "createdAt": "2026-10-10T09:00:00.000Z"
+        }
+      ],
+      "ledger": [
+        {
+          "id": "led_01J0USR0000000000000000011",
+          "amount": 60,
+          "bucket": "BONUS",
+          "type": "BONUS",
+          "reference": "welcome",
+          "description": "Offre de bienvenue",
+          "expiresAt": "__FUTURE_20D__",
+          "createdAt": "2026-10-10T09:01:00.000Z"
+        }
+      ]
+    },
+    {
+      "user": {
+        "id": "0192f3a0-7c1e-7a10-8e00-000000000003",
+        "type": "GUEST",
+        "status": "ACTIVE",
+        "displayName": null,
+        "email": null,
+        "phone": null,
+        "country": "CI",
+        "language": "fr",
+        "vipStatus": "none",
+        "vipExpiresAt": null,
+        "providers": [],
+        "autoUnlock": false,
+        "deletionScheduledAt": null,
+        "createdAt": "2026-10-27T17:45:00.000Z",
+        "lastSeenAt": "2026-10-29T12:00:00.000Z"
+      },
+      "wallet": { "purchased": 0, "bonus": 5 },
+      "bonusExpiring": [{ "amount": 5, "expiresAt": "__FUTURE_28D__" }],
+      "subscription": null,
+      "devices": 1,
+      "unlocks": [],
+      "purchases": [],
+      "ledger": [
+        {
+          "id": "led_01J0USR0000000000000000021",
+          "amount": 5,
+          "bucket": "BONUS",
+          "type": "BONUS",
+          "reference": "checkin:2026-10-29",
+          "description": "Check-in jour 1",
+          "expiresAt": "__FUTURE_28D__",
+          "createdAt": "2026-10-29T12:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "user": {
+        "id": "0192f3a0-7c1e-7a10-8e00-000000000004",
+        "type": "REGISTERED",
+        "status": "BLOCKED",
+        "displayName": "Chinedu Okafor",
+        "email": "chinedu.okafor@example.com",
+        "phone": "+2348012345678",
+        "country": "NG",
+        "language": "en",
+        "vipStatus": "expired",
+        "vipExpiresAt": "2026-09-30T00:00:00.000Z",
+        "providers": ["phone", "google"],
+        "autoUnlock": false,
+        "deletionScheduledAt": null,
+        "createdAt": "2026-07-01T10:00:00.000Z",
+        "lastSeenAt": "2026-10-15T22:30:00.000Z"
+      },
+      "wallet": { "purchased": -300, "bonus": 0 },
+      "bonusExpiring": [],
+      "subscription": {
+        "status": "expired",
+        "plan": "WEEK",
+        "startedAt": "2026-09-23T00:00:00.000Z",
+        "expiresAt": "2026-09-30T00:00:00.000Z",
+        "autoRenew": false,
+        "store": "google"
+      },
+      "devices": 0,
+      "unlocks": [],
+      "purchases": [
+        {
+          "id": "pur_01J0USR0000000000000000003",
+          "productId": "coins_300",
+          "type": "inapp",
+          "coins": 300,
+          "bonusCoins": 30,
+          "amountMinor": 375000,
+          "currency": "NGN",
+          "status": "REFUNDED",
+          "createdAt": "2026-10-01T11:00:00.000Z"
+        }
+      ],
+      "ledger": [
+        {
+          "id": "led_01J0USR0000000000000000031",
+          "amount": 300,
+          "bucket": "PURCHASED",
+          "type": "PURCHASE",
+          "reference": "purchase:pur_01J0USR0000000000000000003",
+          "description": "Pack coins_300",
+          "expiresAt": null,
+          "createdAt": "2026-10-01T11:00:01.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000032",
+          "amount": 30,
+          "bucket": "BONUS",
+          "type": "BONUS",
+          "reference": "purchase:pur_01J0USR0000000000000000003",
+          "description": "Bonus du pack coins_300",
+          "expiresAt": "2026-10-31T11:00:01.000Z",
+          "createdAt": "2026-10-01T11:00:01.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000033",
+          "amount": -300,
+          "bucket": "PURCHASED",
+          "type": "UNLOCK",
+          "reference": "unlock:series:ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+          "description": "Mariage sous contrat — série complète",
+          "expiresAt": null,
+          "createdAt": "2026-10-02T09:00:00.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000034",
+          "amount": -30,
+          "bucket": "BONUS",
+          "type": "EXPIRY",
+          "reference": null,
+          "description": "Bonus expirés",
+          "expiresAt": null,
+          "createdAt": "2026-10-14T00:00:00.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000035",
+          "amount": -300,
+          "bucket": "PURCHASED",
+          "type": "REFUND",
+          "reference": "purchase:pur_01J0USR0000000000000000003",
+          "description": "Remboursement Google Play",
+          "expiresAt": null,
+          "createdAt": "2026-10-15T08:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "user": {
+        "id": "0192f3a0-7c1e-7a10-8e00-000000000005",
+        "type": "REGISTERED",
+        "status": "DELETION_PENDING",
+        "displayName": "Marie Dupont",
+        "email": "marie.dupont@example.fr",
+        "phone": null,
+        "country": "FR",
+        "language": "fr",
+        "vipStatus": "none",
+        "vipExpiresAt": null,
+        "providers": ["email"],
+        "autoUnlock": false,
+        "deletionScheduledAt": "__FUTURE_25D__",
+        "createdAt": "2026-09-20T15:00:00.000Z",
+        "lastSeenAt": "2026-10-24T18:00:00.000Z"
+      },
+      "wallet": { "purchased": 20, "bonus": 0 },
+      "bonusExpiring": [],
+      "subscription": null,
+      "devices": 1,
+      "unlocks": [
+        {
+          "episodeId": "ep_01HZX0E0000000000000000013",
+          "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+          "seriesTitle": "Mariage sous contrat",
+          "episodeNumber": 4,
+          "method": "FREE",
+          "at": "2026-09-21T10:00:00.000Z"
+        }
+      ],
+      "purchases": [
+        {
+          "id": "pur_01J0USR0000000000000000004",
+          "productId": "coins_100",
+          "type": "inapp",
+          "coins": 100,
+          "bonusCoins": 0,
+          "amountMinor": 79,
+          "currency": "EUR",
+          "status": "CREDITED",
+          "createdAt": "2026-09-22T19:00:00.000Z"
+        }
+      ],
+      "ledger": [
+        {
+          "id": "led_01J0USR0000000000000000041",
+          "amount": 100,
+          "bucket": "PURCHASED",
+          "type": "PURCHASE",
+          "reference": "purchase:pur_01J0USR0000000000000000004",
+          "description": "Pack coins_100",
+          "expiresAt": null,
+          "createdAt": "2026-09-22T19:00:01.000Z"
+        },
+        {
+          "id": "led_01J0USR0000000000000000042",
+          "amount": -80,
+          "bucket": "PURCHASED",
+          "type": "UNLOCK",
+          "reference": "unlock:series:ser_01HZX0A1B2C3D4E5F6G7H8J9K3",
+          "description": "Le Secret du Lagon — 8 épisodes",
+          "expiresAt": null,
+          "createdAt": "2026-09-23T20:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,11 @@ export const AUDIT_TARGET_TYPES = [
   'home_row',
   'admin_account',
   'upload',
+  'monetization_settings',
+  'coin_pack',
+  'vip_plan',
+  'checkin_scale',
+  'user',
 ] as const
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
