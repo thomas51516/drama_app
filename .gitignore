@@ -33,3 +33,8 @@ android/captures/
 
 # Firebase (fourni par le client, hors dépôt)
 android/app/google-services.json
+
+# Rushes et contenu déposés à la racine pour ingestion (le contenu final vit sur le CDN, pas dans git)
+/*.mp4
+/episode*_fichiers/
+/monter_episode*.py

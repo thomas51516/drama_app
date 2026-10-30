@@ -51,9 +51,21 @@ jobs:
         env:
           NUXT_PUBLIC_API_MOCK: 'false'
 
+      - name: Build recharge app (SSR)
+        run: npm run build:recharge
+        env:
+          NUXT_PUBLIC_API_MOCK: 'false'
+
       - name: Upload admin build
         uses: actions/upload-artifact@v4
         with:
           name: web-admin-output
           path: web/apps/admin/.output
+          retention-days: 7
+
+      - name: Upload recharge build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-recharge-output
+          path: web/apps/recharge/.output
           retention-days: 7
