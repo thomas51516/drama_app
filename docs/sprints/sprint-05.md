@@ -9,14 +9,14 @@ Contrat partagé : `docs/api/contract-v1.3-sprint5.md`.
 
 | ID | Lot | Ticket | Statut |
 | --- | --- | --- | --- |
-| B-13+ | BE/WEB | Appareil de confiance 30 jours pour le back-office (demande du client) | Backend terminé ; web en cours |
+| B-13+ | BE/WEB | Appareil de confiance 30 jours pour le back-office (demande du client) | Terminé, vérifié, commité |
 | S05-OPS-01 | OPS | Sauvegardes PostgreSQL et alertes | Terminé, vérifié, commité |
 | S06-OPS-01 | OPS | Alertes de latence p95 et d'erreurs | Terminé, vérifié, commité |
 | S06-BE-01 | BE | Push FCM : jetons, envoi, nouvel épisode d'une série suivie (avancé) | Terminé, vérifié, commité |
 | S06-BE-02 | BE | Centre d'aide : FAQ et formulaire de contact (avancé) | Terminé, vérifié, commité |
 | S06-BE-03 | BE | Événements d'analyse côté serveur (avancé) | Terminé, vérifié, commité |
-| B-10 | BE/WEB | Campagnes push ciblées (avancé) | Backend terminé ; web en cours |
-| B-03bis | WEB | Gestion de la FAQ et boîte de réception du support (avancé) | En cours |
+| B-10 | BE/WEB | Campagnes push ciblées (avancé) | Terminé, vérifié, commité |
+| B-03bis | WEB | Gestion de la FAQ et boîte de réception du support (avancé) | Terminé, vérifié, commité |
 | S05-A1-03 | A1 | Profil : langue appliquée à l'app, préférences de notification | En cours |
 | S05-A2-03 | A2 | Internationalisation FR, EN, ES, PT | En cours |
 | S06-A1-01 | A1 | Centre d'aide, FAQ, contact (avancé) | En cours |
@@ -34,6 +34,12 @@ Contrat partagé : `docs/api/contract-v1.3-sprint5.md`.
 | S06-BE-01 | Push FCM | Télécharger un compte de service Firebase (Paramètres du projet → Comptes de service → Générer une clé privée) et me donner le chemin du fichier ; en attendant, mode `log` |
 | S05-PM-01 | Formation éditoriale | Planifier avec l'équipe contenu |
 | S05-OPS-01 | Hébergement | Toujours en attente d'un hébergeur pour le staging |
+
+## Notes d'intégration
+
+- `GET /admin/campaigns` est paginé (`items, total, page, pageSize`) ; le contrat v1.3 indiquait un tableau simple. Le web gère les deux formes.
+- Le backend ne signale pas encore quel appareil de confiance est le navigateur courant (`current`) ; à ajouter au sprint 6.
+- Les comptes monetization@ et support@ sont désormais enrôlés en TOTP par l'agent web pour ses tests ; secrets dans le rapport interne, pas dans le dépôt.
 
 ## Compte rendu de fin de sprint
 
