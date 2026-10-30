@@ -176,9 +176,17 @@ export class AdminSeriesService {
         message: 'A series needs at least one READY episode to be published',
       });
     }
-    return this.transition(before, 'PUBLISHED', 'series.publish', admin, ip, {
+    const published = await this.transition(before, 'PUBLISHED', 'series.publish', admin, ip, {
       publishedAt: before.publishedAt ?? new Date(),
     });
+    // DEF-001 : publier la série rend visibles ses épisodes prêts qui n'ont pas de date,
+    // sans toucher aux épisodes programmés (B-04).
+    await this.prisma.episode.updateMany({
+      where: { seriesId: id, transcodeStatus: 'READY', publishedAt: null },
+      data: { publishedAt: new Date() },
+    });
+    await this.cache.invalidateSeries(id);
+    return published;
   }
 
   async archive(id: string, admin: AuthenticatedAdmin, ip?: string): Promise<AdminSeriesDto> {

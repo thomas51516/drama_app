@@ -69,6 +69,9 @@ export class TranscodeService {
           previewKey: result.previewKey ?? episode.previewKey,
           thumbnailUrl: result.thumbnailUrl ?? episode.thumbnailUrl,
           durationSeconds: result.durationSeconds ?? episode.durationSeconds,
+          // DEF-001 : un épisode prêt devient visible immédiatement, sauf si l'éditeur a déjà
+          // programmé une date (B-04). Sans cela il restait invisible dans l'app.
+          ...(episode.publishedAt === null ? { publishedAt: new Date() } : {}),
         },
       });
       await this.audit.record(

@@ -59,7 +59,10 @@ function makeService(existing: AdminSeriesRecord | null, readyCount = 0) {
       findMany: vi.fn(() => Promise.resolve(existing ? [existing] : [])),
       count: vi.fn(() => Promise.resolve(existing ? 1 : 0)),
     },
-    episode: { count: vi.fn(() => Promise.resolve(readyCount)) },
+    episode: {
+      count: vi.fn(() => Promise.resolve(readyCount)),
+      updateMany: vi.fn(() => Promise.resolve({ count: readyCount })),
+    },
   };
   const audit = { record: vi.fn(() => Promise.resolve()) };
   const cache = { invalidateSeries: vi.fn(() => Promise.resolve(0)) };
@@ -141,9 +144,16 @@ describe('AdminSeriesService.publish / archive', () => {
   });
 
   it('publishes when an episode is READY, sets publishedAt once and audits the transition', async () => {
-    const { service, tx, audit } = makeService(series(), 1);
+    const { service, tx, audit, prisma } = makeService(series(), 1);
     const published = await service.publish(series().id, admin('EDITOR'));
     expect(published.status).toBe('PUBLISHED');
+    // DEF-001 : les épisodes prêts sans date deviennent visibles à la publication.
+    expect(prisma.episode.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { seriesId: series().id, transcodeStatus: 'READY', publishedAt: null },
+        data: { publishedAt: expect.any(Date) },
+      }),
+    );
     expect(tx.series.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: { status: 'PUBLISHED', publishedAt: expect.any(Date) },
