@@ -9,13 +9,13 @@ Contrat partagé : `docs/api/public-contract-v1.2.md`.
 
 | ID | Lot | Ticket | Statut |
 | --- | --- | --- | --- |
-| S04-BE-02 | BE | URL de manifeste signée et expirante, port de signature | En cours |
-| S04-BE-03 | BE | Flux : extraits signés, épisode et favori | En cours |
-| S05-BE-01 à 03 | BE | Connexion Google, OTP, e-mail, rattachement et fusion de l'invité (avancé) | En cours |
-| S05-BE-04 | BE | `/me`, suppression différée (avancé) | En cours |
-| S05-BE-05 | BE | Favoris et J'aime (avancé) | En cours |
-| S05-BE-06 | BE | Recherche plein texte et suggestions (avancé) | En cours |
-| B-04 / B-11 | BE | Publication programmée et statistiques v0 (avancé) | En cours |
+| S04-BE-02 | BE | URL de manifeste signée et expirante, port de signature | Terminé, vérifié, commité |
+| S04-BE-03 | BE | Flux : extraits signés, épisode et favori | Terminé, vérifié, commité |
+| S05-BE-01 à 03 | BE | Connexion Google, OTP, e-mail, rattachement et fusion de l'invité (avancé) | Terminé, vérifié, commité |
+| S05-BE-04 | BE | `/me`, suppression différée (avancé) | Terminé, vérifié, commité |
+| S05-BE-05 | BE | Favoris et J'aime (avancé) | Terminé, vérifié, commité |
+| S05-BE-06 | BE | Recherche plein texte et suggestions (avancé) | Terminé, vérifié, commité |
+| B-04 / B-11 | BE | Publication programmée et statistiques v0 (avancé) | Terminé, vérifié, commité |
 | S04-WEB-xx | WEB | Upload, transcodage, sous-titres | Terminés |
 | B-04 | WEB | Planification : dates de publication, calendrier des sorties (avancé) | Terminé, vérifié, commité |
 | B-11 v0 | WEB | Tableau de bord : utilisateurs actifs, top séries, épisodes vus (avancé) | Terminé, vérifié, commité |
@@ -34,7 +34,7 @@ Contrat partagé : `docs/api/public-contract-v1.2.md`.
 
 | ID | Ticket | Action attendue |
 | --- | --- | --- |
-| S05-BE-01 | Connexion Google | Créer un identifiant OAuth « Web » et « Android » (SHA-1) dans Google Cloud, fournir `GOOGLE_CLIENT_IDS` |
+| S05-BE-01 | Connexion Google | Fait le 29 octobre : clients OAuth Web et Android créés, IDs dans la configuration locale |
 | S05-BE-02 | OTP SMS | Choisir un fournisseur SMS couvrant le Togo, la Côte d'Ivoire et le Sénégal ; en attendant, mode console |
 | S04-A1-03 | App Links | Réserver le nom de domaine ; `assetlinks.json` à publier dessus |
 | S04-PM-01, S04-UX-01 | Spécifications récompenses, maquettes | Ateliers et designer |
