@@ -1,21 +1,23 @@
 # Liste des défauts — recette DRAMA
 
-Mise à jour : 30 octobre 2026 (campagne n° 1). Gravités : **bloquant** (empêche un parcours P1, pas de
+Mise à jour : 30 octobre 2026, campagne n° 2 (jalon 1, `campagne-2026-10-30-jalon1.md`) ; créée lors de la campagne n° 1. Gravités : **bloquant** (empêche un parcours P1, pas de
 contournement), **majeur** (fonction P1 incorrecte ou contournement pénible), **mineur** (écart sans impact sur le
 parcours). Statut : ouvert / corrigé (commit) / fermé (revérifié).
 
 | ID | Gravité | Lot présumé | Titre | Statut |
 | --- | --- | --- | --- | --- |
-| DEF-001 | majeur | BE (`catalog.where.ts`, `admin-series.service.ts`) + WEB B-02 | Épisode READY invisible dans l'app après publication de la série tant que `publishedAt` n'est pas saisi | corrigé (35f0339) |
-| DEF-002 | mineur | BE S05-BE-06 (M-03) | `GET /search` refuse une recherche par genre seul (`q` obligatoire) | ouvert |
-| DEF-003 | mineur | BE S04-BE-02 (`PUT /progress`) | Progression acceptée sur un épisode verrouillé | ouvert |
-| DEF-004 | mineur | BE S04-BE-02 (`POST /play`) | Restriction de territoire non appliquée à la lecture | ouvert |
-| DEF-005 | mineur | WEB S03-WEB-02 | Étape TOTP : code incomplet soumis et message générique « (400) » | ouvert |
-| DEF-006 | mineur | A1 S02-A1-02 | Session invitée remplacée silencieusement après un refresh refusé | ouvert |
-| DEF-007 | mineur | A2 S05-A2-03 / A1 S03-A1-01 | Accueil mélangeant français (interface) et anglais (titres des rangées) sur un appareil `en-US` | ouvert (ticket i18n en cours) |
-| DEF-008 | mineur | BE S04-BE-03 / S04-BE-01 | Paramètres non validés : `cursor` du flux et `X-Country` acceptés quelle que soit leur valeur | ouvert |
-| DEF-009 | mineur | BE S05-BE-05 | Code d'erreur incohérent sur un identifiant de favori mal formé (`BAD_REQUEST` au lieu de `VALIDATION_ERROR`) | ouvert |
-| DEF-010 | information | BE / docs | `docs/api/openapi.v1.json` (1.2.0, 66 routes) en retard sur l'API en cours (1.3.0, 89 routes) | ouvert (travail non committé) |
+| DEF-001 | majeur | BE (`catalog.where.ts`, `admin-series.service.ts`) + WEB B-02 | Épisode READY invisible dans l'app après publication de la série tant que `publishedAt` n'est pas saisi | corrigé (35f0339) — non retestable sans upload le 30/10 (campagne 2) : correctif présent dans HEAD, couvert par les e2e backend ; à refermer au prochain upload de recette |
+| DEF-002 | mineur | BE S05-BE-06 (M-03) | `GET /search` refuse une recherche par genre seul (`q` obligatoire) | corrigé le 30/10 (commit ce54ad2), à retester en campagne 3 |
+| DEF-003 | mineur | BE S04-BE-02 (`PUT /progress`) | Progression acceptée sur un épisode verrouillé | corrigé le 30/10 (commit ce54ad2), à retester en campagne 3 |
+| DEF-004 | mineur | BE S04-BE-02 (`POST /play`) | Restriction de territoire non appliquée à la lecture | corrigé le 30/10 (commit ce54ad2), à retester en campagne 3 |
+| DEF-005 | mineur | WEB S03-WEB-02 | Étape TOTP : code incomplet soumis et message générique « (400) » | corrigé le 30/10 (commit 271b8a3), à retester en campagne 3 |
+| DEF-006 | mineur | A1 S02-A1-02 | Session invitée remplacée silencieusement après un refresh refusé | ouvert (non reproduit en campagne 2 : installations fraîches) |
+| DEF-007 | mineur | A2 S05-A2-03 / A1 S03-A1-01 | Accueil mélangeant français (interface) et anglais (titres des rangées) sur un appareil `en-US` | **fermé** (983275b ; revérifié le 30/10 sur E36 `en-US` : interface et rangées en anglais, `e36-01-home.png`) |
+| DEF-008 | mineur | BE S04-BE-03 / S04-BE-01 | Paramètres non validés : `cursor` du flux et `X-Country` acceptés quelle que soit leur valeur | corrigé le 30/10 (commit ce54ad2), à retester en campagne 3 |
+| DEF-009 | mineur | BE S05-BE-05 | Code d'erreur incohérent sur un identifiant de favori mal formé (`BAD_REQUEST` au lieu de `VALIDATION_ERROR`) | corrigé le 30/10 (commit ce54ad2), à retester en campagne 3 |
+| DEF-010 | information | BE / docs | `docs/api/openapi.v1.json` (1.2.0, 66 routes) en retard sur l'API en cours (1.3.0, 89 routes) | **fermé** (fichier committé en 1.3.0 / 89 routes = `/docs-json` servi le 30/10 12:00) |
+| DEF-011 | mineur | A1 S06-A1-02 (`DefaultPushRepository`) | Jeton push enregistré deux fois au démarrage (`PUT /me/devices/push` ×2 en 12 ms) | ouvert |
+| DEF-012 | mineur | A2 S05-A2-03 / S05-BE-06 | Puces de genre de l'écran de recherche en français (« Drame », « Comédie », « Famille ») sur une interface en anglais ou en espagnol | ouvert |
 
 ---
 
@@ -127,3 +129,27 @@ parcours). Statut : ouvert / corrigé (commit) / fermé (revérifié).
 - **Constaté** : `/docs-json` sert 1.3.0 avec 89 routes (push, FAQ, support, campagnes, appareils de confiance,
   `/events`) ; `docs/api/openapi.v1.json` est en 1.2.0 avec 66 routes. Attendu tant que le sprint 5 n'est pas
   committé ; la CI (`openapi:export`) doit le rattraper au commit.
+
+
+## DEF-011 — Jeton push enregistré deux fois au démarrage
+
+- **Gravité** : mineur (deux écritures idempotentes, pas d'effet visible). **Lot** : Android A1 S06-A1-02
+  (`DefaultPushRepository`, synchronisation du jeton par couple (jeton, utilisateur) ; `android/README.md` annonce
+  « une seule fois par couple »).
+- **Étapes** : installation fraîche (`pm clear`), lancer l'app, `adb logcat -s Http AppStartup`.
+- **Attendu** : un seul `PUT /me/devices/push` pour l'invité créé.
+- **Constaté** (E36, 30/10 12:12:18) : `PUT /me/devices/push` → 204 à 12:12:18.579 puis à nouveau à 12:12:18.591
+  (deux appels à 12 ms d'intervalle), `push token in sync` entre les deux : course entre le démarrage de session et
+  `onNewToken`, ou double collecte du flux utilisateur.
+- **Preuve** : rapport campagne 2 §4 RC-320 (Logcat).
+
+## DEF-012 — Puces de genre non traduites sur l'écran de recherche
+
+- **Gravité** : mineur (cosmétique, M-03 / i18n). **Lot** : Android A2 S05-A2-03 (origine des libellés à
+  confirmer : liste locale ou clés de genre du serveur).
+- **Étapes** : appareil en `en-US` (ou langue de l'app Español), loupe de l'accueil.
+- **Attendu** : puces de genre dans la langue de l'interface (« Drama », « Comedy », « Family » ; le serveur sait
+  traduire les rangées de genre : « Drama » dans `GET /home` en `en`).
+- **Constaté** : puces « Romance », « Drame », « Comédie », « Thriller », « Famille » alors que le reste de l'écran
+  est en anglais (« Title, genre, keyword… », « Recent searches »). Idem en espagnol.
+- **Preuve** : `evidence/jalon1/e36-02-search-suggest.png`, `e36-06-search-history.png`.

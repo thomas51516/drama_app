@@ -1,21 +1,25 @@
-# Cahier de recette — lot « regarder » et compte (S05-QA-01)
+# Cahier de recette — lot « regarder » et compte (S05-QA-01, S06-QA-01)
 
-Version 1.0 — 30 octobre 2026 — QA DRAMA. Couvre les fonctions **P1** livrées aux sprints 1 à 4 (plus les tickets
-du sprint 5 déjà livrés) : application Android (M-01, M-02, M-03, M-10 à M-16, M-50 à M-52), back-office
-(B-01, B-02, B-03, B-05, B-13 ; B-04 et B-11 v0 en information), API et règles métier du §8.4 observables.
+Version 1.1 — 30 octobre 2026 — QA DRAMA. Couvre les fonctions **P1** livrées aux sprints 1 à 5 : application
+Android (M-01, M-02, M-03, M-10 à M-16, M-50 à M-54), back-office (B-01, B-02, B-03, B-03bis, B-05, B-10, B-13 ;
+B-04 et B-11 v0 en information), API et règles métier du §8.4 observables.
 Référence : `docs/Cahier des charges — Application de micro-séries verticales (Android).md` (§4, §5, §7, §8.4, §15.3).
 
-Les fonctions P1 non encore livrées (paywall M-20 à M-22, boutique M-30 à M-33, check-in M-40, aide M-53, push
-M-54, B-06, B-08, B-09, B-11 complet) ne figurent pas dans ce cahier ; elles seront ajoutées aux sprints 7 à 10.
+Historique : v1.0 (30/10, sprints 1 à 4) ; **v1.1** (30/10, campagne du jalon 1) ajoute les cas du sprint 5 :
+réglages langue et notifications (§4.14), centre d'aide (§4.15), notifications (§4.16), accessibilité et taille de
+police (§4.17), API aide / notifications / push / événements (§5.5), pages back-office campagnes et centre d'aide (§6.8).
+
+Les fonctions P1 non encore livrées (paywall M-20 à M-22, boutique M-30 à M-33, check-in M-40, B-06, B-08, B-09,
+B-11 complet) ne figurent pas dans ce cahier ; elles seront ajoutées aux sprints 7 à 10.
 
 ## 1. Conventions
 
 | Élément | Règle |
 | --- | --- |
-| Identifiant | `RC-0xx` Android, `RC-1xx` API et règles métier, `RC-2xx` back-office |
+| Identifiant | `RC-0xx` Android (sprints 1 à 4), `RC-3xx` Android (sprint 5 : réglages, aide, notifications, accessibilité), `RC-1xx` API et règles métier, `RC-2xx` back-office |
 | Priorité | **P1** : bloque la recette du jalon ; **P2** : à corriger avant mise en ligne ; **P3** : confort |
 | Résultat | **OK** conforme · **KO** non conforme (défaut `DEF-xxx` ouvert) · **NT** non testable / non testé (motif noté) · **—** sans objet sur cet appareil |
-| Preuve | capture `docs/recette/evidence/<appareil>-<n°>-<nom>.png`, ligne Logcat (tags `PlayerSpike`, `Player`, `Analytics`, `Http`, `Session`, `AppStartup`) ou réponse HTTP |
+| Preuve | capture `docs/recette/evidence/[<campagne>/]<appareil>-<n°>-<nom>.png`, ligne Logcat (tags `PlayerSpike`, `Player`, `Analytics`, `Http`, `Session`, `AppStartup`, `Push`) ou réponse HTTP |
 | Données de test | préfixe `QA-` pour tout ce qui est créé pendant une campagne ; supprimé ou archivé en fin de campagne ; ne jamais toucher `admin@drama.local` |
 
 Colonnes d'exécution : **CM6** = TECNO CM6 (Android 16, 1080×2436, 8 Go), **E36** = émulateur
@@ -190,9 +194,9 @@ Réseaux à couvrir : Wi-Fi, 4G réelle (critère M-12), 3G simulée (émulateur
 | --- | --- | --- | --- | --- | --- |
 | RC-120 | Carte de profil | Compte connecté | Onglet Profil | Nom, e-mail ou téléphone, fournisseurs, langue | P1 |
 | RC-121 | Modifier le nom | — | 1. Modifier, enregistrer | `PATCH /me {displayName}` → 200 ; nom mis à jour partout | P1 |
-| RC-122 | Modifier la langue | — | 1. Choisir EN | `PATCH /me {language:"en"}` ; interface et rangées de l'accueil en anglais (S05-A1-03 / S05-A2-03 en cours) | P1 |
+| RC-122 | Modifier la langue | — | 1. Choisir EN | `PATCH /me {language:"en"}` ; interface et rangées de l'accueil en anglais (détail en §4.14) | P1 |
 | RC-123 | Suppression du compte | — | 1. « Supprimer mon compte », confirmer | `DELETE /me` → 202 `scheduledFor` +30 j ; retour en invité ; message de délai | P1 |
-| RC-124 | Préférences de notification | — | Profil | Trois interrupteurs (nouveaux épisodes, offres, rappel) → `PATCH /me {notificationPreferences}` (livraison S05-A1-03) | P1 |
+| RC-124 | Préférences de notification | — | Profil → Paramètres | Trois interrupteurs (nouveaux épisodes, offres, rappel) → `PATCH /me {notificationPreferences}` (détail en §4.14) | P1 |
 
 ### 4.13 Exigences non fonctionnelles (§7)
 
@@ -203,8 +207,53 @@ Réseaux à couvrir : Wi-Fi, 4G réelle (critère M-12), 3G simulée (émulateur
 | RC-132 | Plantages | Toute la campagne | `adb logcat -b crash -d` en fin de session | 0 `FATAL EXCEPTION` | P1 |
 | RC-133 | Fluidité | Accueil et flux | `adb shell dumpsys gfxinfo com.drama.app.debug` après défilement | Janky frames < 10 % | P2 |
 | RC-134 | Compatibilité minimale | Appareil API 26 | Parcours RC-001, 010, 040, 050 | Identique aux autres appareils | P1 |
-| RC-135 | Langue de l'appareil | Appareil en EN, ES, PT | Lancer | Interface traduite (S05-A2-03 en cours : NT jusqu'à livraison) | P1 |
+| RC-135 | Langue de l'appareil | Appareil en EN, ES, PT | Lancer | Interface traduite (livré S05-A2-03 ; détail en RC-306) | P1 |
 | RC-136 | Accessibilité | TalkBack | Parcourir accueil et lecteur | Chaque bouton a un libellé (`content-desc` : Rechercher, Retour, Partager, Ajouter à Ma liste…), tailles de texte dynamiques respectées | P2 |
+
+### 4.14 M-52 — Réglages : langue de l'application et préférences de notification (S05-A1-03, S05-A2-03)
+
+| ID | Cas | Prérequis | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- | --- |
+| RC-300 | Accès aux réglages | Invité ou compte | Profil → « Langue · Notifications » | Écran Paramètres : section Langue (Français, English, Español, Português, radio), section Notifications (3 interrupteurs), entrées « Aide » et « Mes notifications » | P1 |
+| RC-301 | Changement de langue immédiat | Appareil en `en-US` | 1. Choisir Español | Toute l'interface (onglets, titres, boutons) passe en espagnol sans redémarrage ; `PATCH /me {language:"es"}` → 200 ; `GET /home` rejoué avec `Accept-Language: es` et rangées traduites (« Tendencias », « Novedades ») | P1 |
+| RC-302 | Persistance de la langue | RC-301 | 1. `am force-stop`, relancer. 2. Android 13+ : Réglages système → Langues de l'application | Langue conservée (`autoStoreLocales`) ; visible dans les langues par application ; retour au français possible | P1 |
+| RC-303 | Interrupteurs de notification | En ligne | 1. Désactiver « Nouveaux épisodes ». 2. Réactiver | Bascule immédiate (optimiste), `PATCH /me {notificationPreferences:{newEpisodes:false}}` → 200 ; état retrouvé après relance ; ligne entière cliquable (`Role.Switch`) | P1 |
+| RC-304 | Retour arrière hors ligne | Mode avion | 1. Basculer un interrupteur | Interrupteur revient à sa valeur, message d'erreur, aucun plantage | P2 |
+| RC-305 | Notifications coupées côté système | Permission refusée / canal bloqué | Ouvrir Paramètres | Bandeau « notifications désactivées » et bouton « Autoriser les notifications » (demande `POST_NOTIFICATIONS` sur Android 13+) ou ouverture des réglages | P1 |
+| RC-306 | Interface sans mélange de langues | Appareil en EN, ES ou PT (remplace RC-135) | Parcourir accueil, fiche, lecteur, Profil, Aide | Aucun libellé français résiduel côté application ; les contenus éditoriaux (titres, synopsis) restent dans leur langue d'origine | P1 |
+
+### 4.15 M-53 — Centre d'aide (S06-A1-01)
+
+| ID | Cas | Prérequis | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- | --- |
+| RC-310 | FAQ | FAQ publiée en B-03bis | Profil → Aide | `GET /help/faq?lang=<langue de l'app>` → 200 ; catégories (Compte, Pièces, VIP, Lecture, Paiement, Contenu) et questions dépliables ; réponses dans la langue de l'app | P1 |
+| RC-311 | Recherche locale dans la FAQ | — | 1. Saisir « compte » puis « pieces » (sans accent) | Filtrage instantané, insensible aux accents et à la casse ; état « aucun résultat » explicite | P2 |
+| RC-312 | Formulaire de contact | Compte ou invité | 1. Onglet « Nous contacter ». 2. Valider vide. 3. Remplir catégorie, sujet, message | Erreurs de validation en clair ; `POST /help/contact` → 201 `{ticketId}` ; confirmation avec le numéro de demande ; formulaire vidé | P1 |
+| RC-313 | Mes demandes | RC-312 | 1. Onglet « Mes demandes » | `GET /help/tickets` ; demande listée avec statut « Ouverte », sujet, date ; fil des messages ; « Répondue » après réponse du support | P1 |
+| RC-314 | Limite quotidienne | 5 demandes déjà envoyées | 1. Envoyer une 6e demande | 429 `RATE_LIMITED` affiché « trop de demandes aujourd'hui », pas de plantage | P2 |
+| RC-315 | Aide hors ligne | Mode avion | Ouvrir Aide | État hors ligne avec « Réessayer » ; FAQ en cache si déjà chargée | P2 |
+
+### 4.16 M-54 — Notifications (S06-A1-02)
+
+| ID | Cas | Prérequis | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- | --- |
+| RC-320 | Enregistrement du jeton push | Services Google présents | 1. Premier lancement. 2. `adb logcat -s Push AppStartup Http` | `PUT /me/devices/push {token, platform:"android", locale, appVersion}` → 204, `push token registered user=…` ; **un seul** appel par couple (jeton, utilisateur) | P1 |
+| RC-321 | Jeton suivi du compte | Connexion puis déconnexion | Observer `Http` | `PUT /me/devices/push` rejoué pour le nouvel utilisateur ; `DELETE /me/devices/push/{token}` juste avant la déconnexion | P1 |
+| RC-322 | Permission `POST_NOTIFICATIONS` | Android 13+, app fraîche | 1. Ajouter une série à Ma liste | Boîte système de permission affichée une seule fois, jamais au lancement ; refus respecté | P1 |
+| RC-323 | Mes notifications | — | Profil → « Mes notifications » | `GET /me/notifications` ; état vide explicite ; sinon liste avec non lues en gras, type, date relative | P1 |
+| RC-324 | Réception et routage | `PUSH_PROVIDER=log` : publier un épisode d'une série suivie, ou réponse du support | 1. Ouvrir Mes notifications. 2. Appuyer | Notification présente dans l'historique in-app ; appui → `POST /me/notifications/{id}/read`, ouverture de la fiche / du lecteur / de l'aide selon le type ; `Analytics: push_open` | P1 |
+| RC-325 | Liens profonds de notification | — | `am start -a VIEW -d "drama://notifications"` ; `drama://help` ; `drama://player/<seriesId>/<episodeId>` | Écran correspondant ouvert sans plantage | P2 |
+| RC-326 | Canaux | Android 8+ | Réglages système → Notifications de l'app | Canaux « Nouveaux épisodes », « Offres », « Rappels », « Support » localisés | P2 |
+
+### 4.17 Accessibilité et affichage (S06-A1-03, §7)
+
+| ID | Cas | Prérequis | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- | --- |
+| RC-330 | Libellés lecteur d'écran | TalkBack ou `uiautomator dump` | Accueil, fiche série, lecteur, Paramètres | Chaque élément cliquable sans texte porte un `content-desc` ; cartes annoncées « titre, sous-titre » ; cellules d'épisode « Épisode N, gratuit / verrouillé, N pièces » ; puces du lecteur avec leur valeur (« Vitesse de lecture : 1x ») | P1 |
+| RC-331 | Parcours TalkBack | TalkBack activé (`settings put secure enabled_accessibility_services com.google.android.marvin.talkback/.TalkBackService`) | Balayer l'accueil puis la fiche série | Ordre logique (titre → recherche → bannières → rangées ; retour / partager / Ma liste → titre → bouton principal → grille) ; aucune zone muette ; app utilisable | P2 |
+| RC-332 | Taille de police 200 % | `settings put system font_scale 2.0` | Accueil, fiche série, Paramètres, Aide | Textes agrandis sans chevauchement ni troncature bloquante ; boutons toujours atteignables ; restauration `font_scale 1.0` | P1 |
+| RC-333 | Cibles tactiles | `uiautomator dump` | Boutons, puces, interrupteurs | Rectangles ≥ 48 dp (≥ 126 px à 420 dpi, ≥ 96 px à 320 dpi) | P2 |
+| RC-334 | Interrupteurs et radios | TalkBack | Écran Paramètres | Une seule cible par ligne, état annoncé (« activé / désactivé », « sélectionné ») | P2 |
 
 ## 5. API et règles métier (§8.2, §8.4, §12 sécurité)
 
@@ -267,6 +316,18 @@ Exécution par `curl` contre `http://localhost:3000` ; l'utilisateur de test est
 | RC-204 | En-têtes de sécurité | `GET /home` | HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options` | P2 |
 | RC-205 | Webhook transcodage | `POST /webhooks/transcode/local` non signé | 401 `INVALID_WEBHOOK_SIGNATURE` (400 si corps invalide) | P1 |
 | RC-206 | Santé et documentation | `GET /health`, `/health/live`, `/docs-json`, `/metrics` | 200 ; `database` et `redis` `up` ; version OpenAPI cohérente avec `docs/api/openapi.v1.json` | P2 |
+
+### 5.5 Aide, notifications, push, événements, profil (contrat v1.3)
+
+| ID | Cas | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- |
+| RC-194 | Historique des notifications | `GET /me/notifications?page=1&pageSize=20` ; `POST /me/notifications/{id}/read` sur un id inconnu | 200 `{items[{id,type,title,body,data,sentAt,readAt}], total, page, pageSize, unreadCount}` ; 404 `NOTIFICATION_NOT_FOUND` ; sans jeton 401 | P1 |
+| RC-195 | Appareil push | `PUT /me/devices/push {token, platform:"android", locale, appVersion}` ×2 ; `platform:"ios"` ; `DELETE /me/devices/push/{token}` | 204, 204 (upsert) ; 400 `VALIDATION_ERROR` ; 204 | P1 |
+| RC-196 | Événements | `POST /events` nom autorisé ; nom inconnu ; `params` > 2 Ko | 202 `{accepted}` ; 400 ; 400 `EVENT_PARAMS_TOO_LARGE` | P2 |
+| RC-197 | Profil : validation | `PATCH /me {language:"xx"}` ; `{notificationPreferences:{bogus:true}}` ; `{notificationPreferences:{newEpisodes:false}}` | 400 « language must be one of fr, en, es, pt » ; 400 ; 200 et `GET /me` reflète les trois clés | P1 |
+| RC-207 | FAQ publique | `GET /help/faq?lang=fr|en|es|pt` ; `lang=de` ; sans `lang` | 200 par langue avec titres de catégories traduits ; repli fr pour une langue inconnue (ou 400 explicite) ; 200 avec repli | P1 |
+| RC-208 | Contact | `POST /help/contact {}` ; catégorie inconnue ; corps valide ; sans jeton | 400 (sujet ≥ 3, message ≥ 10, catégorie dans la liste) ; 201 `{ticketId}` ; 401 | P1 |
+| RC-209 | Mes demandes et boîte support | `GET /help/tickets` ; `GET /admin/support/tickets` en EDITOR | 200 liste de l'utilisateur avec `status=OPEN` ; 403 `FORBIDDEN_ROLE` (SUPPORT, ADMIN requis) | P1 |
 
 ## 6. Back-office web
 
@@ -351,15 +412,26 @@ Les cas réservés au rôle ADMIN (comptes, audit) sont exécutés avec un compt
 | RC-271 | Tableau de bord | `/dashboard` 7 / 30 jours | Tuiles cohérentes avec `GET /admin/stats/overview` ; états vide/erreur | P2 |
 | RC-272 | Aide | `/help` | Guide rendu avec sommaire | P3 |
 
+### 6.8 B-10 / B-03bis / B-13+ — Campagnes, centre d'aide, appareils de confiance
+
+| ID | Cas | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- |
+| RC-273 | Campagnes push | `/campaigns` | Liste paginée (`GET /admin/campaigns`), création brouillon avec segment, envoi / annulation ; états vide et erreur | P1 |
+| RC-274 | Centre d'aide : FAQ | `/help-center` | Questions par catégorie, langues FR/EN/ES/PT, publication, réordonnancement ; aperçu « dans l'application » identique à `GET /help/faq` | P1 |
+| RC-275 | Boîte de réception du support | `/help-center` onglet Support avec un compte SUPPORT ou ADMIN | Demandes `OPEN` listées, réponse → statut `ANSWERED` et notification `support_reply` côté utilisateur ; EDITOR : onglet absent | P1 |
+| RC-276 | Appareils de confiance | `/account` après une connexion avec « Se souvenir » | Appareil listé (date, expiration), révocable ; l'appareil courant signalé (`current`, à livrer) | P2 |
+
 ## 7. Critères d'acceptation §15.3 — liste de contrôle
 
 | # | Critère | Comment on le vérifie | État au 30/10/2026 |
 | --- | --- | --- | --- |
-| 1 | Toutes les fonctions P1 validées sur ≥ 8 appareils Android dont 3 d'entrée de gamme | Toutes les lignes P1 de ce cahier en OK sur les 8 colonnes | Non atteint : 3 appareils disponibles (1 entrée de gamme émulé), P1 partiellement livrées |
+| 1 | Toutes les fonctions P1 validées sur ≥ 8 appareils Android dont 3 d'entrée de gamme | Toutes les lignes P1 de ce cahier en OK sur les 8 colonnes | Non atteint (campagne 2, jalon 1) : P1 des sprints 1-5 validées sur E36, partiellement sur E29, CM6 non exploité ; appareils 4-8 à acquérir |
 | 2 | Parcours d'achat testé de bout en bout (sandbox Google Play, mobile money réel à faible montant) | Cahier des sprints 7-9 | Sans objet (monétisation non livrée) |
-| 3 | Aucun défaut bloquant ou majeur ouvert ; mineurs listés avec date de correction | `docs/recette/defauts.md` | Voir rapport de campagne |
+| 3 | Aucun défaut bloquant ou majeur ouvert ; mineurs listés avec date de correction | `docs/recette/defauts.md` | Atteint au 30/10 (campagne 2) : 0 bloquant, 0 majeur ouvert, 9 mineurs planifiés sprint 6 |
 | 4 | Objectifs de performance §12 atteints en test de charge (p95 < 300 ms, 5 000 simultanés) | Campagne de charge dédiée (k6) | Non testé |
 | 5 | Bêta fermée de 2 semaines, ≥ 100 testeurs | Firebase App Distribution / Play test interne | Non démarré |
 | 6 | Garantie 3 mois après mise en ligne | Contrat | — |
 
-Critères techniques §7 suivis à chaque campagne : démarrage à froid < 2,5 s sur 2 Go (RC-130), première image < 1,5 s en 4G (RC-051), APK/AAB < 30 Mo (RC-131), sessions sans plantage ≥ 99,5 % (RC-132), 60 i/s (RC-133).
+Critères techniques §7 suivis à chaque campagne : démarrage à froid < 2,5 s sur 2 Go (RC-130), première image < 1,5 s en 4G (RC-051), APK/AAB < 30 Mo (RC-131), sessions sans plantage ≥ 99,5 % (RC-132), 60 i/s (RC-133), accessibilité (RC-330 à 334).
+
+Rapports : `campagne-2026-10-30.md` (n° 1), `campagne-2026-10-30-jalon1.md` (n° 2), `rapport-jalon-1.md` (synthèse client du jalon 1).
