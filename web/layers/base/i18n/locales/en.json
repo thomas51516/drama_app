@@ -35,7 +35,11 @@
       "EDITOR": "Editor",
       "MONETIZATION": "Monetization",
       "SUPPORT": "Support"
-    }
+    },
+    "rememberDevice": "Remember this device for 30 days",
+    "rememberDeviceHint": "Only on a personal computer: the next sign-in will not ask for a code. Revocable from \"My account\".",
+    "trustedDeviceWelcome": "Trusted device recognised: signed in without a code.",
+    "userMenu": "User menu"
   },
   "nav": {
     "catalogue": "Catalogue",
@@ -50,7 +54,9 @@
     "notifications": "Notifications",
     "dashboards": "Dashboards",
     "rights": "Rights and contracts",
-    "administration": "Administration"
+    "administration": "Administration",
+    "helpCenter": "Help center",
+    "openTickets": "{count} open ticket | {count} open tickets"
   },
   "breadcrumb": {
     "label": "Breadcrumb",
@@ -67,7 +73,19 @@
     "search": "Search",
     "remove": "Remove",
     "clear": "Clear all",
-    "close": "Close"
+    "close": "Close",
+    "refresh": "Refresh",
+    "copy": "Copy",
+    "copied": "Copied",
+    "never": "Never",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "send": "Send",
+    "optional": "optional",
+    "actions": "Actions",
+    "all": "All",
+    "status": "Status"
   },
   "errors": {
     "title": "Error",
@@ -103,7 +121,11 @@
     "passwordCase": "The password must contain upper and lower case letters.",
     "passwordDigit": "The password must contain at least one digit.",
     "rowKey": "Invalid key: lowercase letters, digits, “-” or “_”, 2 to 80 characters.",
-    "invalidDate": "Invalid date."
+    "invalidDate": "Invalid date.",
+    "deepLink": "Invalid link: it must start with drama:// (e.g. drama://series/{id}).",
+    "positiveInteger": "Enter a whole number of at least 1.",
+    "translationPair": "A translation needs both the question and the answer.",
+    "bodyTooLong": "The message exceeds {max} characters."
   },
   "series": {
     "title": "Catalogue — series",
@@ -541,32 +563,9 @@
       "policy": "At least {min} characters, with upper case, lower case and digits."
     },
     "accounts": {
-      "create": "New account",
-      "createAction": "Create account",
-      "edit": "Edit account",
-      "columns": {
-        "email": "E-mail",
-        "displayName": "Display name",
-        "role": "Role",
-        "active": "Active",
-        "totp": "Two-factor",
-        "lastLogin": "Last login"
-      },
-      "firstLoginHint": "On first login the person will have to enrol two-factor authentication (TOTP).",
-      "summary": "{count} account, {active} active | {count} accounts, {active} active",
-      "loadError": "Could not load accounts.",
-      "you": "you",
-      "active": "Active",
-      "inactive": "Disabled",
-      "totpEnrolled": "Enrolled",
-      "totpPending": "To enrol",
-      "neverLoggedIn": "Never logged in",
-      "resetTotp": "Reset two-factor authentication",
-      "resetTotpConfirm": "Reset two-factor authentication of {email}? A new enrolment will be required at next login.",
-      "resetTotpAction": "Reset",
-      "resetPassword": "Reset password",
-      "resetPasswordHint": "New password for {email}. It is shown once after confirmation.",
-      "resetPasswordAction": "Reset password"
+      "revokeDevices": "Revoke trusted devices",
+      "revokeDevicesConfirm": "Revoke every trusted device of {email}? A code will be required at the next sign-in.",
+      "devicesRevoked": "Trusted devices revoked."
     },
     "lockout": {
       "selfDeactivate": "You cannot deactivate your own account.",
@@ -676,9 +675,9 @@
     "title": "Dashboards",
     "subtitle": "Users, viewing and top series (B-11 v0). Figures computed by the server.",
     "period": {
-      "label": "Period",
       "7": "Last 7 days",
-      "30": "Last 30 days"
+      "30": "Last 30 days",
+      "label": "Period"
     },
     "refresh": "Refresh",
     "generatedAt": "Computed on {date}",
@@ -733,5 +732,259 @@
     "toc": "Contents",
     "backToTop": "Back to top",
     "open": "Open the guide"
+  },
+  "account": {
+    "title": "My account",
+    "subtitle": "Your profile and the devices allowed to sign in without a code.",
+    "profile": "Profile",
+    "displayName": "Display name",
+    "email": "E-mail address",
+    "role": "Role",
+    "devices": {
+      "title": "Trusted devices",
+      "hint": "A trusted device skips the code step for 30 days. Revoke any device you do not recognise.",
+      "empty": "No trusted device. Tick \"Remember this device\" at your next sign-in to add one.",
+      "current": "This device",
+      "thisBrowser": "This browser holds a trusted-device token.",
+      "thisBrowserUnknown": "This browser holds a token, but the API does not say which device it is: revoke it from the list below.",
+      "columns": {
+        "label": "Device",
+        "createdAt": "Trusted since",
+        "lastUsedAt": "Last used",
+        "expiresAt": "Expires"
+      },
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke the device \"{label}\"? It will need a code at its next sign-in.",
+      "revokeThis": "Revoke this device",
+      "revokeThisConfirm": "This browser will ask for a code again at the next sign-in. Continue?",
+      "revoked": "Device revoked.",
+      "forgotten": "This browser is no longer a trusted device.",
+      "loadError": "Could not load the devices.",
+      "unknownLabel": "Unknown device"
+    }
+  },
+  "campaigns": {
+    "title": "Push notifications",
+    "subtitle": "Targeted campaigns: everyone, by country, followers of a series or inactive users (B-10). The \"offers\" preference and the daily cap are enforced by the server.",
+    "restricted": "Campaigns are restricted to the Monetization and Administrator roles.",
+    "create": "New campaign",
+    "edit": "Edit campaign",
+    "summary": "{count} campaign | {count} campaigns",
+    "loadError": "Could not load the campaigns.",
+    "empty": {
+      "title": "No campaign",
+      "hint": "Create a campaign, estimate its audience, then send or schedule it."
+    },
+    "filters": {
+      "status": "Status",
+      "all": "All statuses"
+    },
+    "columns": {
+      "title": "Campaign",
+      "segment": "Target",
+      "status": "Status",
+      "audience": "Audience",
+      "sent": "Sent",
+      "date": "Date"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "SENDING": "Sending",
+      "SENT": "Sent",
+      "CANCELLED": "Cancelled"
+    },
+    "segments": {
+      "types": {
+        "ALL": "All users",
+        "COUNTRY": "By country",
+        "SERIES_FOLLOWERS": "Followers of a series",
+        "INACTIVE": "Inactive for X days"
+      },
+      "summary": {
+        "ALL": "All users",
+        "COUNTRY": "Countries: {countries}",
+        "SERIES_FOLLOWERS": "Followers of {series}",
+        "INACTIVE": "Inactive for {days} day | Inactive for {days} days"
+      }
+    },
+    "form": {
+      "title": "Notification title",
+      "titleHint": "Short and explicit: it is the first line seen on the phone.",
+      "body": "Message",
+      "bodyCounter": "{remaining} character left | {remaining} characters left",
+      "bodyOver": "{over} character over the limit | {over} characters over the limit",
+      "deepLink": "Opening link",
+      "deepLinkHint": "Optional. Screen opened when the notification is tapped; empty = home.",
+      "deepLinkSeries": "Pick a series…",
+      "deepLinkUseSeries": "Use this series",
+      "segment": "Target",
+      "countries": "Countries",
+      "series": "Followed series",
+      "inactiveDays": "Days of inactivity",
+      "inactiveDaysHint": "Users without any playback for this number of days (1 to 365).",
+      "schedule": "Schedule the send",
+      "scheduleHint": "Optional, Lomé time. Empty = sent immediately when you press \"Send\".",
+      "scheduleClear": "Clear the date"
+    },
+    "actions": {
+      "estimate": "Estimate audience",
+      "send": "Send",
+      "schedule": "Schedule",
+      "cancel": "Cancel send",
+      "delete": "Delete",
+      "edit": "Edit",
+      "details": "Details",
+      "duplicate": "Duplicate"
+    },
+    "estimate": {
+      "result": "Estimated audience: {count} user | Estimated audience: {count} users",
+      "pending": "Estimating…",
+      "failed": "Estimation failed."
+    },
+    "sendConfirm": {
+      "header": "Send the campaign",
+      "headerScheduled": "Schedule the campaign",
+      "message": "Send \"{title}\" now to about {count} users? Sending cannot be cancelled once started.",
+      "messageScheduled": "Schedule \"{title}\" on {date} (Lomé time) for about {count} users? You can cancel it until that date.",
+      "estimating": "Estimating the audience…"
+    },
+    "cancelConfirm": {
+      "header": "Cancel send",
+      "message": "Cancel the scheduled campaign \"{title}\"? It will not be sent."
+    },
+    "deleteConfirm": {
+      "header": "Delete campaign",
+      "message": "Delete the draft \"{title}\"?"
+    },
+    "toasts": {
+      "created": "Campaign created.",
+      "saved": "Campaign saved.",
+      "sent": "Sending started.",
+      "scheduled": "Campaign scheduled.",
+      "cancelled": "Campaign cancelled.",
+      "deleted": "Campaign deleted.",
+      "saveFailed": "Could not save.",
+      "actionFailed": "Action failed."
+    },
+    "detail": {
+      "title": "Campaign detail",
+      "body": "Message",
+      "deepLink": "Opening link",
+      "noDeepLink": "App home",
+      "audience": "Estimated audience",
+      "sent": "Notifications sent",
+      "deliveryRate": "Send rate",
+      "createdBy": "Created by",
+      "scheduledAt": "Scheduled on",
+      "timeline": "Timeline",
+      "preview": "Phone preview"
+    },
+    "timeline": {
+      "created": "Created",
+      "scheduled": "Scheduled for",
+      "sending": "Sending started",
+      "sent": "Sending finished",
+      "cancelled": "Cancelled"
+    },
+    "sendingHint": "Batched sending in progress: the counters refresh automatically."
+  },
+  "helpCenter": {
+    "title": "Help center",
+    "subtitle": "Frequently asked questions shown in the app and the support inbox (M-53).",
+    "restricted": "The help center is restricted to the Editor, Support and Administrator roles.",
+    "tabs": {
+      "faq": "FAQ",
+      "support": "Support"
+    },
+    "faq": {
+      "summary": "{count} question | {count} questions",
+      "published": "{count} published | {count} published",
+      "create": "New question",
+      "edit": "Edit question",
+      "delete": "Delete question",
+      "deleteConfirm": "Delete \"{question}\"?",
+      "loadError": "Could not load the FAQ.",
+      "empty": {
+        "title": "No question",
+        "hint": "Add the frequent questions of your users; only published questions appear in the app."
+      },
+      "emptyCategory": "No question in this category.",
+      "reorderHint": "Drag rows to change the display order within the category.",
+      "columns": {
+        "question": "Question",
+        "languages": "Languages",
+        "published": "Published"
+      },
+      "form": {
+        "category": "Category",
+        "question": "Question",
+        "answer": "Answer",
+        "languageTabs": "Language",
+        "frenchRequired": "French is required; the other languages fall back to French when empty.",
+        "published": "Published in the app"
+      },
+      "preview": {
+        "title": "Preview in the app",
+        "language": "Displayed language",
+        "empty": "No published question in this language.",
+        "fallback": "French fallback",
+        "hint": "What the app receives for the chosen language (GET /help/faq)."
+      },
+      "toasts": {
+        "created": "Question created.",
+        "saved": "Question saved.",
+        "deleted": "Question deleted.",
+        "reordered": "Order saved.",
+        "published": "Question published.",
+        "unpublished": "Question unpublished.",
+        "saveFailed": "Could not save."
+      },
+      "categories": {
+        "account": "Account",
+        "coins": "Coins",
+        "vip": "VIP",
+        "playback": "Playback",
+        "payment": "Payment",
+        "content": "Content",
+        "other": "Other"
+      }
+    },
+    "support": {
+      "inbox": "Inbox",
+      "summary": "{count} ticket | {count} tickets",
+      "loadError": "Could not load the tickets.",
+      "empty": "No ticket for this filter.",
+      "selectHint": "Select a ticket to read the conversation.",
+      "filters": {
+        "status": "Status",
+        "all": "All tickets"
+      },
+      "status": {
+        "OPEN": "Open",
+        "ANSWERED": "Answered",
+        "CLOSED": "Closed"
+      },
+      "from": {
+        "user": "User",
+        "support": "Support"
+      },
+      "ticket": "Ticket",
+      "user": "User",
+      "category": "Category",
+      "createdAt": "Opened on",
+      "updatedAt": "Updated on",
+      "reply": "Your reply",
+      "replyPlaceholder": "Reply to the user: the answer is sent as a notification and kept in their history.",
+      "send": "Send reply",
+      "close": "Close ticket",
+      "closeConfirm": "Close the ticket \"{subject}\"? The user will not be able to reply any more.",
+      "closed": "Ticket closed: no more replies.",
+      "toasts": {
+        "replied": "Reply sent.",
+        "closed": "Ticket closed.",
+        "failed": "Action failed."
+      }
+    }
   }
 }

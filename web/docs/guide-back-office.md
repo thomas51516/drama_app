@@ -3,7 +3,8 @@
 Ce guide s'adresse à l'équipe éditoriale et aux personnes qui administrent le back-office de
 DRAMA, l'application de micro-séries verticales. Il décrit, écran par écran, comment publier une
 série de A à Z : connexion, catalogue, épisodes, sous-titres, mise en avant, planification des
-sorties, tableau de bord, comptes internes. Il est aussi accessible depuis le bouton **Aide** de
+sorties, tableau de bord, comptes internes, appareils de confiance, notifications push et centre
+d'aide. Il est aussi accessible depuis le bouton **Aide** de
 la barre du haut.
 
 > Règle d'or : le serveur fait foi. Les prix, les droits et les dates de publication sont appliqués
@@ -235,6 +236,67 @@ Chaque action (création, modification, suppression, connexion, changement de pr
 pièces…) est tracée avec l'auteur, la date, la cible et les valeurs **avant / après**. Filtrez par
 auteur, action, type de cible ou période ; dépliez une ligne pour voir le détail des champs
 modifiés. Le journal n'est ni modifiable ni effaçable.
+
+## Appareil de confiance (connexion sans code pendant 30 jours)
+
+Sur l'écran du code à 6 chiffres, la case **« Se souvenir de cet appareil pendant 30 jours »**
+(décochée par défaut) évite de ressaisir un code à chaque connexion depuis ce navigateur.
+
+- À ne cocher que sur un **ordinateur personnel** : le serveur mémorise ce navigateur pour votre
+  compte uniquement, pendant 30 jours. Le mot de passe reste demandé à chaque connexion.
+- **Se déconnecter ne retire pas la confiance** : la prochaine connexion passera directement.
+- Pour la retirer : menu utilisateur (en haut à droite) → **Mon compte** → **Appareils de
+  confiance**. Vous y voyez chaque navigateur autorisé (date, dernière utilisation, expiration) ;
+  **Révoquer** retire un appareil, **Révoquer cet appareil** retire celui que vous utilisez.
+- Un administrateur peut révoquer tous les appareils d'un compte (Administration → Comptes,
+  icône téléphone) ; réinitialiser la double authentification le fait aussi.
+- En cas de doute (ordinateur partagé, perdu), révoquez : un code sera demandé à la connexion suivante.
+
+## Notifications push (campagnes)
+
+Menu **Notifications**, réservé aux rôles Monétisation et Administrateur.
+
+1. **Nouvelle campagne** : titre (première ligne vue sur le téléphone), message (**178 caractères
+   au plus**, compteur sous le champ), lien d'ouverture facultatif (`drama://series/{id}` ; le
+   sélecteur « Utiliser cette série » le remplit pour vous ; vide = accueil de l'application).
+2. **Cible** : tous les utilisateurs, par pays (codes à deux lettres), abonnés d'une série (série à
+   choisir) ou inactifs depuis X jours (1 à 365).
+3. **Programmer l'envoi** (facultatif, heure de Lomé) : vide = envoi immédiat au moment d'« Envoyer ».
+4. **Estimer l'audience** à tout moment (icône calculatrice). **Envoyer** recalcule l'estimation et
+   demande confirmation avec le nombre d'utilisateurs visés ; avec une date future la campagne passe
+   en **Programmée** et reste **annulable** jusqu'à cette date. Une fois l'envoi démarré, il ne peut
+   plus être arrêté ; les compteurs « Envoyés » se mettent à jour automatiquement.
+5. Les étiquettes du haut comptent les campagnes par statut (Brouillon, Programmée, Envoi en cours,
+   Envoyée, Annulée) et filtrent la liste ; le détail (icône i ou clic sur le titre) montre le
+   message tel que vu sur le téléphone, la cible, l'audience, le nombre envoyé et la chronologie.
+
+> Le serveur applique les préférences de chaque utilisateur (« offres » désactivées) et le plafond de
+> deux notifications par jour : le nombre envoyé est donc souvent inférieur à l'audience estimée.
+
+## Centre d'aide (FAQ et support)
+
+Menu **Centre d'aide** : onglet **FAQ** pour les rôles Éditeur, Support et Administrateur ; onglet
+**Support** pour Support et Administrateur. Le badge sur l'entrée du menu compte les tickets ouverts.
+
+### FAQ
+
+- Les questions sont regroupées par **catégorie** (compte, pièces, VIP, lecture, paiement, contenu,
+  autre). Dans une catégorie, **glissez les lignes** pour changer l'ordre affiché dans l'application.
+- **Nouvelle question** : catégorie, puis question et réponse en **français (obligatoire)** et, via
+  les boutons FR / EN / ES / PT, dans les autres langues. Une langue vide reprend le français dans
+  l'application ; une traduction doit comporter la question **et** la réponse.
+- L'interrupteur **Publiée** rend la question visible dans l'application ; une question non publiée
+  reste un brouillon.
+- L'**aperçu** à droite montre exactement ce que reçoit l'application pour la langue choisie
+  (étiquette « Repli sur le français » quand la traduction manque).
+
+### Support
+
+- La **boîte de réception** liste les tickets envoyés depuis l'application (filtre par statut :
+  Ouvert, Répondu, Fermé ; les ouverts par défaut). Cliquez un ticket pour lire la conversation.
+- **Envoyer la réponse** : l'utilisateur la reçoit en notification et dans son historique ; le
+  ticket passe en **Répondu** (il repasse en Ouvert si l'utilisateur répond).
+- **Fermer le ticket** quand le sujet est réglé : plus aucune réponse n'est possible.
 
 ## Erreurs fréquentes
 

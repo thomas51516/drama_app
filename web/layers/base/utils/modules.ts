@@ -1,5 +1,7 @@
+import type { AdminRole } from '../types/api'
+
 /**
- * Back-office modules (cahier des charges §5, B-01 to B-13).
+ * Back-office modules (cahier des charges §5, B-01 to B-13, plus B-03bis the help center).
  * `path` is the route in the admin app; `labelKey` points to i18n `nav.*`.
  */
 export interface BackofficeModule {
@@ -8,6 +10,10 @@ export interface BackofficeModule {
   labelKey: string
   path: string
   icon: string
+  /** Roles that may open the module; every role when omitted. */
+  roles?: readonly AdminRole[]
+  /** Sidebar badge fed by a store (`supportInbox` = open tickets). */
+  badge?: 'supportInbox'
 }
 
 export const backofficeModules: readonly BackofficeModule[] = [
@@ -31,6 +37,15 @@ export const backofficeModules: readonly BackofficeModule[] = [
     labelKey: 'nav.subtitles',
     path: '/subtitles',
     icon: 'pi pi-language',
+  },
+  {
+    key: 'helpCenter',
+    ticket: 'B-03bis',
+    labelKey: 'nav.helpCenter',
+    path: '/help-center',
+    icon: 'pi pi-question-circle',
+    roles: ['EDITOR', 'SUPPORT', 'ADMIN'],
+    badge: 'supportInbox',
   },
   {
     key: 'scheduling',
@@ -60,8 +75,9 @@ export const backofficeModules: readonly BackofficeModule[] = [
     key: 'notifications',
     ticket: 'B-10',
     labelKey: 'nav.notifications',
-    path: '/notifications',
+    path: '/campaigns',
     icon: 'pi pi-bell',
+    roles: ['MONETIZATION', 'ADMIN'],
   },
   {
     key: 'dashboards',
@@ -88,4 +104,12 @@ export const backofficeModules: readonly BackofficeModule[] = [
 
 export function findModuleByPath(path: string): BackofficeModule | undefined {
   return backofficeModules.find((module) => module.path === path)
+}
+
+/** True when `role` may open the module (no `roles` = everyone). */
+export function moduleAllowsRole(
+  module: Pick<BackofficeModule, 'roles'>,
+  role: AdminRole | null | undefined,
+): boolean {
+  return !module.roles || (Boolean(role) && module.roles.includes(role as AdminRole))
 }

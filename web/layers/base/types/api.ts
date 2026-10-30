@@ -1,6 +1,8 @@
 /**
  * Contracts of the admin API consumed by the web apps.
- * Source of truth: docs/api/admin-contract-v1.md (binding for backend and back-office).
+ * Source of truth: docs/api/admin-contract-v1.md, the back-office section of
+ * docs/api/public-contract-v1.2.md and docs/api/contract-v1.3-sprint5.md (binding for backend
+ * and back-office).
  * These types drive both the real client and the mock mode.
  */
 
@@ -19,17 +21,20 @@ export interface AdminUser {
   role: AdminRole
 }
 
-/** POST /admin/auth/login */
+/** POST /admin/auth/login (`deviceToken`: trusted device of contract v1.3, B-13+). */
 export interface LoginRequest {
   email: string
   password: string
+  deviceToken?: string
 }
 
 /**
- * The password step never returns a session: TOTP is mandatory (§11).
+ * The password step never returns a session unless a valid trusted-device token is sent (§11,
+ * contract v1.3):
  * - `totp_required`: the account already has TOTP enrolled, ask for a code.
  * - `totp_setup_required`: first login, the account must enrol with `secret` / `otpauthUri`.
- * The `challengeToken` expires after 5 minutes.
+ * - `ok`: the `deviceToken` was valid for this account, the session opens without a code.
+ * The `challengeToken` expires after 5 minutes. An invalid device token is silently ignored.
  */
 export type LoginResponse =
   | { status: 'totp_required'; challengeToken: string }
@@ -39,17 +44,42 @@ export type LoginResponse =
       secret: string
       otpauthUri: string
     }
+  | { status: 'ok'; accessToken: string; expiresIn: number; user: AdminUser }
 
 /** POST /admin/auth/totp/verify */
 export interface TotpVerifyRequest {
   challengeToken: string
   code: string
+  /** Ask for a 30-day trusted-device token (contract v1.3). */
+  rememberDevice?: boolean
 }
 
 export interface TotpVerifyResponse {
   accessToken: string
   expiresIn: number
   user: AdminUser
+  /** Present when `rememberDevice` was true: random 256-bit token, hashed server-side. */
+  deviceToken?: string
+  deviceTokenExpiresAt?: string
+}
+
+// ---------------------------------------------------------------------------
+// Trusted devices (B-13+) — contract v1.3
+// ---------------------------------------------------------------------------
+
+/** Lifetime of a trusted device and of the `drama_admin_device` cookie (30 days). */
+export const TRUSTED_DEVICE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
+
+/** Item of GET /admin/auth/devices. */
+export interface TrustedDevice {
+  id: string
+  /** Human label derived from the user agent (`Chrome · Linux`), may be empty. */
+  label: string | null
+  createdAt: string
+  lastUsedAt: string | null
+  expiresAt: string
+  /** Optional hint of the backend: the device whose token opened the current session. */
+  current?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -499,6 +529,147 @@ export interface StatsOverview {
   episodesCompleted: number
   topSeries: StatsTopSeries[]
   generatedAt: string
+}
+
+// ---------------------------------------------------------------------------
+// Push campaigns (B-10) — contract v1.3
+// ---------------------------------------------------------------------------
+
+export type CampaignSegmentType = 'ALL' | 'COUNTRY' | 'SERIES_FOLLOWERS' | 'INACTIVE'
+export const CAMPAIGN_SEGMENT_TYPES: readonly CampaignSegmentType[] = [
+  'ALL',
+  'COUNTRY',
+  'SERIES_FOLLOWERS',
+  'INACTIVE',
+]
+
+export type CampaignStatus = 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELLED'
+export const CAMPAIGN_STATUSES: readonly CampaignStatus[] = [
+  'DRAFT',
+  'SCHEDULED',
+  'SENDING',
+  'SENT',
+  'CANCELLED',
+]
+
+/** Audience of a campaign; only the field of the chosen `type` is meaningful. */
+export interface CampaignSegment {
+  type: CampaignSegmentType
+  /** ISO 3166-1 alpha-2 codes, for `COUNTRY`. */
+  countries?: string[]
+  /** For `SERIES_FOLLOWERS`. */
+  seriesId?: string | null
+  /** Days without activity, for `INACTIVE`. */
+  inactiveDays?: number | null
+}
+
+export interface Campaign {
+  id: string
+  title: string
+  /** Push body, at most `CAMPAIGN_BODY_MAX` characters. */
+  body: string
+  /** `drama://series/{id}` or any `drama://` deep link; `null` opens the home. */
+  deepLink: string | null
+  segment: CampaignSegment
+  /** ISO UTC; `null` means "send now" when sent. */
+  scheduledAt: string | null
+  status: CampaignStatus
+  audienceCount: number
+  sentCount: number
+  createdBy: string
+  createdAt: string
+  /** Optional timestamps the backend may add. */
+  updatedAt?: string | null
+  sentAt?: string | null
+  cancelledAt?: string | null
+}
+
+/** Push body limit of the contract (B-10). */
+export const CAMPAIGN_BODY_MAX = 178
+export const CAMPAIGN_TITLE_MAX = 60
+
+/** POST /admin/campaigns and PATCH /admin/campaigns/{id}. */
+export type CampaignInput = Pick<Campaign, 'title' | 'body' | 'segment'> & {
+  deepLink?: string | null
+  scheduledAt?: string | null
+}
+
+/** POST /admin/campaigns/{id}/estimate */
+export interface CampaignEstimate {
+  audienceCount: number
+}
+
+// ---------------------------------------------------------------------------
+// Help center: FAQ and support (M-53, B-03bis) — contract v1.3
+// ---------------------------------------------------------------------------
+
+export const FAQ_LANGUAGES = ['fr', 'en', 'es', 'pt'] as const
+export type FaqLanguage = (typeof FAQ_LANGUAGES)[number]
+
+/** French is required and is the fallback; the backend may return `null` for the others. */
+export type FaqLocalized = { fr: string } & Partial<Record<'en' | 'es' | 'pt', string | null>>
+
+export interface FaqEntry {
+  id: string
+  /** Category key (`account`, `coins`, `playback`, …), see `FAQ_CATEGORIES`. */
+  category: string
+  question: FaqLocalized
+  answer: FaqLocalized
+  /** Global order (1..n) across categories. */
+  position: number
+  isPublished: boolean
+}
+
+/** POST /admin/faq and PATCH /admin/faq/{id}. */
+export type FaqEntryInput = Partial<
+  Pick<FaqEntry, 'category' | 'question' | 'answer' | 'isPublished'>
+>
+
+/** PUT /admin/faq/order */
+export interface FaqOrderInput {
+  ids: string[]
+}
+
+/** GET /help/faq?lang — published entries in the requested language with French fallback. */
+export interface PublicFaqResponse {
+  categories: {
+    key: string
+    title: string
+    entries: { id: string; question: string; answer: string }[]
+  }[]
+}
+
+export type SupportTicketStatus = 'OPEN' | 'ANSWERED' | 'CLOSED'
+export const SUPPORT_TICKET_STATUSES: readonly SupportTicketStatus[] = [
+  'OPEN',
+  'ANSWERED',
+  'CLOSED',
+]
+
+export interface SupportMessage {
+  from: 'user' | 'support'
+  body: string
+  at: string
+}
+
+export interface SupportTicket {
+  id: string
+  userId: string
+  /** Display name, e-mail or masked identifier of the user. */
+  userLabel: string
+  category: string
+  subject: string
+  status: SupportTicketStatus
+  messages: SupportMessage[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Query of GET /admin/support/tickets */
+export interface SupportTicketQuery {
+  status?: SupportTicketStatus
+  page?: number
+  pageSize?: number
 }
 
 // ---------------------------------------------------------------------------

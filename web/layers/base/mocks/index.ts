@@ -14,8 +14,14 @@ import type {
   AdminSeriesUpdateInput,
   AdminUser,
   AuditLog,
+  Campaign,
+  CampaignInput,
+  CampaignSegment,
   EpisodeUploadUrlRequest,
   EpisodeUploadUrlResponse,
+  FaqEntry,
+  FaqEntryInput,
+  FaqLocalized,
   HomeBanner,
   HomeBannerInput,
   HomeOrderInput,
@@ -27,6 +33,7 @@ import type {
   Paginated,
   PresignRequest,
   PresignResponse,
+  PublicFaqResponse,
   PublicHomeResponse,
   PublicSeriesSummary,
   ScheduleApiItem,
@@ -35,11 +42,17 @@ import type {
   StatsOverview,
   StatsPeriod,
   Subtitle,
+  SupportTicket,
+  SupportTicketStatus,
   TotpVerifyRequest,
   TotpVerifyResponse,
+  TrustedDevice,
 } from '../types/api'
 import {
   ADMIN_ROLES,
+  CAMPAIGN_SEGMENT_TYPES,
+  FAQ_LANGUAGES,
+  TRUSTED_DEVICE_MAX_AGE_SECONDS,
   HOME_ROW_KEY_RE,
   HOME_ROW_TYPES,
   HOME_TITLE_LANGUAGES,
@@ -65,7 +78,26 @@ import subtitlesFixture from './subtitles.json'
 import homeFixture from './home.json'
 import auditLogsFixture from './audit-logs.json'
 import statsFixture from './stats.json'
+import campaignsFixture from './campaigns.json'
+import faqFixture from './faq.json'
+import ticketsFixture from './tickets.json'
 import { isStatsPeriod } from '../utils/stats'
+import {
+  bodyRemaining,
+  canCancelCampaign,
+  canDeleteCampaign,
+  canEditCampaign,
+  canSendCampaign,
+  isValidDeepLink,
+  statusAfterSend,
+} from '../utils/campaigns'
+import {
+  faqPreview,
+  isTicketStatus,
+  sortFaqEntries,
+  sortTickets,
+  ticketTransition,
+} from '../utils/help-center'
 import { mockAssetUrlFor, mockUploadUrlFor, registerMockAsset } from './assets'
 
 /**
@@ -86,6 +118,10 @@ import { mockAssetUrlFor, mockUploadUrlFor, registerMockAsset } from './assets'
  * works), home banners/rows with a `/admin/home/preview` computed like the public `/home`,
  * internal accounts (linked to the login flow: deactivation, TOTP reset, created accounts can
  * sign in) and an audit log fed by every mutation of this mock.
+ *
+ * Contract v1.3 (sprint 5): trusted devices (login with a valid `deviceToken` skips TOTP),
+ * push campaigns (estimate from a fake audience table, SENDING → SENT after
+ * `mockTiming.campaignSendMs`), FAQ with the public `/help/faq` fallback and support tickets.
  */
 
 export type MockMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -117,6 +153,7 @@ export const mockTiming = {
   latencyMs: 150,
   uploadedToProcessingMs: 1500,
   processingToReadyMs: 4000,
+  campaignSendMs: 2500,
 }
 
 const SAMPLE_COUNT = 3
@@ -134,6 +171,14 @@ interface MockAccount {
   /** Password of accounts created in the session; fixture accounts share the fixture password. */
   password?: string
   user: AdminUser
+  /** Trusted device that opened the current session (mock only, drives `current`). */
+  currentDeviceId?: string | null
+}
+
+/** Trusted device of an account (the raw token is kept here; the backend stores a hash). */
+interface MockDevice extends TrustedDevice {
+  accountId: string
+  token: string
 }
 
 const fixtureAccounts = authFixture.users as MockAccount[]
@@ -151,6 +196,10 @@ interface MockState {
   accounts: MockAccount[]
   auditLogs: AuditLog[]
   challenges: Map<string, MockAccount>
+  devices: MockDevice[]
+  campaigns: Campaign[]
+  faq: FaqEntry[]
+  tickets: SupportTicket[]
 }
 
 function clone<T>(value: T): T {
@@ -194,7 +243,23 @@ function initialState(): MockState {
     accounts: clone(fixtureAccounts),
     auditLogs: clone(auditLogsFixture) as AuditLog[],
     challenges: new Map(),
+    devices: [],
+    campaigns: seedCampaigns(clone(campaignsFixture) as Campaign[]),
+    faq: clone(faqFixture) as FaqEntry[],
+    tickets: clone(ticketsFixture) as SupportTicket[],
   }
+}
+
+/** The scheduled fixture campaign is always in the future (placeholder replaced at load). */
+function seedCampaigns(campaigns: Campaign[]): Campaign[] {
+  for (const campaign of campaigns) {
+    if (campaign.scheduledAt === '__FUTURE_2D_10H__') {
+      const date = new Date(Date.now() + 2 * 86_400_000)
+      date.setUTCHours(10, 0, 0, 0)
+      campaign.scheduledAt = date.toISOString()
+    }
+  }
+  return campaigns
 }
 
 /** Sample WebVTT cues (30 s) so the fixture subtitles really display in the preview. */
@@ -437,7 +502,7 @@ function route(method: MockMethod, path: string, handler: Handler): void {
 // --- auth -------------------------------------------------------------------
 
 route('POST', '/admin/auth/login', ({ body, path }): LoginResponse => {
-  const { email, password } = (body ?? {}) as Partial<LoginRequest>
+  const { email, password, deviceToken } = (body ?? {}) as Partial<LoginRequest>
   const account = state.accounts.find((item) => item.user.email === email?.trim().toLowerCase())
   const expected = account?.password ?? authFixture.credentials.password
   if (!account || password !== expected) {
@@ -445,6 +510,28 @@ route('POST', '/admin/auth/login', ({ body, path }): LoginResponse => {
   }
   if (!account.isActive) {
     fail(401, 'ACCOUNT_DISABLED', 'This account is deactivated', path)
+  }
+  // Trusted device (contract v1.3): a valid token for this account skips the TOTP step.
+  // An invalid, expired or foreign token is silently ignored.
+  if (deviceToken && account.totpEnrolled) {
+    const device = state.devices.find(
+      (item) =>
+        item.token === deviceToken &&
+        item.accountId === account.user.id &&
+        new Date(item.expiresAt).getTime() > Date.now(),
+    )
+    if (device) {
+      device.lastUsedAt = now()
+      account.currentDeviceId = device.id
+      account.lastLoginAt = now()
+      recordLogin(account, 'trusted_device')
+      return {
+        status: 'ok',
+        accessToken: account.token,
+        expiresIn: 8 * 3600,
+        user: clone(account.user),
+      }
+    }
   }
   const challengeToken = `${authFixture.challengeToken}:${account.user.role.toLowerCase()}`
   state.challenges.set(challengeToken, account)
@@ -462,15 +549,7 @@ route('POST', '/admin/auth/login', ({ body, path }): LoginResponse => {
   return { status: 'totp_required', challengeToken }
 })
 
-route('POST', '/admin/auth/totp/verify', ({ body, path }): TotpVerifyResponse => {
-  const { challengeToken, code } = (body ?? {}) as Partial<TotpVerifyRequest>
-  const account = challengeToken ? state.challenges.get(challengeToken) : undefined
-  if (!account || code !== authFixture.credentials.totpCode) {
-    fail(401, 'INVALID_TOTP', 'Invalid TOTP code', path)
-  }
-  state.challenges.delete(challengeToken as string)
-  account.totpEnrolled = true
-  account.lastLoginAt = now()
+function recordLogin(account: MockAccount, method: 'totp' | 'trusted_device'): void {
   state.auditLogs.unshift({
     id: newId('aud'),
     actorId: account.user.id,
@@ -479,11 +558,118 @@ route('POST', '/admin/auth/totp/verify', ({ body, path }): TotpVerifyResponse =>
     targetType: 'admin_account',
     targetId: account.user.id,
     oldValue: null,
-    newValue: { method: 'totp' },
+    newValue: { method },
     ip: '127.0.0.1',
     createdAt: now(),
   })
-  return { accessToken: account.token, expiresIn: 8 * 3600, user: clone(account.user) }
+}
+
+/** `Chrome · Linux`-style label from the browser's user agent (the backend does the same). */
+function deviceLabel(): string {
+  const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /Firefox\//.test(ua)
+      ? 'Firefox'
+      : /Chrome\//.test(ua)
+        ? 'Chrome'
+        : /Safari\//.test(ua)
+          ? 'Safari'
+          : 'Navigateur'
+  const os = /Android/.test(ua)
+    ? 'Android'
+    : /iPhone|iPad/.test(ua)
+      ? 'iOS'
+      : /Windows/.test(ua)
+        ? 'Windows'
+        : /Mac OS/.test(ua)
+          ? 'macOS'
+          : /Linux/.test(ua)
+            ? 'Linux'
+            : 'Inconnu'
+  return `${browser} · ${os}`
+}
+
+function randomToken(): string {
+  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+    const bytes = crypto.getRandomValues(new Uint8Array(32))
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  }
+  return `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`
+}
+
+function toTrustedDevice(device: MockDevice, account: MockAccount): TrustedDevice {
+  return {
+    id: device.id,
+    label: device.label,
+    createdAt: device.createdAt,
+    lastUsedAt: device.lastUsedAt,
+    expiresAt: device.expiresAt,
+    current: account.currentDeviceId === device.id,
+  }
+}
+
+function revokeDevicesOf(accountId: string): number {
+  const before = state.devices.length
+  state.devices = state.devices.filter((device) => device.accountId !== accountId)
+  const account = state.accounts.find((item) => item.user.id === accountId)
+  if (account) account.currentDeviceId = null
+  return before - state.devices.length
+}
+
+route('POST', '/admin/auth/totp/verify', ({ body, path }): TotpVerifyResponse => {
+  const { challengeToken, code, rememberDevice } = (body ?? {}) as Partial<TotpVerifyRequest>
+  const account = challengeToken ? state.challenges.get(challengeToken) : undefined
+  if (!account || code !== authFixture.credentials.totpCode) {
+    fail(401, 'INVALID_TOTP', 'Invalid TOTP code', path)
+  }
+  state.challenges.delete(challengeToken as string)
+  account.totpEnrolled = true
+  account.lastLoginAt = now()
+  account.currentDeviceId = null
+  recordLogin(account, 'totp')
+  const response: TotpVerifyResponse = {
+    accessToken: account.token,
+    expiresIn: 8 * 3600,
+    user: clone(account.user),
+  }
+  if (rememberDevice === true) {
+    const device: MockDevice = {
+      id: newId('dev'),
+      accountId: account.user.id,
+      token: randomToken(),
+      label: deviceLabel(),
+      createdAt: now(),
+      lastUsedAt: now(),
+      expiresAt: new Date(Date.now() + TRUSTED_DEVICE_MAX_AGE_SECONDS * 1000).toISOString(),
+    }
+    state.devices.push(device)
+    account.currentDeviceId = device.id
+    response.deviceToken = device.token
+    response.deviceTokenExpiresAt = device.expiresAt
+  }
+  return response
+})
+
+route('GET', '/admin/auth/devices', (context): TrustedDevice[] => {
+  const user = requireAuth(context)
+  const account = state.accounts.find((item) => item.user.id === user.id) as MockAccount
+  return state.devices
+    .filter((device) => device.accountId === user.id)
+    .map((device) => toTrustedDevice(device, account))
+})
+
+route('DELETE', '/admin/auth/devices/:id', (context) => {
+  const user = requireAuth(context)
+  const index = state.devices.findIndex(
+    (device) => device.id === context.params.id && device.accountId === user.id,
+  )
+  if (index === -1) fail(404, 'DEVICE_NOT_FOUND', 'Trusted device not found', context.path)
+  const [removed] = state.devices.splice(index, 1)
+  const account = state.accounts.find((item) => item.user.id === user.id)
+  if (account && account.currentDeviceId === removed?.id) account.currentDeviceId = null
+  audit(context, 'admin_device.revoke', 'admin_account', user.id, { deviceId: removed?.id }, null)
+  return null
 })
 
 route('POST', '/admin/auth/logout', (context) => {
@@ -1327,10 +1513,22 @@ route('PATCH', '/admin/accounts/:id', (context): AdminAccount => {
   return after
 })
 
+route('POST', '/admin/accounts/:id/revoke-devices', (context) => {
+  requireRole(context, ['ADMIN'])
+  const account = findAccount(context, context.params.id as string)
+  const revoked = revokeDevicesOf(account.user.id)
+  audit(context, 'admin_account.revoke_devices', 'admin_account', account.user.id, null, {
+    revoked,
+  })
+  return null
+})
+
 route('POST', '/admin/accounts/:id/reset-totp', (context): AdminAccount => {
   requireRole(context, ['ADMIN'])
   const account = findAccount(context, context.params.id as string)
   account.totpEnrolled = false
+  // Resetting TOTP revokes every trusted device (contract v1.3).
+  revokeDevicesOf(account.user.id)
   audit(
     context,
     'admin_account.reset_totp',
@@ -1473,6 +1671,435 @@ route('GET', '/admin/stats/overview', (context): StatsOverview => {
 // ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
+
+// --- push campaigns (B-10, contract v1.3) -------------------------------------
+
+const CAMPAIGN_ROLES: AdminRole[] = ['MONETIZATION', 'ADMIN']
+
+/** Fake audience: app users per country and followers per series. */
+const AUDIENCE_TOTAL = 12_480
+const AUDIENCE_BY_COUNTRY: Record<string, number> = {
+  TG: 4120,
+  CI: 2890,
+  SN: 1740,
+  BJ: 980,
+  CM: 1260,
+  FR: 860,
+  BF: 390,
+  ML: 240,
+}
+const FOLLOWERS_BY_SERIES: Record<string, number> = {
+  ser_01HZX0A1B2C3D4E5F6G7H8J9K0: 5320,
+  ser_01HZX0A1B2C3D4E5F6G7H8J9K1: 3875,
+  ser_01HZX0A1B2C3D4E5F6G7H8J9K2: 0,
+  ser_01HZX0A1B2C3D4E5F6G7H8J9K3: 1210,
+}
+
+function estimateAudience(segment: CampaignSegment): number {
+  switch (segment.type) {
+    case 'COUNTRY':
+      return (segment.countries ?? []).reduce(
+        (sum, code) => sum + (AUDIENCE_BY_COUNTRY[code] ?? 120),
+        0,
+      )
+    case 'SERIES_FOLLOWERS':
+      return segment.seriesId ? (FOLLOWERS_BY_SERIES[segment.seriesId] ?? 150) : 0
+    case 'INACTIVE': {
+      const days = segment.inactiveDays ?? 7
+      // The longer the inactivity threshold, the smaller the audience.
+      return Math.round(AUDIENCE_TOTAL * Math.max(0.03, 0.45 * Math.exp(-days / 20)))
+    }
+    default:
+      return AUDIENCE_TOTAL
+  }
+}
+
+function findCampaign(context: MockContext, id: string): Campaign {
+  const campaign = state.campaigns.find((item) => item.id === id)
+  if (!campaign) fail(404, 'CAMPAIGN_NOT_FOUND', `Campaign ${id} not found`, context.path)
+  return campaign
+}
+
+function readSegment(context: MockContext, value: unknown): CampaignSegment {
+  const input = (value ?? {}) as Partial<CampaignSegment>
+  if (!input.type || !CAMPAIGN_SEGMENT_TYPES.includes(input.type)) {
+    fail(400, 'VALIDATION_ERROR', `Unknown segment type ${String(input.type)}`, context.path)
+  }
+  switch (input.type) {
+    case 'COUNTRY': {
+      const countries = readCountries(context, input.countries ?? [])
+      if (countries.length === 0) {
+        fail(400, 'VALIDATION_ERROR', 'segment.countries is required', context.path)
+      }
+      return { type: 'COUNTRY', countries }
+    }
+    case 'SERIES_FOLLOWERS': {
+      if (!input.seriesId)
+        fail(400, 'VALIDATION_ERROR', 'segment.seriesId is required', context.path)
+      findSeries(context, input.seriesId)
+      return { type: 'SERIES_FOLLOWERS', seriesId: input.seriesId }
+    }
+    case 'INACTIVE': {
+      const days = Number(input.inactiveDays)
+      if (!Number.isInteger(days) || days < 1 || days > 365) {
+        fail(400, 'VALIDATION_ERROR', 'segment.inactiveDays must be 1..365', context.path)
+      }
+      return { type: 'INACTIVE', inactiveDays: days }
+    }
+    default:
+      return { type: 'ALL' }
+  }
+}
+
+function applyCampaignInput(
+  context: MockContext,
+  target: Campaign,
+  input: Partial<CampaignInput>,
+): void {
+  if ('title' in input) {
+    const title = String(input.title ?? '').trim()
+    if (!title) fail(400, 'VALIDATION_ERROR', 'title is required', context.path)
+    target.title = title
+  }
+  if ('body' in input) {
+    const body = String(input.body ?? '').trim()
+    if (!body) fail(400, 'VALIDATION_ERROR', 'body is required', context.path)
+    if (bodyRemaining(body) < 0) {
+      fail(400, 'VALIDATION_ERROR', 'body exceeds 178 characters', context.path)
+    }
+    target.body = body
+  }
+  if ('deepLink' in input) {
+    const link = input.deepLink ? String(input.deepLink).trim() : null
+    if (link && !isValidDeepLink(link)) {
+      fail(400, 'VALIDATION_ERROR', 'deepLink must start with drama://', context.path)
+    }
+    target.deepLink = link
+  }
+  if ('segment' in input) target.segment = readSegment(context, input.segment)
+  if ('scheduledAt' in input) target.scheduledAt = readPublishedAt(context, input.scheduledAt)
+  target.updatedAt = now()
+}
+
+function startSending(campaignId: string): void {
+  later(mockTiming.campaignSendMs, () => {
+    const campaign = state.campaigns.find((item) => item.id === campaignId)
+    if (!campaign || campaign.status !== 'SENDING') return
+    // Preferences (`offers` off) and the daily cap leave a few users out.
+    campaign.sentCount = Math.round(campaign.audienceCount * 0.93)
+    campaign.status = 'SENT'
+    campaign.sentAt = now()
+    campaign.updatedAt = now()
+  })
+}
+
+/** A scheduled campaign whose date has passed starts sending when the list is read. */
+function runDueCampaigns(): void {
+  for (const campaign of state.campaigns) {
+    if (
+      campaign.status === 'SCHEDULED' &&
+      campaign.scheduledAt &&
+      new Date(campaign.scheduledAt).getTime() <= Date.now()
+    ) {
+      campaign.status = 'SENDING'
+      campaign.updatedAt = now()
+      startSending(campaign.id)
+    }
+  }
+}
+
+route('GET', '/admin/campaigns', (context): Paginated<Campaign> => {
+  requireRole(context, CAMPAIGN_ROLES)
+  runDueCampaigns()
+  const status = context.query.get('status')
+  const page = Math.max(1, Number(context.query.get('page') ?? 1))
+  const pageSize = Math.min(100, Math.max(1, Number(context.query.get('pageSize') ?? 20)))
+  const filtered = state.campaigns.filter((campaign) => !status || campaign.status === status)
+  const start = (page - 1) * pageSize
+  return {
+    items: clone(filtered.slice(start, start + pageSize)),
+    total: filtered.length,
+    page,
+    pageSize,
+  }
+})
+
+route('POST', '/admin/campaigns', (context): Campaign => {
+  const user = requireRole(context, CAMPAIGN_ROLES)
+  const input = (context.body ?? {}) as Partial<CampaignInput>
+  if (!input.title || !input.body || !input.segment) {
+    fail(400, 'VALIDATION_ERROR', 'title, body and segment are required', context.path)
+  }
+  const campaign: Campaign = {
+    id: newId('cmp'),
+    title: '',
+    body: '',
+    deepLink: null,
+    segment: { type: 'ALL' },
+    scheduledAt: null,
+    status: 'DRAFT',
+    audienceCount: 0,
+    sentCount: 0,
+    createdBy: user.email,
+    createdAt: now(),
+    updatedAt: now(),
+    sentAt: null,
+    cancelledAt: null,
+  }
+  applyCampaignInput(context, campaign, input)
+  campaign.audienceCount = estimateAudience(campaign.segment)
+  state.campaigns.unshift(campaign)
+  audit(context, 'campaign.create', 'campaign', campaign.id, null, campaign)
+  return clone(campaign)
+})
+
+route('GET', '/admin/campaigns/:id', (context): Campaign => {
+  requireRole(context, CAMPAIGN_ROLES)
+  runDueCampaigns()
+  return clone(findCampaign(context, context.params.id as string))
+})
+
+route('PATCH', '/admin/campaigns/:id', (context): Campaign => {
+  requireRole(context, CAMPAIGN_ROLES)
+  const campaign = findCampaign(context, context.params.id as string)
+  if (!canEditCampaign(campaign.status)) {
+    fail(
+      409,
+      'CAMPAIGN_NOT_EDITABLE',
+      `A ${campaign.status} campaign cannot be edited`,
+      context.path,
+    )
+  }
+  const before = clone(campaign)
+  applyCampaignInput(context, campaign, (context.body ?? {}) as Partial<CampaignInput>)
+  campaign.audienceCount = estimateAudience(campaign.segment)
+  audit(context, 'campaign.update', 'campaign', campaign.id, before, campaign)
+  return clone(campaign)
+})
+
+route('DELETE', '/admin/campaigns/:id', (context) => {
+  requireRole(context, CAMPAIGN_ROLES)
+  const campaign = findCampaign(context, context.params.id as string)
+  if (!canDeleteCampaign(campaign.status)) {
+    fail(409, 'CAMPAIGN_NOT_DRAFT', 'Only drafts can be deleted', context.path)
+  }
+  state.campaigns = state.campaigns.filter((item) => item.id !== campaign.id)
+  audit(context, 'campaign.delete', 'campaign', campaign.id, campaign, null)
+  return null
+})
+
+route('POST', '/admin/campaigns/:id/estimate', (context): { audienceCount: number } => {
+  requireRole(context, CAMPAIGN_ROLES)
+  const campaign = findCampaign(context, context.params.id as string)
+  campaign.audienceCount = estimateAudience(campaign.segment)
+  return { audienceCount: campaign.audienceCount }
+})
+
+route('POST', '/admin/campaigns/:id/send', (context): Campaign => {
+  requireRole(context, CAMPAIGN_ROLES)
+  const campaign = findCampaign(context, context.params.id as string)
+  if (!canSendCampaign(campaign.status)) {
+    fail(409, 'CAMPAIGN_NOT_DRAFT', `A ${campaign.status} campaign cannot be sent`, context.path)
+  }
+  campaign.audienceCount = estimateAudience(campaign.segment)
+  campaign.status = statusAfterSend(campaign.scheduledAt)
+  campaign.updatedAt = now()
+  if (campaign.status === 'SENDING') startSending(campaign.id)
+  audit(context, 'campaign.send', 'campaign', campaign.id, null, {
+    status: campaign.status,
+    scheduledAt: campaign.scheduledAt,
+  })
+  return clone(campaign)
+})
+
+route('POST', '/admin/campaigns/:id/cancel', (context): Campaign => {
+  requireRole(context, CAMPAIGN_ROLES)
+  const campaign = findCampaign(context, context.params.id as string)
+  if (!canCancelCampaign(campaign.status)) {
+    fail(409, 'CAMPAIGN_NOT_SCHEDULED', 'Only scheduled campaigns can be cancelled', context.path)
+  }
+  campaign.status = 'CANCELLED'
+  campaign.cancelledAt = now()
+  campaign.updatedAt = now()
+  audit(
+    context,
+    'campaign.cancel',
+    'campaign',
+    campaign.id,
+    { status: 'SCHEDULED' },
+    { status: 'CANCELLED' },
+  )
+  return clone(campaign)
+})
+
+// --- help center: FAQ and support (M-53 / B-03bis, contract v1.3) -------------
+
+const FAQ_ROLES: AdminRole[] = ['EDITOR', 'SUPPORT', 'ADMIN']
+const SUPPORT_ROLES: AdminRole[] = ['SUPPORT', 'ADMIN']
+
+function findFaq(context: MockContext, id: string): FaqEntry {
+  const entry = state.faq.find((item) => item.id === id)
+  if (!entry) fail(404, 'FAQ_NOT_FOUND', `FAQ entry ${id} not found`, context.path)
+  return entry
+}
+
+function readLocalized(context: MockContext, field: string, value: unknown): FaqLocalized {
+  const input = (value ?? {}) as Partial<Record<string, unknown>>
+  const fr = typeof input.fr === 'string' ? input.fr.trim() : ''
+  if (!fr) fail(400, 'VALIDATION_ERROR', `${field}.fr is required`, context.path)
+  const result: FaqLocalized = { fr }
+  for (const lang of FAQ_LANGUAGES) {
+    if (lang === 'fr') continue
+    const text = input[lang]
+    result[lang] = typeof text === 'string' && text.trim() ? text.trim() : null
+  }
+  return result
+}
+
+function applyFaqInput(context: MockContext, target: FaqEntry, input: FaqEntryInput): void {
+  if ('category' in input) {
+    const category = String(input.category ?? '').trim()
+    if (!category) fail(400, 'VALIDATION_ERROR', 'category is required', context.path)
+    target.category = category
+  }
+  if ('question' in input) target.question = readLocalized(context, 'question', input.question)
+  if ('answer' in input) target.answer = readLocalized(context, 'answer', input.answer)
+  if ('isPublished' in input) target.isPublished = Boolean(input.isPublished)
+}
+
+route('GET', '/help/faq', (context): PublicFaqResponse => {
+  const lang = context.query.get('lang') ?? 'fr'
+  return faqPreview(state.faq, lang)
+})
+
+route('GET', '/admin/faq', (context): FaqEntry[] => {
+  requireRole(context, FAQ_ROLES)
+  return clone(sortFaqEntries(state.faq))
+})
+
+route('POST', '/admin/faq', (context): FaqEntry => {
+  requireRole(context, FAQ_ROLES)
+  const input = (context.body ?? {}) as FaqEntryInput
+  if (!input.category || !input.question || !input.answer) {
+    fail(400, 'VALIDATION_ERROR', 'category, question and answer are required', context.path)
+  }
+  const entry: FaqEntry = {
+    id: newId('faq'),
+    category: '',
+    question: { fr: '' },
+    answer: { fr: '' },
+    position: state.faq.length + 1,
+    isPublished: false,
+  }
+  applyFaqInput(context, entry, input)
+  state.faq.push(entry)
+  audit(context, 'faq.create', 'faq', entry.id, null, entry)
+  return clone(entry)
+})
+
+route('PATCH', '/admin/faq/:id', (context): FaqEntry => {
+  requireRole(context, FAQ_ROLES)
+  const entry = findFaq(context, context.params.id as string)
+  const before = clone(entry)
+  applyFaqInput(context, entry, (context.body ?? {}) as FaqEntryInput)
+  audit(context, 'faq.update', 'faq', entry.id, before, entry)
+  return clone(entry)
+})
+
+route('DELETE', '/admin/faq/:id', (context) => {
+  requireRole(context, FAQ_ROLES)
+  const entry = findFaq(context, context.params.id as string)
+  state.faq = sortFaqEntries(state.faq.filter((item) => item.id !== entry.id)).map(
+    (item, index) => ({ ...item, position: index + 1 }),
+  )
+  audit(context, 'faq.delete', 'faq', entry.id, entry, null)
+  return null
+})
+
+route('PUT', '/admin/faq/order', (context): FaqEntry[] => {
+  requireRole(context, FAQ_ROLES)
+  const { ids } = (context.body ?? {}) as Partial<{ ids: string[] }>
+  if (!Array.isArray(ids) || ids.length !== state.faq.length) {
+    fail(400, 'VALIDATION_ERROR', 'ids must list every FAQ entry exactly once', context.path)
+  }
+  const byId = new Map(state.faq.map((entry) => [entry.id, entry]))
+  if (new Set(ids).size !== ids.length || ids.some((id) => !byId.has(id))) {
+    fail(400, 'VALIDATION_ERROR', 'ids must list every FAQ entry exactly once', context.path)
+  }
+  const before = sortFaqEntries(state.faq).map((entry) => entry.id)
+  ids.forEach((id, index) => {
+    const entry = byId.get(id) as FaqEntry
+    entry.position = index + 1
+  })
+  state.faq = sortFaqEntries(state.faq)
+  audit(context, 'faq.reorder', 'faq', null, before, ids)
+  return clone(state.faq)
+})
+
+function findTicket(context: MockContext, id: string): SupportTicket {
+  const ticket = state.tickets.find((item) => item.id === id)
+  if (!ticket) fail(404, 'TICKET_NOT_FOUND', `Ticket ${id} not found`, context.path)
+  return ticket
+}
+
+route('GET', '/admin/support/tickets', (context): Paginated<SupportTicket> => {
+  requireRole(context, SUPPORT_ROLES)
+  const status = context.query.get('status')
+  if (status && !isTicketStatus(status)) {
+    fail(400, 'VALIDATION_ERROR', `Unknown status ${status}`, context.path)
+  }
+  const page = Math.max(1, Number(context.query.get('page') ?? 1))
+  const pageSize = Math.min(100, Math.max(1, Number(context.query.get('pageSize') ?? 20)))
+  const filtered = sortTickets(state.tickets).filter(
+    (ticket) => !status || ticket.status === (status as SupportTicketStatus),
+  )
+  const start = (page - 1) * pageSize
+  return {
+    items: clone(filtered.slice(start, start + pageSize)),
+    total: filtered.length,
+    page,
+    pageSize,
+  }
+})
+
+route('GET', '/admin/support/tickets/:id', (context): SupportTicket => {
+  requireRole(context, SUPPORT_ROLES)
+  return clone(findTicket(context, context.params.id as string))
+})
+
+route('POST', '/admin/support/tickets/:id/reply', (context): SupportTicket => {
+  requireRole(context, SUPPORT_ROLES)
+  const ticket = findTicket(context, context.params.id as string)
+  const { message } = (context.body ?? {}) as Partial<{ message: string }>
+  const body = typeof message === 'string' ? message.trim() : ''
+  if (!body) fail(400, 'VALIDATION_ERROR', 'message is required', context.path)
+  const next = ticketTransition(ticket.status, 'reply')
+  if (!next) fail(409, 'TICKET_CLOSED', 'A closed ticket cannot be answered', context.path)
+  ticket.messages.push({ from: 'support', body, at: now() })
+  ticket.status = next
+  ticket.updatedAt = now()
+  audit(context, 'support_ticket.reply', 'support_ticket', ticket.id, null, { status: next })
+  return clone(ticket)
+})
+
+route('POST', '/admin/support/tickets/:id/close', (context): SupportTicket => {
+  requireRole(context, SUPPORT_ROLES)
+  const ticket = findTicket(context, context.params.id as string)
+  const next = ticketTransition(ticket.status, 'close')
+  if (!next) fail(409, 'TICKET_CLOSED', 'The ticket is already closed', context.path)
+  const before = ticket.status
+  ticket.status = next
+  ticket.updatedAt = now()
+  audit(
+    context,
+    'support_ticket.close',
+    'support_ticket',
+    ticket.id,
+    { status: before },
+    { status: next },
+  )
+  return clone(ticket)
+})
 
 function stripQuery(path: string): string {
   const index = path.indexOf('?')

@@ -1,0 +1,85 @@
+[
+  {
+    "id": "tck_01HZX0T0000000000000000001",
+    "userId": "usr_01HZX0U0000000000000000011",
+    "userLabel": "Awa K. (+228 •• •• 41 02)",
+    "category": "coins",
+    "subject": "Recharge Flooz non créditée",
+    "status": "OPEN",
+    "messages": [
+      {
+        "from": "user",
+        "body": "Bonjour, j'ai rechargé 2 000 FCFA par Flooz ce matin (réf. FL-8831-2210) et je n'ai toujours pas mes pièces.",
+        "at": "2026-10-30T07:42:00.000Z"
+      }
+    ],
+    "createdAt": "2026-10-30T07:42:00.000Z",
+    "updatedAt": "2026-10-30T07:42:00.000Z"
+  },
+  {
+    "id": "tck_01HZX0T0000000000000000002",
+    "userId": "usr_01HZX0U0000000000000000012",
+    "userLabel": "kouassi.m@gmail.com",
+    "category": "playback",
+    "subject": "L'épisode 4 ne se lance pas",
+    "status": "OPEN",
+    "messages": [
+      {
+        "from": "user",
+        "body": "Sur « Mariage sous contrat », l'épisode 4 reste sur l'écran de chargement. Les autres marchent. Téléphone TECNO Spark, 4G.",
+        "at": "2026-10-29T19:10:00.000Z"
+      }
+    ],
+    "createdAt": "2026-10-29T19:10:00.000Z",
+    "updatedAt": "2026-10-29T19:10:00.000Z"
+  },
+  {
+    "id": "tck_01HZX0T0000000000000000003",
+    "userId": "usr_01HZX0U0000000000000000013",
+    "userLabel": "Invité 7f3a…c2",
+    "category": "account",
+    "subject": "Perdu mes épisodes après réinstallation",
+    "status": "ANSWERED",
+    "messages": [
+      {
+        "from": "user",
+        "body": "J'ai réinstallé l'application et mes épisodes débloqués ont disparu.",
+        "at": "2026-10-28T10:05:00.000Z"
+      },
+      {
+        "from": "support",
+        "body": "Bonjour, en mode invité les déblocages sont liés à l'installation. Si vous avez un reçu Google Play, envoyez-nous le numéro de commande et nous recréditons les pièces. Pour l'avenir, créez un compte depuis Profil → Se connecter.",
+        "at": "2026-10-28T11:30:00.000Z"
+      }
+    ],
+    "createdAt": "2026-10-28T10:05:00.000Z",
+    "updatedAt": "2026-10-28T11:30:00.000Z"
+  },
+  {
+    "id": "tck_01HZX0T0000000000000000004",
+    "userId": "usr_01HZX0U0000000000000000014",
+    "userLabel": "Nadia B. (+225 •• •• 77 19)",
+    "category": "other",
+    "subject": "Sous-titres en anglais ?",
+    "status": "CLOSED",
+    "messages": [
+      {
+        "from": "user",
+        "body": "Est-ce qu'il y aura des sous-titres en anglais sur Le Prince oublié ?",
+        "at": "2026-10-21T14:00:00.000Z"
+      },
+      {
+        "from": "support",
+        "body": "Oui, ils sont disponibles depuis hier sur les 10 premiers épisodes (icône sous-titres dans le lecteur). Bon visionnage !",
+        "at": "2026-10-22T08:15:00.000Z"
+      },
+      {
+        "from": "user",
+        "body": "Parfait, merci !",
+        "at": "2026-10-22T09:02:00.000Z"
+      }
+    ],
+    "createdAt": "2026-10-21T14:00:00.000Z",
+    "updatedAt": "2026-10-22T09:30:00.000Z"
+  }
+]

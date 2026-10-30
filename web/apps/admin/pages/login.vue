@@ -12,7 +12,9 @@ const api = useApi()
 const email = ref('')
 const password = ref('')
 const code = ref('')
+const rememberDevice = ref(false)
 const error = ref<string | null>(null)
+const notify = useNotify()
 
 const codeIsValid = computed(() => /^\d{6}$/.test(code.value))
 
@@ -30,11 +32,23 @@ function describeError(err: unknown, fallbackKey: string): string {
   return t('auth.errors.generic', { status: '?' })
 }
 
+async function goToApp(): Promise<void> {
+  password.value = ''
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+  await navigateTo(redirect.startsWith('/') ? redirect : '/', { replace: true })
+}
+
 async function submitCredentials(): Promise<void> {
   error.value = null
   try {
-    await auth.login(email.value.trim(), password.value)
+    const step = await auth.login(email.value.trim(), password.value)
     code.value = ''
+    rememberDevice.value = false
+    if (step === 'done') {
+      // Trusted device (B-13+): the server accepted the device token, no code needed.
+      notify.info(t('auth.trustedDeviceWelcome'))
+      await goToApp()
+    }
   } catch (err) {
     error.value = describeError(err, 'auth.errors.invalidCredentials')
   }
@@ -44,10 +58,8 @@ async function submitCode(): Promise<void> {
   if (!codeIsValid.value) return
   error.value = null
   try {
-    await auth.verifyTotp(code.value)
-    password.value = ''
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    await navigateTo(redirect.startsWith('/') ? redirect : '/', { replace: true })
+    await auth.verifyTotp(code.value, rememberDevice.value)
+    await goToApp()
   } catch (err) {
     error.value = describeError(err, 'auth.errors.invalidTotp')
     code.value = ''
@@ -179,6 +191,14 @@ function backToCredentials(): void {
         <div class="flex flex-col gap-1.5">
           <label for="totp" class="text-sm font-medium">{{ t('auth.totpCode') }}</label>
           <InputOtp id="totp" v-model="code" :length="6" integer-only autofocus />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-2">
+            <Checkbox v-model="rememberDevice" input-id="remember-device" binary />
+            <label for="remember-device" class="text-sm">{{ t('auth.rememberDevice') }}</label>
+          </div>
+          <small class="pl-7 text-xs text-muted-color">{{ t('auth.rememberDeviceHint') }}</small>
         </div>
 
         <Button

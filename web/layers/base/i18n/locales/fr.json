@@ -35,7 +35,11 @@
       "EDITOR": "Éditeur",
       "MONETIZATION": "Monétisation",
       "SUPPORT": "Support"
-    }
+    },
+    "rememberDevice": "Se souvenir de cet appareil pendant 30 jours",
+    "rememberDeviceHint": "À ne cocher que sur un ordinateur personnel : la prochaine connexion ne demandera pas de code. Révocable depuis « Mon compte ».",
+    "trustedDeviceWelcome": "Appareil de confiance reconnu : connexion sans code.",
+    "userMenu": "Menu utilisateur"
   },
   "nav": {
     "catalogue": "Catalogue",
@@ -50,7 +54,9 @@
     "notifications": "Notifications",
     "dashboards": "Tableaux de bord",
     "rights": "Droits et contrats",
-    "administration": "Administration"
+    "administration": "Administration",
+    "helpCenter": "Centre d'aide",
+    "openTickets": "{count} ticket ouvert | {count} tickets ouverts"
   },
   "breadcrumb": {
     "label": "Fil d'Ariane",
@@ -67,7 +73,19 @@
     "search": "Rechercher",
     "remove": "Retirer",
     "clear": "Tout effacer",
-    "close": "Fermer"
+    "close": "Fermer",
+    "refresh": "Actualiser",
+    "copy": "Copier",
+    "copied": "Copié",
+    "never": "Jamais",
+    "none": "Aucun",
+    "yes": "Oui",
+    "no": "Non",
+    "send": "Envoyer",
+    "optional": "facultatif",
+    "actions": "Actions",
+    "all": "Tous",
+    "status": "Statut"
   },
   "errors": {
     "title": "Erreur",
@@ -103,7 +121,11 @@
     "passwordCase": "Le mot de passe doit contenir des majuscules et des minuscules.",
     "passwordDigit": "Le mot de passe doit contenir au moins un chiffre.",
     "rowKey": "Clé invalide : minuscules, chiffres, « - » ou « _ », de 2 à 80 caractères.",
-    "invalidDate": "Date invalide."
+    "invalidDate": "Date invalide.",
+    "deepLink": "Lien invalide : il doit commencer par drama:// (ex. drama://series/{id}).",
+    "positiveInteger": "Saisissez un nombre entier supérieur ou égal à 1.",
+    "translationPair": "Une traduction doit comporter la question et la réponse.",
+    "bodyTooLong": "Le message dépasse {max} caractères."
   },
   "series": {
     "title": "Catalogue — séries",
@@ -541,32 +563,9 @@
       "policy": "Au moins {min} caractères, avec majuscules, minuscules et chiffres."
     },
     "accounts": {
-      "create": "Nouveau compte",
-      "createAction": "Créer le compte",
-      "edit": "Modifier le compte",
-      "columns": {
-        "email": "E-mail",
-        "displayName": "Nom affiché",
-        "role": "Rôle",
-        "active": "Actif",
-        "totp": "Double authentification",
-        "lastLogin": "Dernière connexion"
-      },
-      "firstLoginHint": "À la première connexion, la personne devra enrôler la double authentification (TOTP).",
-      "summary": "{count} compte, {active} actif | {count} comptes, {active} actifs",
-      "loadError": "Impossible de charger les comptes.",
-      "you": "vous",
-      "active": "Actif",
-      "inactive": "Désactivé",
-      "totpEnrolled": "Enrôlée",
-      "totpPending": "À enrôler",
-      "neverLoggedIn": "Jamais connecté",
-      "resetTotp": "Réinitialiser la double authentification",
-      "resetTotpConfirm": "Réinitialiser la double authentification de {email} ? Un nouvel enrôlement sera demandé à sa prochaine connexion.",
-      "resetTotpAction": "Réinitialiser",
-      "resetPassword": "Réinitialiser le mot de passe",
-      "resetPasswordHint": "Nouveau mot de passe pour {email}. Il sera affiché une seule fois après validation.",
-      "resetPasswordAction": "Réinitialiser le mot de passe"
+      "revokeDevices": "Révoquer les appareils de confiance",
+      "revokeDevicesConfirm": "Révoquer tous les appareils de confiance de {email} ? Un code sera demandé à sa prochaine connexion.",
+      "devicesRevoked": "Appareils de confiance révoqués."
     },
     "lockout": {
       "selfDeactivate": "Vous ne pouvez pas désactiver votre propre compte.",
@@ -676,9 +675,9 @@
     "title": "Tableaux de bord",
     "subtitle": "Utilisateurs, visionnage et top séries (B-11 v0). Chiffres calculés par le serveur.",
     "period": {
-      "label": "Période",
       "7": "7 derniers jours",
-      "30": "30 derniers jours"
+      "30": "30 derniers jours",
+      "label": "Période"
     },
     "refresh": "Actualiser",
     "generatedAt": "Calculé le {date}",
@@ -733,5 +732,259 @@
     "toc": "Sommaire",
     "backToTop": "Haut de page",
     "open": "Ouvrir le guide"
+  },
+  "account": {
+    "title": "Mon compte",
+    "subtitle": "Votre profil et les appareils autorisés à se connecter sans code.",
+    "profile": "Profil",
+    "displayName": "Nom affiché",
+    "email": "Adresse e-mail",
+    "role": "Rôle",
+    "devices": {
+      "title": "Appareils de confiance",
+      "hint": "Un appareil de confiance passe l'étape du code pendant 30 jours. Révoquez tout appareil que vous ne reconnaissez pas.",
+      "empty": "Aucun appareil de confiance. Cochez « Se souvenir de cet appareil » à votre prochaine connexion pour en ajouter un.",
+      "current": "Cet appareil",
+      "thisBrowser": "Ce navigateur possède un jeton d'appareil de confiance.",
+      "thisBrowserUnknown": "Ce navigateur possède un jeton, mais l'API n'indique pas à quel appareil il correspond : révoquez-le dans la liste ci-dessous.",
+      "columns": {
+        "label": "Appareil",
+        "createdAt": "Autorisé le",
+        "lastUsedAt": "Dernière utilisation",
+        "expiresAt": "Expire le"
+      },
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer l'appareil « {label} » ? Il devra saisir un code à sa prochaine connexion.",
+      "revokeThis": "Révoquer cet appareil",
+      "revokeThisConfirm": "Ce navigateur demandera de nouveau un code à la prochaine connexion. Continuer ?",
+      "revoked": "Appareil révoqué.",
+      "forgotten": "Ce navigateur n'est plus un appareil de confiance.",
+      "loadError": "Impossible de charger les appareils.",
+      "unknownLabel": "Appareil inconnu"
+    }
+  },
+  "campaigns": {
+    "title": "Notifications push",
+    "subtitle": "Campagnes ciblées : tous les utilisateurs, par pays, abonnés d'une série ou inactifs (B-10). Les préférences « offres » et le plafond quotidien sont appliqués par le serveur.",
+    "restricted": "Les campagnes sont réservées aux rôles Monétisation et Administrateur.",
+    "create": "Nouvelle campagne",
+    "edit": "Modifier la campagne",
+    "summary": "{count} campagne | {count} campagnes",
+    "loadError": "Impossible de charger les campagnes.",
+    "empty": {
+      "title": "Aucune campagne",
+      "hint": "Créez une campagne, estimez son audience puis envoyez-la ou programmez-la."
+    },
+    "filters": {
+      "status": "Statut",
+      "all": "Tous les statuts"
+    },
+    "columns": {
+      "title": "Campagne",
+      "segment": "Cible",
+      "status": "Statut",
+      "audience": "Audience",
+      "sent": "Envoyés",
+      "date": "Date"
+    },
+    "status": {
+      "DRAFT": "Brouillon",
+      "SCHEDULED": "Programmée",
+      "SENDING": "Envoi en cours",
+      "SENT": "Envoyée",
+      "CANCELLED": "Annulée"
+    },
+    "segments": {
+      "types": {
+        "ALL": "Tous les utilisateurs",
+        "COUNTRY": "Par pays",
+        "SERIES_FOLLOWERS": "Abonnés d'une série",
+        "INACTIVE": "Inactifs depuis X jours"
+      },
+      "summary": {
+        "ALL": "Tous les utilisateurs",
+        "COUNTRY": "Pays : {countries}",
+        "SERIES_FOLLOWERS": "Abonnés de {series}",
+        "INACTIVE": "Inactifs depuis {days} jour | Inactifs depuis {days} jours"
+      }
+    },
+    "form": {
+      "title": "Titre de la notification",
+      "titleHint": "Court et explicite : c'est la première ligne vue sur le téléphone.",
+      "body": "Message",
+      "bodyCounter": "{remaining} caractère restant | {remaining} caractères restants",
+      "bodyOver": "Dépassement de {over} caractère | Dépassement de {over} caractères",
+      "deepLink": "Lien d'ouverture",
+      "deepLinkHint": "Facultatif. Écran ouvert au toucher de la notification ; vide = accueil.",
+      "deepLinkSeries": "Choisir une série…",
+      "deepLinkUseSeries": "Utiliser cette série",
+      "segment": "Cible",
+      "countries": "Pays",
+      "series": "Série suivie",
+      "inactiveDays": "Jours d'inactivité",
+      "inactiveDaysHint": "Utilisateurs sans aucune lecture depuis ce nombre de jours (1 à 365).",
+      "schedule": "Programmer l'envoi",
+      "scheduleHint": "Facultatif, heure de Lomé. Vide = envoi immédiat au moment de « Envoyer ».",
+      "scheduleClear": "Effacer la date"
+    },
+    "actions": {
+      "estimate": "Estimer l'audience",
+      "send": "Envoyer",
+      "schedule": "Programmer",
+      "cancel": "Annuler l'envoi",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "details": "Détails",
+      "duplicate": "Dupliquer"
+    },
+    "estimate": {
+      "result": "Audience estimée : {count} utilisateur | Audience estimée : {count} utilisateurs",
+      "pending": "Estimation…",
+      "failed": "Estimation impossible."
+    },
+    "sendConfirm": {
+      "header": "Envoyer la campagne",
+      "headerScheduled": "Programmer la campagne",
+      "message": "Envoyer « {title} » maintenant à environ {count} utilisateurs ? L'envoi ne peut pas être annulé une fois démarré.",
+      "messageScheduled": "Programmer « {title} » le {date} (heure de Lomé) pour environ {count} utilisateurs ? Vous pourrez l'annuler jusqu'à cette date.",
+      "estimating": "Estimation de l'audience en cours…"
+    },
+    "cancelConfirm": {
+      "header": "Annuler l'envoi",
+      "message": "Annuler la campagne programmée « {title} » ? Elle ne sera pas envoyée."
+    },
+    "deleteConfirm": {
+      "header": "Supprimer la campagne",
+      "message": "Supprimer le brouillon « {title} » ?"
+    },
+    "toasts": {
+      "created": "Campagne créée.",
+      "saved": "Campagne enregistrée.",
+      "sent": "Envoi démarré.",
+      "scheduled": "Campagne programmée.",
+      "cancelled": "Campagne annulée.",
+      "deleted": "Campagne supprimée.",
+      "saveFailed": "Enregistrement impossible.",
+      "actionFailed": "Action impossible."
+    },
+    "detail": {
+      "title": "Détail de la campagne",
+      "body": "Message",
+      "deepLink": "Lien d'ouverture",
+      "noDeepLink": "Accueil de l'application",
+      "audience": "Audience estimée",
+      "sent": "Notifications envoyées",
+      "deliveryRate": "Taux d'envoi",
+      "createdBy": "Créée par",
+      "scheduledAt": "Programmée le",
+      "timeline": "Chronologie",
+      "preview": "Aperçu sur le téléphone"
+    },
+    "timeline": {
+      "created": "Créée",
+      "scheduled": "Programmée pour le",
+      "sending": "Envoi démarré",
+      "sent": "Envoi terminé",
+      "cancelled": "Annulée"
+    },
+    "sendingHint": "Envoi par lots en cours : les compteurs se mettent à jour automatiquement."
+  },
+  "helpCenter": {
+    "title": "Centre d'aide",
+    "subtitle": "Questions fréquentes affichées dans l'application et boîte de réception du support (M-53).",
+    "restricted": "Le centre d'aide est réservé aux rôles Éditeur, Support et Administrateur.",
+    "tabs": {
+      "faq": "FAQ",
+      "support": "Support"
+    },
+    "faq": {
+      "summary": "{count} question | {count} questions",
+      "published": "{count} publiée | {count} publiées",
+      "create": "Nouvelle question",
+      "edit": "Modifier la question",
+      "delete": "Supprimer la question",
+      "deleteConfirm": "Supprimer « {question} » ?",
+      "loadError": "Impossible de charger la FAQ.",
+      "empty": {
+        "title": "Aucune question",
+        "hint": "Ajoutez les questions fréquentes de vos utilisateurs ; seules les questions publiées apparaissent dans l'application."
+      },
+      "emptyCategory": "Aucune question dans cette catégorie.",
+      "reorderHint": "Glissez les lignes pour changer l'ordre d'affichage dans la catégorie.",
+      "columns": {
+        "question": "Question",
+        "languages": "Langues",
+        "published": "Publiée"
+      },
+      "form": {
+        "category": "Catégorie",
+        "question": "Question",
+        "answer": "Réponse",
+        "languageTabs": "Langue",
+        "frenchRequired": "Le français est obligatoire ; les autres langues reprennent le français si elles sont vides.",
+        "published": "Publiée dans l'application"
+      },
+      "preview": {
+        "title": "Aperçu dans l'application",
+        "language": "Langue affichée",
+        "empty": "Aucune question publiée dans cette langue.",
+        "fallback": "Repli sur le français",
+        "hint": "Ce que l'application reçoit pour la langue choisie (GET /help/faq)."
+      },
+      "toasts": {
+        "created": "Question créée.",
+        "saved": "Question enregistrée.",
+        "deleted": "Question supprimée.",
+        "reordered": "Ordre enregistré.",
+        "published": "Question publiée.",
+        "unpublished": "Question dépubliée.",
+        "saveFailed": "Enregistrement impossible."
+      },
+      "categories": {
+        "account": "Compte",
+        "coins": "Pièces",
+        "vip": "VIP",
+        "playback": "Lecture",
+        "payment": "Paiement",
+        "content": "Contenu",
+        "other": "Autre"
+      }
+    },
+    "support": {
+      "inbox": "Boîte de réception",
+      "summary": "{count} ticket | {count} tickets",
+      "loadError": "Impossible de charger les tickets.",
+      "empty": "Aucun ticket pour ce filtre.",
+      "selectHint": "Sélectionnez un ticket pour lire la conversation.",
+      "filters": {
+        "status": "Statut",
+        "all": "Tous les tickets"
+      },
+      "status": {
+        "OPEN": "Ouvert",
+        "ANSWERED": "Répondu",
+        "CLOSED": "Fermé"
+      },
+      "from": {
+        "user": "Utilisateur",
+        "support": "Support"
+      },
+      "ticket": "Ticket",
+      "user": "Utilisateur",
+      "category": "Catégorie",
+      "createdAt": "Ouvert le",
+      "updatedAt": "Mis à jour le",
+      "reply": "Votre réponse",
+      "replyPlaceholder": "Répondez à l'utilisateur : la réponse lui est envoyée en notification et dans son historique.",
+      "send": "Envoyer la réponse",
+      "close": "Fermer le ticket",
+      "closeConfirm": "Fermer le ticket « {subject} » ? L'utilisateur ne pourra plus y répondre.",
+      "closed": "Ticket fermé : plus de réponse possible.",
+      "toasts": {
+        "replied": "Réponse envoyée.",
+        "closed": "Ticket fermé.",
+        "failed": "Action impossible."
+      }
+    }
   }
 }

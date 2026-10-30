@@ -1,0 +1,110 @@
+[
+  {
+    "id": "faq_01HZX0F0000000000000000001",
+    "category": "account",
+    "question": {
+      "fr": "Puis-je regarder sans créer de compte ?",
+      "en": "Can I watch without creating an account?",
+      "es": "¿Puedo ver sin crear una cuenta?",
+      "pt": null
+    },
+    "answer": {
+      "fr": "Oui. L'application démarre en mode invité : vos épisodes gratuits et vos pièces sont liés à votre téléphone. Créez un compte (téléphone ou Google) pour les retrouver sur un autre appareil.",
+      "en": "Yes. The app starts in guest mode: your free episodes and coins are tied to your phone. Create an account (phone or Google) to keep them on another device.",
+      "es": "Sí. La aplicación empieza en modo invitado: tus episodios gratuitos y tus monedas están vinculados a tu teléfono. Crea una cuenta (teléfono o Google) para recuperarlos en otro dispositivo.",
+      "pt": null
+    },
+    "position": 1,
+    "isPublished": true
+  },
+  {
+    "id": "faq_01HZX0F0000000000000000002",
+    "category": "account",
+    "question": {
+      "fr": "J'ai changé de téléphone, comment retrouver mes pièces ?",
+      "en": "I changed phones, how do I get my coins back?",
+      "es": null,
+      "pt": null
+    },
+    "answer": {
+      "fr": "Connectez-vous avec le même numéro ou le même compte Google : votre solde et votre historique sont rattachés à votre compte, pas au téléphone.",
+      "en": "Sign in with the same phone number or Google account: your balance and history belong to your account, not to the phone.",
+      "es": null,
+      "pt": null
+    },
+    "position": 2,
+    "isPublished": true
+  },
+  {
+    "id": "faq_01HZX0F0000000000000000003",
+    "category": "coins",
+    "question": {
+      "fr": "Comment acheter des pièces ?",
+      "en": "How do I buy coins?",
+      "es": "¿Cómo compro monedas?",
+      "pt": "Como compro moedas?"
+    },
+    "answer": {
+      "fr": "Dans l'application, ouvrez « Pièces » puis choisissez un pack (Google Play). Depuis le site de recharge, payez par Mobile Money (Orange, MTN, Moov, Wave) : les pièces arrivent en quelques secondes.",
+      "en": "In the app, open “Coins” and pick a pack (Google Play). On the top-up website, pay with Mobile Money (Orange, MTN, Moov, Wave): coins arrive within seconds.",
+      "es": "En la aplicación, abre «Monedas» y elige un paquete (Google Play). En el sitio de recarga, paga con Mobile Money (Orange, MTN, Moov, Wave): las monedas llegan en segundos.",
+      "pt": "Na aplicação, abra «Moedas» e escolha um pacote (Google Play). No site de recarga, pague com Mobile Money (Orange, MTN, Moov, Wave): as moedas chegam em segundos."
+    },
+    "position": 3,
+    "isPublished": true
+  },
+  {
+    "id": "faq_01HZX0F0000000000000000004",
+    "category": "coins",
+    "question": {
+      "fr": "J'ai payé mais je n'ai pas reçu mes pièces.",
+      "en": null,
+      "es": null,
+      "pt": null
+    },
+    "answer": {
+      "fr": "Le crédit peut prendre jusqu'à 5 minutes. Passé ce délai, envoyez-nous la référence de la transaction depuis « Nous contacter » : nous vérifions et créditons manuellement si besoin.",
+      "en": null,
+      "es": null,
+      "pt": null
+    },
+    "position": 4,
+    "isPublished": true
+  },
+  {
+    "id": "faq_01HZX0F0000000000000000005",
+    "category": "vip",
+    "question": {
+      "fr": "Que comprend l'abonnement VIP ?",
+      "en": "What does the VIP subscription include?",
+      "es": null,
+      "pt": null
+    },
+    "answer": {
+      "fr": "Tous les épisodes débloqués sans pièces, pas de publicité et les nouveautés en avant-première pendant la durée de l'abonnement.",
+      "en": "Every episode unlocked without coins, no ads and early access to new releases for the duration of the subscription.",
+      "es": null,
+      "pt": null
+    },
+    "position": 5,
+    "isPublished": false
+  },
+  {
+    "id": "faq_01HZX0F0000000000000000006",
+    "category": "playback",
+    "question": {
+      "fr": "La vidéo se coupe ou met du temps à charger.",
+      "en": "The video stops or takes long to load.",
+      "es": null,
+      "pt": null
+    },
+    "answer": {
+      "fr": "L'application s'adapte à votre connexion. En cas de coupures : baissez la qualité dans le lecteur (icône engrenage), fermez les autres applications, ou téléchargez l'épisode en Wi-Fi pour le regarder hors ligne.",
+      "en": "The app adapts to your connection. If it keeps stopping: lower the quality in the player (gear icon), close other apps, or download the episode over Wi-Fi to watch offline.",
+      "es": null,
+      "pt": null
+    },
+    "position": 6,
+    "isPublished": true
+  }
+]

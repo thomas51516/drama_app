@@ -3,11 +3,11 @@
 Espace de travail npm (workspaces) regroupant les applications web du projet, conformément au
 cahier des charges (§11) : **une base Nuxt 3 commune, deux applications distinctes**.
 
-| Dossier         | Rôle                                                                                                                                                                                                            | Tickets                                         |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `layers/base`   | Couche Nuxt partagée : Tailwind CSS, PrimeVue (thème Aura), Pinia, i18n (FR par défaut), client API typé `useApi()`, store d'authentification, layouts et composants de mise en page, fixtures de démonstration | S03-WEB-01                                      |
-| `apps/admin`    | Back-office (comptes internes, JWT + TOTP obligatoire) : catalogue B-01, épisodes et upload B-02, sous-titres B-03, mise en avant B-05, administration B-13                                                     | S03-WEB-01 à 03, S04-WEB-01 à 03, S05-WEB-01/02 |
-| `apps/recharge` | Site de recharge mobile money — emplacement réservé, créé au Sprint 9                                                                                                                                           | S09-WEB-*                                       |
+| Dossier         | Rôle                                                                                                                                                                                                                          | Tickets                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `layers/base`   | Couche Nuxt partagée : Tailwind CSS, PrimeVue (thème Aura), Pinia, i18n (FR par défaut), client API typé `useApi()`, store d'authentification, layouts et composants de mise en page, fixtures de démonstration               | S03-WEB-01                                                            |
+| `apps/admin`    | Back-office (comptes internes, JWT + TOTP obligatoire, appareil de confiance) : catalogue B-01, épisodes et upload B-02, sous-titres B-03, mise en avant B-05, notifications B-10, centre d'aide B-03bis, administration B-13 | S03-WEB-01 à 03, S04-WEB-01 à 03, S05-WEB-01/02, B-13+, B-10, B-03bis |
+| `apps/recharge` | Site de recharge mobile money — emplacement réservé, créé au Sprint 9                                                                                                                                                         | S09-WEB-*                                                             |
 
 ## Versions retenues
 
@@ -65,8 +65,11 @@ web/
 │   ├── assets/css/main.css  # @import "tailwindcss" + plugin PrimeUI
 │   ├── composables/         # useApi, useCatalogueApi (B-01/B-02), useSubtitlesApi (B-03), useFeaturedApi (B-05),
 │   │                        # useScheduleApi (B-04), useStatsApi (B-11), useAdministrationApi (B-13),
-│   │                        # useNotify (toasts), useMediaUrl (clés → URL CDN), useEpisodeUploads, usePosterUpload
-│   ├── stores/auth.ts       # login(), verifyTotp(), fetchMe(), logout()
+│   │                        # useAccountApi (appareils de confiance), useCampaignsApi (B-10),
+│   │                        # useHelpCenterApi (FAQ, tickets), useNotify (toasts), useMediaUrl, useEpisodeUploads,
+│   │                        # usePosterUpload
+│   ├── stores/auth.ts       # login() (jeton d'appareil), verifyTotp(code, rememberDevice), fetchMe(), logout(),
+│   │                        # forgetDevice() ; stores/support-inbox.ts (badge des tickets ouverts)
 │   ├── middleware/auth.global.ts
 │   ├── layouts/             # default (shell + Toast + ConfirmDialog), auth (page de connexion)
 │   ├── components/layout/   # AppSidebar, AppTopbar, PageHeader (fil d'Ariane), ComingSoon, Forbidden
@@ -80,14 +83,19 @@ web/
 │   │                        # SeriesListEditor, HomePreview
 │   ├── components/administration/ # AccountsPanel, AccountCreateDialog, AccountEditDialog,
 │   │                        # PasswordResetDialog, SecretRevealDialog, AuditLogPanel, AuditDiff
+│   ├── components/account/  # TrustedDevicesPanel (B-13+)
+│   ├── components/campaigns/# CampaignDialog, CampaignDetailDrawer, CampaignStatusTag (B-10)
+│   ├── components/help-center/ # FaqPanel, FaqEntryDialog, FaqPreview, SupportInbox (B-03bis)
 │   ├── i18n/locales/        # fr.json (référence), en.json
-│   ├── mocks/               # index.ts (API simulée avec état), assets.ts, fixtures JSON (dont stats.json)
+│   ├── mocks/               # index.ts (API simulée avec état), assets.ts, fixtures JSON (stats, campaigns,
+│   │                        # faq, tickets…)
 │   ├── types/api.ts         # contrats de l'API admin (= docs/api/admin-contract-v1.md + section back-office
-│   │                        # de public-contract-v1.2.md)
+│   │                        # de public-contract-v1.2.md + docs/api/contract-v1.3-sprint5.md)
 │   ├── utils/               # ApiError, upload-queue, upload-transport, polling, series-form,
 │   │                        # subtitles, featured, accounts, audit-diff, schedule (fuseau, calendrier,
 │   │                        # sortie quotidienne), stats (tuiles, taux), markdown (aide), countries,
-│   │                        # format, episode-files, registre des modules B-01…B-13
+│   │                        # format, episode-files, campaigns (B-10), help-center (FAQ, tickets),
+│   │                        # registre des modules B-01…B-13 (+ B-03bis, rôles, badge)
 │   └── tests/
 ├── docs/guide-back-office.md # guide v1 de l'équipe éditoriale (S06-WEB-02), rendu sur /help
 └── apps/
@@ -97,7 +105,8 @@ web/
     │   ├── error.vue        # erreurs fatales (404 de route…)
     │   ├── pages/           # login, index (→ /series), series/{index,new,[id]/index,[id]/episodes},
     │   │                    # episodes/index et subtitles/index (choix de la série), schedule (B-04),
-    │   │                    # featured (B-05), dashboard (B-11), administration (B-13), help (guide),
+    │   │                    # featured (B-05), campaigns (B-10), help-center (B-03bis), dashboard (B-11),
+    │   │                    # administration (B-13), account (Mon compte), help (guide),
     │   │                    # [module] (« Module à venir »)
     │   └── tests/
     └── recharge/README.md
@@ -119,6 +128,25 @@ web/
    vers `/login?redirect=…`.
 
 Les contrats sont ceux de `docs/api/admin-contract-v1.md`, retranscrits dans `layers/base/types/api.ts`.
+
+### Appareil de confiance (B-13+, contrat v1.3)
+
+- Sur l'écran du code, la case **« Se souvenir de cet appareil pendant 30 jours »** (décochée par
+  défaut) envoie `rememberDevice: true` à `POST /admin/auth/totp/verify` ; le `deviceToken` reçu est
+  conservé dans le cookie `drama_admin_device` (`SameSite=Strict`, `Secure` hors `nuxt dev`, 30 jours).
+- `POST /admin/auth/login` reçoit ce `deviceToken` ; si le serveur répond `status: "ok"`, le store
+  ouvre la session directement (`login()` renvoie `'done'`) et la page de connexion saute l'étape du
+  code. Un jeton invalide est ignoré par le serveur : le flux TOTP habituel reprend, le cookie n'est
+  pas touché (il peut appartenir à un autre compte sur le même navigateur).
+- **Déconnexion et 401 (dont `ADMIN_TOKEN_REVOKED`) ne suppriment pas le cookie d'appareil** : la
+  déconnexion n'est pas une révocation. Seul `forgetDevice()` le retire.
+- `/account` (« Mon compte », menu utilisateur de la barre du haut) liste `GET /admin/auth/devices`
+  (étiquette, dates, expiration, étiquette « Cet appareil » quand l'API renvoie `current: true`),
+  **Révoquer** (`DELETE /admin/auth/devices/{id}`) et **Révoquer cet appareil** (révoque l'appareil
+  courant si l'API l'identifie, puis vide le cookie). Administration → Comptes propose
+  `POST /admin/accounts/{id}/revoke-devices` ; la réinitialisation TOTP révoque aussi tout.
+- Mock : jetons aléatoires liés au compte, 30 jours, `current` calculé, réinitialisation TOTP et
+  `revoke-devices` purgent la liste.
 
 ## Catalogue et épisodes (S03-WEB-03, S04-WEB-01)
 
@@ -233,6 +261,51 @@ Contrat : section « Back-office (B-04, B-11 v0) » de `docs/api/public-contract
   rendu par `utils/markdown.ts` (mini-rendu maison : titres avec ancres et sommaire, listes,
   tableaux, citations, code ; la source est échappée, seules les balises générées sont injectées).
 
+### Notifications push (B-10, contrat v1.3)
+
+- `/campaigns` (barre latérale « Notifications »), réservé à MONETIZATION et ADMIN (les autres rôles
+  voient « Droits insuffisants » sans appel API ; l'entrée est masquée du menu).
+- Liste `GET /admin/campaigns` triée (envoyées / programmées / créées), étiquettes de statut
+  (Brouillon, Programmée, Envoi en cours, Envoyée, Annulée) avec compteurs cliquables qui filtrent
+  (filtre dans l'URL), audience, envoyés, date.
+- Création / édition (brouillon et programmée) : titre (60), **message avec compteur 178 caractères**
+  (comptage en points de code), lien d'ouverture facultatif validé (`drama://…`) avec un sélecteur de
+  série produisant `drama://series/{id}`, cible `ALL | COUNTRY (pays) | SERIES_FOLLOWERS (série) |
+INACTIVE (jours 1-365)` avec champs conditionnels, date d'envoi facultative saisie en heure de Lomé
+  (`toPickerDate` / `fromPickerDate`). Le payload `segment` ne contient que le champ du type choisi
+  (`segmentFromForm()`).
+- « Estimer l'audience » (`POST /estimate`) ; « Envoyer » / « Programmer » relance l'estimation puis
+  demande confirmation avec le nombre d'utilisateurs ; `POST /send` → `SENDING` (ou `SCHEDULED` si la
+  date est future) ; « Annuler l'envoi » (`POST /cancel`) pour les programmées ; suppression des
+  brouillons. Pendant un envoi, la liste est rechargée toutes les 5 s (`createPoller`).
+- Tiroir de détail : aperçu façon notification Android, cible, lien, audience, envoyés (+ taux),
+  créée par, chronologie (créée → programmée → envoi démarré → terminé, ou annulée) calculée par
+  `campaignTimeline()` à partir des champs du contrat et des horodatages facultatifs
+  (`sentAt`, `cancelledAt`, `updatedAt`) si le backend les fournit.
+- Mock : audience factice par pays / série / inactivité, `SENDING → SENT` après
+  `mockTiming.campaignSendMs` (93 % de l'audience), programmées échues déclenchées à la lecture,
+  409 sur les transitions interdites.
+
+### Centre d'aide (B-03bis, M-53, contrat v1.3)
+
+- `/help-center` (barre latérale « Centre d'aide », badge = tickets ouverts pour SUPPORT/ADMIN,
+  actualisé au montage et après chaque réponse / fermeture, `stores/support-inbox.ts`).
+- **Onglet FAQ** (EDITOR, SUPPORT, ADMIN) : entrées `GET /admin/faq` regroupées par catégorie fixe
+  (`account`, `coins`, `vip`, `playback`, `payment`, `content`, `other`, titres en 4 langues
+  alignés sur le backend dans `utils/help-center.ts`), glisser-déposer dans une catégorie → `PUT /admin/faq/order` avec l'ordre
+  global recalculé (`reorderWithinCategory()`), interrupteur « Publiée », création / édition avec
+  question et réponse en FR (obligatoire), EN, ES, PT (traductions vides envoyées `null`, paire
+  question + réponse exigée), suppression. **Aperçu téléphone** calculé localement par `faqPreview()`
+  avec les mêmes règles que `GET /help/faq?lang` (publiées, repli français, catégories vides
+  masquées), sélecteur de langue et étiquette « Repli sur le français ».
+- **Onglet Support** (SUPPORT, ADMIN) : `GET /admin/support/tickets?status&page` (20 par page,
+  ouverts par défaut, filtre dans l'URL), conversation (bulles utilisateur / support), réponse
+  (`POST /reply`, 2 000 caractères) qui passe le ticket en `ANSWERED`, fermeture avec confirmation
+  (`POST /close`, définitive : plus de réponse). Machine à états pure et testée
+  (`ticketTransition()`).
+- Mock : FAQ et tickets avec état, `GET /help/faq` public servi par `faqPreview()`, 403 pour les
+  rôles non autorisés, 409 sur un ticket fermé.
+
 ### Administration (S05-WEB-01, B-13)
 
 - `/administration`, réservé au rôle ADMIN (les autres voient « Droits insuffisants » sans appel API).
@@ -243,6 +316,7 @@ Contrat : section « Back-office (B-04, B-11 v0) » de `docs/api/public-contract
   un bouton Copier. Garde anti-verrouillage (`utils/accounts.ts`) : l'utilisateur courant ne peut ni se
   désactiver ni se retirer le rôle ADMIN (interrupteur désactivé, avertissement, et l'erreur 4xx du
   serveur est affichée si elle survient quand même).
+- **Révoquer les appareils de confiance** d'un compte (`POST /admin/accounts/{id}/revoke-devices`).
 - **Journal d'audit** : table paginée (20 par page, `GET /admin/audit-logs`), filtres auteur, action
   (recherche), type de cible, identifiant de cible et période ; ligne dépliable montrant la différence
   ancienne/nouvelle valeur (clés modifiées surlignées, JSON brut à la demande), `utils/audit-diff.ts`.
@@ -255,7 +329,9 @@ rechargement) : filtres, pagination, création/édition, rôles (403), publicati
 pour l'aperçu, SRT converti), bannières et rangées avec un aperçu calculé comme le `GET /home` public
 (pays, dates, séries publiées), comptes internes reliés au flux de connexion (compte désactivé refusé,
 réinitialisation TOTP → nouvel enrôlement, compte créé qui peut se connecter avec son mot de passe)
-et journal d'audit alimenté par chaque mutation du mock. Les URL d'upload sont des `mock://upload/...`
+et journal d'audit alimenté par chaque mutation du mock, appareils de confiance (connexion sans code),
+campagnes push (estimation, envoi simulé, programmation, annulation), FAQ (avec le `GET /help/faq`
+public) et tickets de support. Les URL d'upload sont des `mock://upload/...`
 traitées par `mockUploadTransport` (progression simulée, fichier conservé pour l'aperçu des affiches) ;
 `POST /uploaded` fait passer l'épisode `UPLOADED` → `PROCESSING` (1,5 s) → `READY` (4 s), avec un
 manifeste HLS pointant vers les échantillons `hls/samples/epN/` de `infra/media-samples` dans MinIO,

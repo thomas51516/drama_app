@@ -90,6 +90,9 @@ describe('markdown renderer (help page)', () => {
       'Planification des sorties',
       'Tableau de bord',
       'Comptes internes et journal d’audit'.replace('’', "'"),
+      'Appareil de confiance (connexion sans code pendant 30 jours)',
+      'Notifications push (campagnes)',
+      'Centre d’aide (FAQ et support)'.replace('’', "'"),
       'Erreurs fréquentes',
     ])
     expect(html).toContain('<table>')

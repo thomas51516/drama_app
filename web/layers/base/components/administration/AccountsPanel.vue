@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { AdminAccount } from '../../types/api'
 import { useAdministrationApi } from '../../composables/useAdministrationApi'
+import { useAccountApi } from '../../composables/useAccountApi'
 import { useAuthStore } from '../../stores/auth'
 import { useNotify } from '../../composables/useNotify'
 import { isSelf } from '../../utils/accounts'
@@ -9,6 +10,7 @@ import { isSelf } from '../../utils/accounts'
 /** Accounts tab (B-13): table, creation, edition, TOTP reset and password reset. */
 const { t, d } = useI18n()
 const api = useAdministrationApi()
+const accountApi = useAccountApi()
 const auth = useAuthStore()
 const notify = useNotify()
 const confirm = useConfirm()
@@ -72,6 +74,31 @@ function askResetTotp(account: AdminAccount): void {
     acceptProps: { severity: 'danger' },
     accept: () => void resetTotp(account),
   })
+}
+
+function askRevokeDevices(account: AdminAccount): void {
+  confirm.require({
+    header: t('administration.accounts.revokeDevices'),
+    message: t('administration.accounts.revokeDevicesConfirm', { email: account.email }),
+    icon: 'pi pi-mobile',
+    acceptLabel: t('administration.accounts.revokeDevices'),
+    rejectLabel: t('common.cancel'),
+    acceptProps: { severity: 'danger' },
+    accept: () => void revokeDevices(account),
+  })
+}
+
+/** B-13+ (contract v1.3): revoke every trusted device of the account. */
+async function revokeDevices(account: AdminAccount): Promise<void> {
+  busyId.value = account.id
+  try {
+    await accountApi.revokeAccountDevices(account.id)
+    notify.success(t('administration.accounts.devicesRevoked'))
+  } catch (err) {
+    notify.apiError(err, t('administration.accounts.revokeDevices'))
+  } finally {
+    busyId.value = null
+  }
 }
 
 async function resetTotp(account: AdminAccount): Promise<void> {
@@ -184,7 +211,7 @@ async function resetTotp(account: AdminAccount): Promise<void> {
           }}</span>
         </template>
       </Column>
-      <Column class="w-36">
+      <Column class="w-44">
         <template #body="{ data: row }: { data: AdminAccount }">
           <div class="flex justify-end gap-1">
             <Button
@@ -205,6 +232,16 @@ async function resetTotp(account: AdminAccount): Promise<void> {
               :aria-label="t('administration.accounts.resetTotp')"
               :title="t('administration.accounts.resetTotp')"
               @click="askResetTotp(row)"
+            />
+            <Button
+              icon="pi pi-mobile"
+              size="small"
+              text
+              severity="warn"
+              :loading="busyId === row.id"
+              :aria-label="t('administration.accounts.revokeDevices')"
+              :title="t('administration.accounts.revokeDevices')"
+              @click="askRevokeDevices(row)"
             />
             <Button
               icon="pi pi-key"
