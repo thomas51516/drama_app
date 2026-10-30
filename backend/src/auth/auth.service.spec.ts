@@ -68,7 +68,8 @@ function makeService() {
     secret: SECRET,
     signOptions: { expiresIn: 900, issuer: 'drama-api' },
   });
-  const service = new AuthService(prisma as never, jwt, new AppConfig(env));
+  const settings = { get: vi.fn(() => Promise.resolve({ autoUnlockDefault: false })) };
+  const service = new AuthService(prisma as never, jwt, new AppConfig(env), settings as never);
   return { service, prisma, tx, jwt };
 }
 

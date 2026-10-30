@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CatalogCacheService, SERIES_CACHE_TTL_SECONDS } from '../cache/catalog-cache.service.js';
 import { normalizeCountry, pickLanguage } from '../common/i18n/accept-language.js';
 import { AppConfig } from '../config/app-config.js';
@@ -226,8 +226,16 @@ function encodeCursor(offset: number): string {
   return Buffer.from(String(offset), 'utf8').toString('base64url');
 }
 
-function decodeCursor(cursor?: string): number {
+/** Curseur = offset encodé en base64url ; toute autre valeur est refusée (DEF-008). */
+export function decodeCursor(cursor?: string): number {
   if (!cursor) return 0;
-  const n = Number.parseInt(Buffer.from(cursor, 'base64url').toString('utf8'), 10);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
+  if (!/^\d{1,9}$/.test(decoded)) {
+    throw new BadRequestException({
+      code: 'VALIDATION_ERROR',
+      message: 'Validation failed',
+      details: { errors: ['cursor is not a valid feed cursor'] },
+    });
+  }
+  return Number.parseInt(decoded, 10);
 }

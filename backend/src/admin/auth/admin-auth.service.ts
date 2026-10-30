@@ -81,9 +81,7 @@ export class AdminAuthService {
         ? await this.devices.verify(account.id, dto.deviceToken)
         : null;
       if (device) {
-        const session = await this.openSession(account, meta, 'password+device', {
-          deviceId: device.id,
-        });
+        const session = await this.openSession(account, meta, 'password+device', device.id);
         return { status: 'ok', ...session };
       }
       const challengeToken = await this.signChallenge({ sub: account.id, jti, setup: false });
@@ -167,9 +165,10 @@ export class AdminAuthService {
         ip: meta.ip,
       });
     }
-    const session = await this.openSession(account, meta, 'password+totp');
-    if (!dto.rememberDevice) return session;
+    if (!dto.rememberDevice) return this.openSession(account, meta, 'password+totp');
+    // L'appareil est émis avant la session pour que le JWT porte son identifiant (`current`).
     const device = await this.devices.issue(account.id, meta);
+    const session = await this.openSession(account, meta, 'password+totp', device.id);
     return {
       ...session,
       deviceToken: device.token,
@@ -182,7 +181,7 @@ export class AdminAuthService {
     account: AdminAccount,
     meta: AdminClientMeta,
     method: 'password+totp' | 'password+device',
-    extra: Record<string, unknown> = {},
+    deviceId?: string,
   ): Promise<AdminSessionDto> {
     const updated = await this.prisma.adminAccount.update({
       where: { id: account.id },
@@ -193,7 +192,11 @@ export class AdminAuthService {
       action: 'admin.login',
       targetType: 'admin_account',
       targetId: account.id,
-      newValue: { method, userAgent: meta.userAgent?.slice(0, 200), ...extra },
+      newValue: {
+        method,
+        userAgent: meta.userAgent?.slice(0, 200),
+        ...(deviceId ? { deviceId } : {}),
+      },
       ip: meta.ip,
     });
     const payload: AdminAccessPayload = {
@@ -201,6 +204,7 @@ export class AdminAuthService {
       jti: randomUUID(),
       email: updated.email,
       role: updated.role,
+      ...(deviceId ? { did: deviceId } : {}),
     };
     const accessToken = await this.jwt.signAsync(payload, {
       audience: ADMIN_ACCESS_AUDIENCE,

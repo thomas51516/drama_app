@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Post,
   Put,
   Query,
@@ -30,6 +29,7 @@ import {
   RegisterPushDeviceDto,
 } from './dto/push.dto.js';
 import { PushService } from './push.service.js';
+import { UuidPipe } from '../common/pipes/uuid.pipe.js';
 
 /** Appareils push et historique des notifications (M-54, contrat v1.3). Jeton utilisateur obligatoire. */
 @ApiTags('users')
@@ -83,7 +83,7 @@ export class PushController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'NOTIFICATION_NOT_FOUND' })
   markRead(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
     return this.push.markRead(user.id, id);

@@ -67,6 +67,16 @@ export const envSchema = z.object({
   // Centre d'aide (S06-BE-02).
   SUPPORT_CONTACT_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(5),
 
+  // Achats (S07-BE-06/07) : vérificateur `google` (Play Developer API) ou `fake` (dev et tests).
+  BILLING_VERIFIER: z.enum(['fake', 'google']).default('fake'),
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
+  GOOGLE_PLAY_SERVICE_ACCOUNT_FILE: z.string().min(1).optional(),
+  GOOGLE_PLAY_PACKAGE_NAME: z.string().min(3).optional(),
+  // Jeton attendu par POST /webhooks/google-rtdn (`?token=` ou bearer) ; vide = aucun contrôle.
+  GOOGLE_RTDN_AUTH_TOKEN: z.string().min(16).optional(),
+  // Validité par défaut des pièces bonus (jours) ; repris par les paramètres de monétisation.
+  BONUS_VALIDITY_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
+
   // Upload direct (S02-BE-04)
   UPLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
 
@@ -117,6 +127,30 @@ const envSchemaWithRules = envSchema.superRefine((env, ctx) => {
       message:
         'FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_FILE is required when PUSH_PROVIDER=fcm',
     });
+  }
+  if (env.BILLING_VERIFIER === 'fake' && env.NODE_ENV === 'production') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['BILLING_VERIFIER'],
+      message: 'BILLING_VERIFIER=fake is not allowed in production',
+    });
+  }
+  if (env.BILLING_VERIFIER === 'google') {
+    if (!env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON && !env.GOOGLE_PLAY_SERVICE_ACCOUNT_FILE) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'],
+        message:
+          'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON or GOOGLE_PLAY_SERVICE_ACCOUNT_FILE is required when BILLING_VERIFIER=google',
+      });
+    }
+    if (!env.GOOGLE_PLAY_PACKAGE_NAME) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['GOOGLE_PLAY_PACKAGE_NAME'],
+        message: 'GOOGLE_PLAY_PACKAGE_NAME is required when BILLING_VERIFIER=google',
+      });
+    }
   }
   if (env.SMS_PROVIDER === 'http' && !env.SMS_HTTP_URL) {
     ctx.addIssue({

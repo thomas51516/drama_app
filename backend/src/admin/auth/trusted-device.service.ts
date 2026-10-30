@@ -9,6 +9,7 @@ import { type AdminClientMeta } from './admin-auth.types.js';
 import { type TrustedDeviceDto } from './dto/admin-auth.dto.js';
 
 export interface IssuedDevice {
+  id: string;
   token: string;
   expiresAt: Date;
 }
@@ -81,7 +82,7 @@ export class TrustedDeviceService {
       newValue: { label: device.label, expiresAt },
       ip: meta.ip,
     });
-    return { token, expiresAt };
+    return { id: device.id, token, expiresAt };
   }
 
   /** Appareil valide pour ce compte (non révoqué, non expiré) ; met à jour `lastUsedAt`. */
@@ -98,12 +99,13 @@ export class TrustedDeviceService {
     });
   }
 
-  async list(adminId: string): Promise<TrustedDeviceDto[]> {
+  /** `current` = appareil lié à la session courante (claim `did` du JWT admin, contrat v1.4). */
+  async list(adminId: string, currentDeviceId?: string): Promise<TrustedDeviceDto[]> {
     const devices = await this.prisma.adminTrustedDevice.findMany({
       where: { adminId, revokedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
-    return devices.map(toTrustedDeviceDto);
+    return devices.map((d) => toTrustedDeviceDto(d, d.id === currentDeviceId));
   }
 
   async revoke(admin: AuthenticatedAdmin, deviceId: string, ip?: string): Promise<void> {
@@ -149,10 +151,11 @@ export class TrustedDeviceService {
   }
 }
 
-export function toTrustedDeviceDto(d: AdminTrustedDevice): TrustedDeviceDto {
+export function toTrustedDeviceDto(d: AdminTrustedDevice, current = false): TrustedDeviceDto {
   return {
     id: d.id,
     label: d.label,
+    current,
     createdAt: d.createdAt.toISOString(),
     lastUsedAt: d.lastUsedAt?.toISOString() ?? null,
     expiresAt: d.expiresAt.toISOString(),

@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 import { AgeRating, HomeRowType, SeriesStatus } from '../../generated/prisma/client.js';
 
 export const EPISODE_ACCESS = ['free', 'unlocked', 'locked'] as const;
@@ -214,15 +224,17 @@ export class ListSeriesQueryDto {
 }
 
 export class SearchQueryDto {
-  @ApiProperty({
-    description: 'Texte recherché (titre, synopsis, tags, genres ; accents ignorés)',
+  @ApiPropertyOptional({
+    description:
+      'Texte recherché (titre, synopsis, tags, genres ; accents ignorés). Facultatif si `genre` est fourni (DEF-002) : la liste du genre est alors renvoyée, des plus récentes aux plus anciennes.',
     minLength: 2,
     maxLength: 100,
   })
+  @ValidateIf((o: SearchQueryDto) => o.q !== undefined || !o.genre)
   @IsString()
   @MinLength(2)
   @MaxLength(100)
-  q: string;
+  q?: string;
 
   @ApiPropertyOptional({ description: 'Filtre par genre', example: 'romance' })
   @IsOptional()
@@ -291,10 +303,14 @@ export class LikeResultDto {
 }
 
 export class FeedQueryDto {
-  @ApiPropertyOptional({ description: 'Curseur opaque renvoyé par l’appel précédent' })
+  @ApiPropertyOptional({
+    description:
+      'Curseur opaque renvoyé par l’appel précédent (base64url) ; curseur illisible → 400 VALIDATION_ERROR (DEF-008)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)
+  @Matches(/^[A-Za-z0-9_-]+$/, { message: 'cursor must be an opaque base64url token' })
   cursor?: string;
 
   @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 30 })

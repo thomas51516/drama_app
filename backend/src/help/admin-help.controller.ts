@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -44,6 +43,7 @@ import {
 } from './dto/help.dto.js';
 import { FaqService } from './faq.service.js';
 import { SupportService } from './support.service.js';
+import { UuidPipe } from '../common/pipes/uuid.pipe.js';
 
 /** Gestion de la FAQ (B-03bis). Rôles EDITOR, SUPPORT, ADMIN. */
 @ApiTags('admin-help')
@@ -96,7 +96,7 @@ export class AdminFaqController {
   @ApiOkResponse({ type: FaqEntryDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'FAQ_ENTRY_NOT_FOUND' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: UpdateFaqEntryDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -111,7 +111,7 @@ export class AdminFaqController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'FAQ_ENTRY_NOT_FOUND' })
   remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {
@@ -146,7 +146,7 @@ export class AdminSupportController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: TicketDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'TICKET_NOT_FOUND' })
-  get(@Param('id', ParseUUIDPipe) id: string): Promise<TicketDto> {
+  get(@Param('id', UuidPipe) id: string): Promise<TicketDto> {
     return this.support.get(id);
   }
 
@@ -159,7 +159,7 @@ export class AdminSupportController {
   @ApiOkResponse({ type: TicketDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'TICKET_NOT_FOUND' })
   reply(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: ReplyTicketDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -174,7 +174,7 @@ export class AdminSupportController {
   @ApiOkResponse({ type: TicketDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'TICKET_NOT_FOUND' })
   close(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<TicketDto> {

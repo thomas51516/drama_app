@@ -76,6 +76,7 @@ export class AdminAuthGuard implements CanActivate {
       role: account.role,
       jti: payload.jti,
       exp: payload.exp ?? Math.floor(Date.now() / 1000),
+      deviceId: payload.did,
     };
     return true;
   }

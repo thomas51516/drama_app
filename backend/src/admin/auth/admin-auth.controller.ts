@@ -8,7 +8,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -41,6 +40,7 @@ import {
   TrustedDeviceDto,
 } from './dto/admin-auth.dto.js';
 import { TrustedDeviceService } from './trusted-device.service.js';
+import { UuidPipe } from '../../common/pipes/uuid.pipe.js';
 
 @ApiTags('admin-auth')
 @Controller('admin/auth')
@@ -126,11 +126,15 @@ export class AdminAuthController {
   @UseGuards(AdminAuthGuard)
   @ApiBearerAuth('admin')
   @Get('devices')
-  @ApiOperation({ summary: 'Appareils de confiance du compte courant (actifs, non expirés)' })
+  @ApiOperation({
+    summary: 'Appareils de confiance du compte courant (actifs, non expirés)',
+    description:
+      '`current: true` pour l’appareil qui a ouvert la session courante (login par `deviceToken` ou `rememberDevice`).',
+  })
   @ApiOkResponse({ type: [TrustedDeviceDto] })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
   listDevices(@CurrentAdmin() admin: AuthenticatedAdmin): Promise<TrustedDeviceDto[]> {
-    return this.devices.list(admin.id);
+    return this.devices.list(admin.id, admin.deviceId);
   }
 
   @AdminRoute()
@@ -146,7 +150,7 @@ export class AdminAuthController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'DEVICE_NOT_FOUND' })
   @ApiUnauthorizedResponse({ type: ApiErrorDto })
   revokeDevice(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {

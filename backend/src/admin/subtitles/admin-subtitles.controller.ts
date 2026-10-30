@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Post,
   UploadedFile,
   UseGuards,
@@ -42,6 +41,7 @@ import {
   MAX_SUBTITLE_BYTES,
   UploadSubtitleDto,
 } from './dto/admin-subtitle.dto.js';
+import { UuidPipe } from '../../common/pipes/uuid.pipe.js';
 
 /** Sous-titres (B-03, contrat admin v1.1). Écriture : EDITOR et ADMIN. */
 @ApiTags('admin-subtitles')
@@ -62,7 +62,7 @@ export class AdminSubtitlesController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: [AdminSubtitleDto] })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'EPISODE_NOT_FOUND' })
-  list(@Param('id', ParseUUIDPipe) episodeId: string): Promise<AdminSubtitleDto[]> {
+  list(@Param('id', UuidPipe) episodeId: string): Promise<AdminSubtitleDto[]> {
     return this.subtitles.list(episodeId);
   }
 
@@ -96,7 +96,7 @@ export class AdminSubtitlesController {
   @ApiPayloadTooLargeResponse({ type: ApiErrorDto, description: 'PAYLOAD_TOO_LARGE (> 2 Mo)' })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'EPISODE_NOT_FOUND' })
   upload(
-    @Param('id', ParseUUIDPipe) episodeId: string,
+    @Param('id', UuidPipe) episodeId: string,
     @UploadedFile() file: UploadedSubtitleFile | undefined,
     @Body() dto: UploadSubtitleDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
@@ -113,7 +113,7 @@ export class AdminSubtitlesController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SUBTITLE_NOT_FOUND' })
   remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {

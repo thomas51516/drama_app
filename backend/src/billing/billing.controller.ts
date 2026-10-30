@@ -1,16 +1,29 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
+  ApiNoContentResponse,
   ApiNotImplementedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
-  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
+import { ViewerCountry } from '../common/decorators/viewer-country.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
 import { BillingService } from './billing.service.js';
@@ -18,49 +31,76 @@ import {
   GoogleRtdnDto,
   GoogleVerifyDto,
   MobileMoneyWebhookDto,
-  PurchaseResultDto,
+  SubscriptionStatusDto,
+  VerifyResultDto,
   WebhookAckDto,
 } from './dto/billing.dto.js';
 
-/** Paiements (§10). Planifié S07-BE-06/07 (Google Play) et S09-BE-01 (mobile money). */
-@ApiNotImplementedResponse({ type: ApiErrorDto, description: 'NOT_IMPLEMENTED' })
+/** Paiements (§10, contrat v1.4) : Google Play (S07-BE-06/07) ; mobile money planifié S09-BE-01. */
 @Controller()
 export class BillingController {
   constructor(private readonly billing: BillingService) {}
 
-  // TODO S07-BE-06
   @ApiTags('billing')
   @Post('billing/google/verify')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Vérifier un achat Google Play et créditer (planifié S07-BE-06)',
+    summary: 'Vérifier un achat Google Play et créditer le compte (M-31)',
     description:
-      'Vérification serveur via la Google Play Developer API, crédit par ligne de grand livre, acquittement. Idempotent par `purchaseToken`.',
+      'Vérification serveur (`BILLING_VERIFIER=google|fake`), puis crédit par deux lignes du grand livre (PURCHASE achetées + BONUS expirables) ou activation du VIP (`subs`), puis acquittement. Idempotent par `purchaseToken` : un second appel répond `already_processed` sans recréditer. Restauration des achats : rejouer les jetons connus de Play Billing.',
   })
-  @ApiOkResponse({ type: PurchaseResultDto })
-  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'UNAUTHENTICATED' })
-  @ApiUnprocessableEntityResponse({
+  @ApiOkResponse({ type: VerifyResultDto })
+  @ApiBadRequestResponse({
     type: ApiErrorDto,
-    description: 'PURCHASE_INVALID | PURCHASE_NOT_PAID',
+    description: 'PURCHASE_INVALID (details.reason) | VALIDATION_ERROR',
   })
-  verifyGoogle(@Body() payload: GoogleVerifyDto, @CurrentUser() user: AuthenticatedUser): never {
-    return this.billing.verifyGooglePurchase(user.id, payload);
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'UNAUTHENTICATED' })
+  @ApiConflictResponse({ type: ApiErrorDto, description: 'PURCHASE_OWNED_BY_OTHER' })
+  verifyGoogle(
+    @Body() dto: GoogleVerifyDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<VerifyResultDto> {
+    return this.billing.verifyGooglePurchase(user.id, dto);
   }
 
-  // TODO S07-BE-07 : authentifié par la signature Pub/Sub, pas par un JWT utilisateur
+  @ApiTags('users')
+  @Get('me/subscription')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Abonnement VIP du compte : statut, formule, échéance, renouvellement (M-33)',
+    description:
+      '`status` : none, active, cancelled (accès jusqu’à l’échéance), grace, expired. Géré depuis Google Play.',
+  })
+  @ApiOkResponse({ type: SubscriptionStatusDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'UNAUTHENTICATED' })
+  subscription(
+    @CurrentUser() user: AuthenticatedUser,
+    @ViewerCountry() country?: string,
+  ): Promise<SubscriptionStatusDto> {
+    return this.billing.getSubscription(user.id, country);
+  }
+
   @ApiTags('webhooks')
   @Public()
   @Post('webhooks/google-rtdn')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Real-time developer notifications Google Play (planifié S07-BE-07)',
-    description: 'Push Pub/Sub authentifié par jeton OIDC ; traitement asynchrone (BullMQ).',
+    summary: 'Real-time developer notifications Google Play (Pub/Sub push)',
+    description:
+      'Corps Pub/Sub (`message.data` = DeveloperNotification en base64). Renouvellement, annulation, pause, remboursement : le jeton est revérifié auprès du magasin, `subscriptions` et `users.vip_*` mis à jour, un remboursement de pack produit des lignes REFUND négatives. Si `GOOGLE_RTDN_AUTH_TOKEN` est défini, il doit être présenté en `?token=` ou `Authorization: Bearer`.',
   })
-  @ApiOkResponse({ type: WebhookAckDto })
+  @ApiNoContentResponse()
   @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_WEBHOOK_SIGNATURE' })
-  googleRtdn(@Body() payload: GoogleRtdnDto): never {
-    return this.billing.handleGoogleRtdn(payload);
+  async googleRtdn(
+    @Body() payload: GoogleRtdnDto,
+    @Query('token') token?: string,
+    @Headers('authorization') authorization?: string,
+  ): Promise<void> {
+    const bearer = authorization?.toLowerCase().startsWith('bearer ')
+      ? authorization.slice(7).trim()
+      : undefined;
+    await this.billing.handleGoogleRtdn(payload, token ?? bearer);
   }
 
   // TODO S09-BE-01 : authentifié par la signature de l'agrégateur
@@ -75,6 +115,7 @@ export class BillingController {
   })
   @ApiParam({ name: 'provider', example: 'cinetpay' })
   @ApiOkResponse({ type: WebhookAckDto })
+  @ApiNotImplementedResponse({ type: ApiErrorDto, description: 'NOT_IMPLEMENTED' })
   @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_WEBHOOK_SIGNATURE' })
   mobileMoney(@Param('provider') provider: string, @Body() payload: MobileMoneyWebhookDto): never {
     return this.billing.handleMobileMoneyWebhook(provider, payload);

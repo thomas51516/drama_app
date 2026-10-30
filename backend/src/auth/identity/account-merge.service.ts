@@ -20,7 +20,7 @@ export interface MergeSummary {
  * Fusion d'un compte invité dans un compte inscrit (M-50, contrat public v1.2), en UNE transaction :
  * progression (position la plus avancée), favoris, « J'aime » et déblocages (union), achats et
  * abonnements rattachés, grand livre : le solde de l'invité est transféré par deux lignes
- * ADJUSTMENT (débit invité / crédit cible) par bucket, les lignes d'origine restent à l'invité
+ * MERGE (débit invité / crédit cible) par bucket, les lignes d'origine restent à l'invité
  * (append-only). L'invité passe en MERGED et tous ses jetons sont révoqués ; une entrée d'audit
  * `user.merge` est écrite avec l'utilisateur pour auteur.
  */
@@ -175,7 +175,7 @@ export class AccountMergeService {
         userId: fromId,
         amount: -amount,
         bucket,
-        type: 'ADJUSTMENT',
+        type: 'MERGE',
         referenceType: 'account_merge',
         referenceId: toId,
         idempotencyKey: `${base}:out`,
@@ -187,7 +187,7 @@ export class AccountMergeService {
         userId: toId,
         amount,
         bucket,
-        type: 'ADJUSTMENT',
+        type: 'MERGE',
         referenceType: 'account_merge',
         referenceId: fromId,
         idempotencyKey: `${base}:in`,

@@ -189,6 +189,1113 @@
         ]
       }
     },
+    "/shop": {
+      "get": {
+        "description": "Devise déduite de `X-Country` (UEMOA → XOF, NG → NGN, GH → GHS, zone euro → EUR, sinon USD), sinon du pays du compte. Un article sans prix dans la devise est proposé en USD ; sans prix USD il est masqué. `welcomeOffer` est toujours `null` au MVP (M-24, P2).",
+        "operationId": "getShop",
+        "parameters": [
+          {
+            "name": "X-Country",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR (X-Country)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Packs de pièces et formules VIP, prix en devise locale (M-30)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/admin/monetization/settings": {
+      "get": {
+        "operationId": "getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonetizationSettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Paramètres de monétisation (défauts des séries, bonus, pub, déblocage auto)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "put": {
+        "description": "Les séries existantes gardent leurs valeurs `freeEpisodeCount` / `coinCostPerEpisode` ; les défauts s’appliquent aux séries créées ensuite. `autoUnlockDefault` s’applique aux nouveaux comptes, `bonusValidityDays` aux prochains crédits bonus.",
+        "operationId": "putSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonetizationSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonetizationSettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier les paramètres de monétisation",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/monetization/packs": {
+      "get": {
+        "operationId": "listPacks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoinPackAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Packs de pièces (tous, actifs ou non)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "post": {
+        "operationId": "createPack",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCoinPackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinPackAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SKU_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer un pack (sku = identifiant produit Play Console, immuable)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/monetization/packs/order": {
+      "put": {
+        "operationId": "reorderPacks",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoinPackAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PACK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Réordonner les packs",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/monetization/packs/{id}": {
+      "patch": {
+        "operationId": "updatePack",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCoinPackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinPackAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PACK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier un pack (pièces, bonus, prix, badge, activation)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "delete": {
+        "operationId": "deletePack",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PACK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer un pack (les achats passés gardent leur sku)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/monetization/vip-plans": {
+      "get": {
+        "operationId": "listPlans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VipPlanAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Formules VIP (toutes, actives ou non)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "post": {
+        "operationId": "createPlan",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVipPlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VipPlanAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SKU_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer une formule VIP (sku = identifiant abonnement Play Console)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/monetization/vip-plans/{id}": {
+      "patch": {
+        "operationId": "updatePlan",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVipPlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VipPlanAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une formule VIP",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "delete": {
+        "operationId": "deletePlan",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer une formule VIP",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/rewards/checkin": {
+      "get": {
+        "operationId": "getCheckin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinScaleDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Barème du check-in quotidien sur 7 jours (M-40, consommé au sprint 8)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "put": {
+        "operationId": "putCheckin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinScaleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinScaleDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier le barème du check-in (7 montants, remise à zéro si jour manqué)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/auth/login": {
+      "post": {
+        "description": "Vérifie le mot de passe (Argon2id) et renvoie un jeton de défi valable 5 minutes. À la première connexion, le secret TOTP et l'URI otpauth sont renvoyés (`totp_setup_required`) : la 2FA est obligatoire. Avec un `deviceToken` d'appareil de confiance valide (B-13+), la session est ouverte directement (`status: ok`). Limite : 5 tentatives par e-mail et par 15 minutes.",
+        "operationId": "login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLoginResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ADMIN_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connexion back-office (étape 1 : mot de passe)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/totp/verify": {
+      "post": {
+        "description": "Valide le code à 6 chiffres (fenêtre ±1 pas de 30 s) et émet le JWT admin. Le jeton de défi est à usage unique. Lors de l'enrôlement, le premier code valide active la 2FA du compte. `rememberDevice: true` ajoute un `deviceToken` (30 jours) qui dispense du TOTP au prochain login.",
+        "operationId": "verify",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTotpVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CHALLENGE | CHALLENGE_EXPIRED | CHALLENGE_USED | INVALID_TOTP_CODE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connexion back-office (étape 2 : code TOTP)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/me": {
+      "get": {
+        "operationId": "me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN | ADMIN_TOKEN_REVOKED | ADMIN_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Compte interne courant",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/logout": {
+      "post": {
+        "description": "Révoque le jeton courant (liste de refus Redis jusqu'à son expiration).",
+        "operationId": "logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Déconnexion",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/devices": {
+      "get": {
+        "description": "`current: true` pour l’appareil qui a ouvert la session courante (login par `deviceToken` ou `rememberDevice`).",
+        "operationId": "listDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrustedDeviceDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Appareils de confiance du compte courant (actifs, non expirés)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
+    "/admin/auth/devices/{id}": {
+      "delete": {
+        "operationId": "revokeDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DEVICE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Révoquer un appareil de confiance (le prochain login redemande le TOTP)",
+        "tags": [
+          "admin-auth"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "description": "Vérifie PostgreSQL et Redis. Renvoie 503 si un composant est indisponible.",
@@ -808,19 +1915,11 @@
           {
             "name": "X-Country",
             "in": "header",
-            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
             "required": false,
             "schema": {
               "type": "string",
               "example": "TG"
-            }
-          },
-          {
-            "name": "x-country",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
             }
           },
           {
@@ -839,6 +1938,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HomeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -872,7 +1981,7 @@
           {
             "name": "X-Country",
             "in": "header",
-            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
             "required": false,
             "schema": {
               "type": "string",
@@ -909,14 +2018,6 @@
               "default": 20,
               "type": "number"
             }
-          },
-          {
-            "name": "x-country",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -926,6 +2027,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedSeriesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -959,7 +2070,7 @@
           {
             "name": "X-Country",
             "in": "header",
-            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
             "required": false,
             "schema": {
               "type": "string",
@@ -974,14 +2085,6 @@
               "format": "uuid",
               "type": "string"
             }
-          },
-          {
-            "name": "x-country",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -991,6 +2094,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SeriesDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -1035,7 +2148,7 @@
           {
             "name": "X-Country",
             "in": "header",
-            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
             "required": false,
             "schema": {
               "type": "string",
@@ -1050,14 +2163,6 @@
               "format": "uuid",
               "type": "string"
             }
-          },
-          {
-            "name": "x-country",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -1070,6 +2175,16 @@
                   "items": {
                     "$ref": "#/components/schemas/EpisodeSummaryDto"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -1114,7 +2229,7 @@
           {
             "name": "X-Country",
             "in": "header",
-            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
             "required": false,
             "schema": {
               "type": "string",
@@ -1125,7 +2240,7 @@
             "name": "cursor",
             "required": false,
             "in": "query",
-            "description": "Curseur opaque renvoyé par l’appel précédent",
+            "description": "Curseur opaque renvoyé par l’appel précédent (base64url) ; curseur illisible → 400 VALIDATION_ERROR (DEF-008)",
             "schema": {
               "type": "string"
             }
@@ -1140,14 +2255,6 @@
               "default": 10,
               "type": "number"
             }
-          },
-          {
-            "name": "x-country",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -1157,6 +2264,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FeedResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -1191,7 +2308,7 @@
           {
             "name": "X-Country",
             "in": "header",
-            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
             "required": false,
             "schema": {
               "type": "string",
@@ -1200,9 +2317,9 @@
           },
           {
             "name": "q",
-            "required": true,
+            "required": false,
             "in": "query",
-            "description": "Texte recherché (titre, synopsis, tags, genres ; accents ignorés)",
+            "description": "Texte recherché (titre, synopsis, tags, genres ; accents ignorés). Facultatif si `genre` est fourni (DEF-002) : la liste du genre est alors renvoyée, des plus récentes aux plus anciennes.",
             "schema": {
               "minLength": 2,
               "maxLength": 100,
@@ -1239,14 +2356,6 @@
               "default": 20,
               "type": "number"
             }
-          },
-          {
-            "name": "x-country",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -1256,6 +2365,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SearchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -1290,7 +2409,7 @@
           {
             "name": "X-Country",
             "in": "header",
-            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
             "required": false,
             "schema": {
               "type": "string",
@@ -1307,14 +2426,6 @@
               "maxLength": 100,
               "type": "string"
             }
-          },
-          {
-            "name": "x-country",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -1324,6 +2435,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SearchSuggestionsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -1342,9 +2463,19 @@
     },
     "/episodes/{id}/play": {
       "post": {
-        "description": "Vérifie le droit (gratuit, débloqué, VIP) puis renvoie le manifeste HLS, les sous-titres, la position de reprise et l'épisode suivant. Le serveur fait foi (§8.4).",
+        "description": "Vérifie le droit (gratuit, débloqué, VIP) puis renvoie le manifeste HLS, les sous-titres, la position de reprise et l'épisode suivant. Le serveur fait foi (§8.4). Épisode verrouillé : si `autoUnlock` est activé et le solde suffisant, l'épisode est débloqué dans la même requête (`unlocked: true`) ; sinon `403 EPISODE_LOCKED { details: { coinCost, balance, canAutoUnlock } }`. Abonné VIP : toujours autorisé (déblocage `vip` enregistré sans débit).",
         "operationId": "play",
         "parameters": [
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : même filtre territorial que le catalogue.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
           {
             "name": "id",
             "required": true,
@@ -1366,6 +2497,16 @@
               }
             }
           },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "UNAUTHENTICATED | INVALID_TOKEN",
             "content": {
@@ -1377,7 +2518,7 @@
             }
           },
           "403": {
-            "description": "EPISODE_LOCKED (details.coinCost)",
+            "description": "EPISODE_LOCKED (details.coinCost, balance, canAutoUnlock)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1420,8 +2561,20 @@
     },
     "/progress": {
       "put": {
+        "description": "Refusée sur un épisode verrouillé (403 `EPISODE_LOCKED`) ou invisible (404) : le serveur fait foi.",
         "operationId": "progress",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : même filtre territorial que le catalogue.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1443,8 +2596,28 @@
               }
             }
           },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "EPISODE_LOCKED",
             "content": {
               "application/json": {
                 "schema": {
@@ -1477,7 +2650,7 @@
     },
     "/episodes/{id}/unlock": {
       "post": {
-        "description": "Débit (bonus avant achetées) et création du déblocage dans la même transaction ; idempotent par `idempotencyKey`. 402 `INSUFFICIENT_COINS` si le solde est insuffisant (details.coinCost, details.balance).",
+        "description": "Coût = `series.coinCostPerEpisode`. Débit (bonus avant achetées, lots les plus proches de l’expiration d’abord) et création du déblocage dans la même transaction ; idempotent par (utilisateur, épisode) et par `idempotencyKey`. Déjà débloqué → `200` avec la méthode d’origine et `charged: {0,0}` ; épisode gratuit → `method: free` ; abonné VIP → `method: vip` sans débit. Solde insuffisant ou négatif → `402 INSUFFICIENT_COINS { details: { cost, balance } }`.",
         "operationId": "unlockEpisode",
         "parameters": [
           {
@@ -1487,6 +2660,15 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
             }
           }
         ],
@@ -1511,8 +2693,28 @@
               }
             }
           },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
           "401": {
             "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "INSUFFICIENT_COINS",
             "content": {
               "application/json": {
                 "schema": {
@@ -1540,19 +2742,46 @@
                 }
               }
             }
-          },
-          "409": {
-            "description": "EPISODE_FREE | EPISODE_NOT_READY",
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Débloquer un épisode avec des pièces (M-21)",
+        "tags": [
+          "unlock"
+        ]
+      }
+    },
+    "/series/{id}/unlocks": {
+      "get": {
+        "operationId": "seriesUnlocks",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
+                  "$ref": "#/components/schemas/SeriesUnlocksDto"
                 }
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "401": {
+            "description": "UNAUTHENTICATED",
             "content": {
               "application/json": {
                 "schema": {
@@ -1567,7 +2796,7 @@
             "bearer": []
           }
         ],
-        "summary": "Débloquer un épisode avec des pièces (planifié S07-BE-02)",
+        "summary": "Épisodes d’une série déjà débloqués par le compte (M-32)",
         "tags": [
           "unlock"
         ]
@@ -1628,6 +2857,7 @@
     },
     "/wallet": {
       "get": {
+        "description": "Projection du grand livre `coin_ledger`. Les pièces bonus sont consommées avant les achetées, du lot le plus proche de l’expiration au plus lointain ; les lots échus sont passés en EXPIRY à la lecture.",
         "operationId": "get",
         "parameters": [],
         "responses": {
@@ -1650,16 +2880,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -1667,7 +2887,7 @@
             "bearer": []
           }
         ],
-        "summary": "Soldes de pièces (planifié S07-BE-04)",
+        "summary": "Soldes de pièces (achetées, bonus, total) et lots bonus à expirer",
         "tags": [
           "wallet"
         ]
@@ -1675,26 +2895,46 @@
     },
     "/wallet/transactions": {
       "get": {
+        "description": "Une ligne par variation de solde : PURCHASE, BONUS, UNLOCK, ADJUSTMENT, EXPIRY, REFUND, MERGE.",
         "operationId": "transactions",
         "parameters": [
           {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Curseur opaque renvoyé par l’appel précédent",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
+            "name": "page",
             "required": false,
             "in": "query",
             "schema": {
               "minimum": 1,
-              "maximum": 50,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Filtre par type de ligne",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PURCHASE",
+                "BONUS",
+                "UNLOCK",
+                "ADJUSTMENT",
+                "EXPIRY",
+                "REFUND",
+                "MERGE"
+              ]
             }
           }
         ],
@@ -1718,16 +2958,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -1735,7 +2965,7 @@
             "bearer": []
           }
         ],
-        "summary": "Historique du grand livre, pagination par curseur (planifié S07-BE-04)",
+        "summary": "Historique du grand livre (paginé, filtre par type)",
         "tags": [
           "wallet"
         ]
@@ -1743,7 +2973,7 @@
     },
     "/billing/google/verify": {
       "post": {
-        "description": "Vérification serveur via la Google Play Developer API, crédit par ligne de grand livre, acquittement. Idempotent par `purchaseToken`.",
+        "description": "Vérification serveur (`BILLING_VERIFIER=google|fake`), puis crédit par deux lignes du grand livre (PURCHASE achetées + BONUS expirables) ou activation du VIP (`subs`), puis acquittement. Idempotent par `purchaseToken` : un second appel répond `already_processed` sans recréditer. Restauration des achats : rejouer les jetons connus de Play Billing.",
         "operationId": "verifyGoogle",
         "parameters": [],
         "requestBody": {
@@ -1762,7 +2992,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PurchaseResultDto"
+                  "$ref": "#/components/schemas/VerifyResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "PURCHASE_INVALID (details.reason) | VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
                 }
               }
             }
@@ -1777,18 +3017,8 @@
               }
             }
           },
-          "422": {
-            "description": "PURCHASE_INVALID | PURCHASE_NOT_PAID",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "409": {
+            "description": "PURCHASE_OWNED_BY_OTHER",
             "content": {
               "application/json": {
                 "schema": {
@@ -1803,18 +3033,74 @@
             "bearer": []
           }
         ],
-        "summary": "Vérifier un achat Google Play et créditer (planifié S07-BE-06)",
+        "summary": "Vérifier un achat Google Play et créditer le compte (M-31)",
         "tags": [
           "Billing",
           "billing"
         ]
       }
     },
+    "/me/subscription": {
+      "get": {
+        "description": "`status` : none, active, cancelled (accès jusqu’à l’échéance), grace, expired. Géré depuis Google Play.",
+        "operationId": "subscription",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Abonnement VIP du compte : statut, formule, échéance, renouvellement (M-33)",
+        "tags": [
+          "Billing",
+          "users"
+        ]
+      }
+    },
     "/webhooks/google-rtdn": {
       "post": {
-        "description": "Push Pub/Sub authentifié par jeton OIDC ; traitement asynchrone (BullMQ).",
+        "description": "Corps Pub/Sub (`message.data` = DeveloperNotification en base64). Renouvellement, annulation, pause, remboursement : le jeton est revérifié auprès du magasin, `subscriptions` et `users.vip_*` mis à jour, un remboursement de pack produit des lignes REFUND négatives. Si `GOOGLE_RTDN_AUTH_TOKEN` est défini, il doit être présenté en `?token=` ou `Authorization: Bearer`.",
         "operationId": "googleRtdn",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1826,15 +3112,8 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebhookAckDto"
-                }
-              }
-            }
+          "204": {
+            "description": ""
           },
           "401": {
             "description": "INVALID_WEBHOOK_SIGNATURE",
@@ -1845,19 +3124,9 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
           }
         },
-        "summary": "Real-time developer notifications Google Play (planifié S07-BE-07)",
+        "summary": "Real-time developer notifications Google Play (Pub/Sub push)",
         "tags": [
           "Billing",
           "webhooks"
@@ -3305,289 +4574,6 @@
         "summary": "Clore un ticket",
         "tags": [
           "admin-help"
-        ]
-      }
-    },
-    "/admin/auth/login": {
-      "post": {
-        "description": "Vérifie le mot de passe (Argon2id) et renvoie un jeton de défi valable 5 minutes. À la première connexion, le secret TOTP et l'URI otpauth sont renvoyés (`totp_setup_required`) : la 2FA est obligatoire. Avec un `deviceToken` d'appareil de confiance valide (B-13+), la session est ouverte directement (`status: ok`). Limite : 5 tentatives par e-mail et par 15 minutes.",
-        "operationId": "login",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AdminLoginDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminLoginResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "INVALID_CREDENTIALS",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "ADMIN_INACTIVE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "RATE_LIMITED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Connexion back-office (étape 1 : mot de passe)",
-        "tags": [
-          "admin-auth"
-        ]
-      }
-    },
-    "/admin/auth/totp/verify": {
-      "post": {
-        "description": "Valide le code à 6 chiffres (fenêtre ±1 pas de 30 s) et émet le JWT admin. Le jeton de défi est à usage unique. Lors de l'enrôlement, le premier code valide active la 2FA du compte. `rememberDevice: true` ajoute un `deviceToken` (30 jours) qui dispense du TOTP au prochain login.",
-        "operationId": "verify",
-        "parameters": [
-          {
-            "name": "user-agent",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AdminTotpVerifyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminSessionDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "INVALID_CHALLENGE | CHALLENGE_EXPIRED | CHALLENGE_USED | INVALID_TOTP_CODE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "RATE_LIMITED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Connexion back-office (étape 2 : code TOTP)",
-        "tags": [
-          "admin-auth"
-        ]
-      }
-    },
-    "/admin/auth/me": {
-      "get": {
-        "operationId": "me",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminUserDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN | ADMIN_TOKEN_REVOKED | ADMIN_INACTIVE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "admin": []
-          }
-        ],
-        "summary": "Compte interne courant",
-        "tags": [
-          "admin-auth"
-        ]
-      }
-    },
-    "/admin/auth/logout": {
-      "post": {
-        "description": "Révoque le jeton courant (liste de refus Redis jusqu'à son expiration).",
-        "operationId": "logout",
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "401": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "admin": []
-          }
-        ],
-        "summary": "Déconnexion",
-        "tags": [
-          "admin-auth"
-        ]
-      }
-    },
-    "/admin/auth/devices": {
-      "get": {
-        "operationId": "listDevices",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TrustedDeviceDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "admin": []
-          }
-        ],
-        "summary": "Appareils de confiance du compte courant (actifs, non expirés)",
-        "tags": [
-          "admin-auth"
-        ]
-      }
-    },
-    "/admin/auth/devices/{id}": {
-      "delete": {
-        "operationId": "revokeDevice",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "401": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "DEVICE_NOT_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "admin": []
-          }
-        ],
-        "summary": "Révoquer un appareil de confiance (le prochain login redemande le TOTP)",
-        "tags": [
-          "admin-auth"
         ]
       }
     },
@@ -6330,7 +7316,11 @@
                 "admin_trusted_device",
                 "campaign",
                 "faq_entry",
-                "support_ticket"
+                "support_ticket",
+                "monetization_settings",
+                "coin_pack",
+                "vip_plan",
+                "wallet"
               ]
             }
           },
@@ -7118,12 +8108,411 @@
           "admin-campaigns"
         ]
       }
+    },
+    "/admin/users": {
+      "get": {
+        "description": "`q` : identifiant exact (UUID) ou texte contenu dans l’e-mail, le téléphone ou le nom affiché. Tri par dernière activité.",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Identifiant exact, e-mail, téléphone ou nom affiché (contient)",
+            "schema": {
+              "example": "awa",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Rechercher des utilisateurs (identifiant, e-mail, téléphone, nom)",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/admin/users/{id}": {
+      "get": {
+        "operationId": "detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDetailDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "USER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Fiche utilisateur : profil, portefeuille, abonnement, déblocages, achats, grand livre",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/admin/users/{id}/coins": {
+      "post": {
+        "description": "Ligne `ADJUSTMENT` du grand livre ; audit `wallet.adjust` avec les soldes avant / après et le motif. Un débit peut rendre le solde négatif (bloque les déblocages).",
+        "operationId": "adjust",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustCoinsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "USER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créditer ou débiter des pièces (ligne ADJUSTMENT, motif obligatoire)",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/admin/users/{id}/block": {
+      "post": {
+        "operationId": "block",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "USER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "USER_NOT_ACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Bloquer un compte (statut BLOCKED, jetons révoqués)",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/admin/users/{id}/unblock": {
+      "post": {
+        "operationId": "unblock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "USER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "USER_NOT_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Débloquer un compte (statut ACTIVE)",
+        "tags": [
+          "admin-users"
+        ]
+      }
     }
   },
   "info": {
     "title": "DRAMA API",
-    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).\n\n**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
-    "version": "1.3.0",
+    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN. Épisode verrouillé : `403 EPISODE_LOCKED { coinCost, balance, canAutoUnlock }`, ou déblocage automatique dans la même requête (`unlocked: true`) quand `autoUnlock` est activé et le solde suffisant.\n\n**Pièces et achats** : le grand livre `coin_ledger` est la seule source de vérité (`GET /wallet`, `GET /wallet/transactions`) ; `POST /episodes/{id}/unlock` débite bonus puis achetées dans la même transaction que le déblocage (idempotent, `402 INSUFFICIENT_COINS`). `GET /shop` donne les prix dans la devise de `X-Country` ; `POST /billing/google/verify` vérifie le jeton côté serveur (`BILLING_VERIFIER=google|fake`), crédite une seule fois par `purchaseToken` et acquitte ; `POST /webhooks/google-rtdn` traite renouvellements, annulations et remboursements.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).\n\n**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » (pub récompensée, check-in, mobile money) répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
+    "version": "1.4.0",
     "contact": {
       "name": "Équipe backend DRAMA",
       "url": "",
@@ -7218,6 +8607,14 @@
     {
       "name": "admin-help",
       "description": "Back-office : FAQ et boîte de réception du support (B-03bis)"
+    },
+    {
+      "name": "admin-monetization",
+      "description": "Back-office : paramètres de monétisation, packs, formules VIP, barème de check-in (B-06, B-08)"
+    },
+    {
+      "name": "admin-users",
+      "description": "Back-office : recherche d’utilisateurs, portefeuille, blocage (B-09)"
     }
   ],
   "servers": [
@@ -7404,6 +8801,719 @@
           "page",
           "pageSize",
           "unreadCount"
+        ]
+      },
+      "PriceDto": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "XOF",
+              "NGN",
+              "GHS",
+              "EUR",
+              "USD"
+            ],
+            "example": "XOF"
+          },
+          "amountMinor": {
+            "type": "number",
+            "example": 1000,
+            "description": "Montant en unité mineure (centimes ; FCFA sans décimale)"
+          }
+        },
+        "required": [
+          "currency",
+          "amountMinor"
+        ]
+      },
+      "CoinPackDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "example": "coins_100",
+            "description": "Identifiant produit Play Console"
+          },
+          "coins": {
+            "type": "number",
+            "example": 100
+          },
+          "bonusCoins": {
+            "type": "number",
+            "example": 10,
+            "description": "Pièces bonus offertes (expirables)"
+          },
+          "price": {
+            "description": "Prix dans la devise du pays (repli USD)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PriceDto"
+              }
+            ]
+          },
+          "badge": {
+            "type": "object",
+            "example": "Populaire",
+            "nullable": true
+          },
+          "position": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "coins",
+          "bonusCoins",
+          "price",
+          "position"
+        ]
+      },
+      "VipPlanDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "example": "vip_month",
+            "description": "Identifiant abonnement Play Console"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ]
+          },
+          "price": {
+            "$ref": "#/components/schemas/PriceDto"
+          },
+          "trialDays": {
+            "type": "number",
+            "example": 0,
+            "description": "Jours d’essai gratuits"
+          },
+          "badge": {
+            "type": "object",
+            "example": "Meilleure offre",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "period",
+          "price",
+          "trialDays"
+        ]
+      },
+      "ShopDto": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "XOF",
+              "NGN",
+              "GHS",
+              "EUR",
+              "USD"
+            ],
+            "description": "Devise retenue pour `X-Country` (repli USD)"
+          },
+          "coinPacks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoinPackDto"
+            }
+          },
+          "vipPlans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VipPlanDto"
+            }
+          },
+          "welcomeOffer": {
+            "type": "object",
+            "nullable": true,
+            "description": "Offre de bienvenue (M-24, P2) : toujours null au MVP",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "currency",
+          "coinPacks",
+          "vipPlans",
+          "welcomeOffer"
+        ]
+      },
+      "MonetizationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "defaultFreeEpisodes": {
+            "type": "number",
+            "example": 5,
+            "description": "Épisodes gratuits proposés à la création d’une série"
+          },
+          "defaultCoinCost": {
+            "type": "number",
+            "example": 10,
+            "description": "Coût par épisode proposé à la création d’une série"
+          },
+          "seriesUnlockDiscountPercent": {
+            "type": "number",
+            "example": 0,
+            "description": "Remise sur le déblocage d’une série entière (M-23, P2)"
+          },
+          "adDailyCap": {
+            "type": "number",
+            "example": 3,
+            "description": "Pubs récompensées par utilisateur et par jour (M-22)"
+          },
+          "autoUnlockDefault": {
+            "type": "boolean",
+            "description": "Déblocage automatique activé par défaut sur les nouveaux comptes"
+          },
+          "bonusValidityDays": {
+            "type": "number",
+            "example": 30,
+            "description": "Validité des pièces bonus créditées (jours)"
+          }
+        },
+        "required": [
+          "defaultFreeEpisodes",
+          "defaultCoinCost",
+          "seriesUnlockDiscountPercent",
+          "adDailyCap",
+          "autoUnlockDefault",
+          "bonusValidityDays"
+        ]
+      },
+      "CoinPackAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "example": "coins_100",
+            "description": "Identifiant produit Play Console"
+          },
+          "coins": {
+            "type": "number",
+            "example": 100
+          },
+          "bonusCoins": {
+            "type": "number",
+            "example": 10,
+            "description": "Pièces bonus offertes (expirables)"
+          },
+          "price": {
+            "description": "Prix dans la devise du pays (repli USD)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PriceDto"
+              }
+            ]
+          },
+          "badge": {
+            "type": "object",
+            "example": "Populaire",
+            "nullable": true
+          },
+          "position": {
+            "type": "number",
+            "example": 1
+          },
+          "prices": {
+            "description": "Liste de prix complète (toutes devises)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceDto"
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "coins",
+          "bonusCoins",
+          "price",
+          "position",
+          "prices",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "CreateCoinPackDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "example": "coins_100",
+            "description": "Identifiant produit Play Console, immuable"
+          },
+          "coins": {
+            "type": "number",
+            "example": 100
+          },
+          "bonusCoins": {
+            "type": "number",
+            "example": 10,
+            "default": 0
+          },
+          "prices": {
+            "description": "Au moins un prix ; USD recommandé comme repli",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceDto"
+            }
+          },
+          "badge": {
+            "type": "object",
+            "example": "Populaire",
+            "nullable": true
+          },
+          "position": {
+            "type": "number",
+            "example": 1
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "sku",
+          "coins",
+          "prices"
+        ]
+      },
+      "ReorderDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "Identifiants dans l’ordre voulu",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "UpdateCoinPackDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number",
+            "example": 100
+          },
+          "bonusCoins": {
+            "type": "number",
+            "example": 10
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceDto"
+            }
+          },
+          "badge": {
+            "type": "object",
+            "nullable": true
+          },
+          "position": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VipPlanAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "example": "vip_month",
+            "description": "Identifiant abonnement Play Console"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ]
+          },
+          "price": {
+            "$ref": "#/components/schemas/PriceDto"
+          },
+          "trialDays": {
+            "type": "number",
+            "example": 0,
+            "description": "Jours d’essai gratuits"
+          },
+          "badge": {
+            "type": "object",
+            "example": "Meilleure offre",
+            "nullable": true
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceDto"
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "position": {
+            "type": "number",
+            "example": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "period",
+          "price",
+          "trialDays",
+          "prices",
+          "isActive",
+          "position",
+          "createdAt"
+        ]
+      },
+      "CreateVipPlanDto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "example": "vip_month",
+            "description": "Identifiant abonnement Play Console, immuable"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ]
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceDto"
+            }
+          },
+          "trialDays": {
+            "type": "number",
+            "example": 0,
+            "default": 0
+          },
+          "badge": {
+            "type": "object",
+            "nullable": true
+          },
+          "position": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "sku",
+          "period",
+          "prices"
+        ]
+      },
+      "UpdateVipPlanDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": [
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ]
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceDto"
+            }
+          },
+          "trialDays": {
+            "type": "number"
+          },
+          "badge": {
+            "type": "object",
+            "nullable": true
+          },
+          "position": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CheckinScaleDto": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "example": [
+              5,
+              5,
+              10,
+              10,
+              15,
+              20,
+              30
+            ],
+            "minItems": 7,
+            "maxItems": 7,
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "resetOnMiss": {
+            "type": "boolean",
+            "description": "Un jour manqué remet le cycle au jour 1"
+          }
+        },
+        "required": [
+          "days",
+          "resetOnMiss"
+        ]
+      },
+      "AdminLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@drama.local"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 200
+          },
+          "deviceToken": {
+            "type": "string",
+            "description": "Jeton d'appareil de confiance (cookie `drama_admin_device`). S'il est valide pour ce compte et que la 2FA est enrôlée, la session est ouverte sans TOTP (`status: ok`). Un jeton invalide est ignoré."
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AdminUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@drama.local"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Administrateur"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "EDITOR",
+              "MONETIZATION",
+              "SUPPORT",
+              "ADMIN"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role"
+        ]
+      },
+      "AdminLoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "totp_required",
+              "totp_setup_required"
+            ],
+            "description": "`totp_setup_required` à la première connexion : afficher le QR code (`otpauthUri`) puis appeler /totp/verify avec le premier code. `ok` : appareil de confiance reconnu, la session est ouverte directement (`accessToken`, `expiresIn`, `user`)."
+          },
+          "challengeToken": {
+            "type": "string",
+            "description": "À renvoyer tel quel à /admin/auth/totp/verify. Expire en 5 minutes. Absent si `status: ok`."
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT admin (uniquement si `status: ok`)."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Durée de vie en secondes (uniquement si `status: ok`)."
+          },
+          "user": {
+            "description": "Uniquement si `status: ok`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserDto"
+              }
+            ]
+          },
+          "secret": {
+            "type": "string",
+            "description": "Secret TOTP base32 (uniquement si `totp_setup_required`).",
+            "example": "JBSWY3DPEHPK3PXP"
+          },
+          "otpauthUri": {
+            "type": "string",
+            "description": "URI otpauth:// à encoder en QR code (uniquement si `totp_setup_required`).",
+            "example": "otpauth://totp/DRAMA%20back-office%3Aadmin%40drama.local?secret=JBSWY3DPEHPK3PXP&issuer=DRAMA+back-office&algorithm=SHA1&digits=6&period=30"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "AdminTotpVerifyDto": {
+        "type": "object",
+        "properties": {
+          "challengeToken": {
+            "type": "string",
+            "description": "Jeton de défi renvoyé par /admin/auth/login (5 min)."
+          },
+          "code": {
+            "type": "string",
+            "description": "Code TOTP à 6 chiffres (fenêtre ±1 pas de 30 s).",
+            "example": "123456"
+          },
+          "rememberDevice": {
+            "type": "boolean",
+            "description": "Se souvenir de cet appareil (30 jours) : la réponse ajoute `deviceToken` et `deviceTokenExpiresAt`.",
+            "default": false
+          }
+        },
+        "required": [
+          "challengeToken",
+          "code"
+        ]
+      },
+      "AdminSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT admin (`aud: admin`), à présenter dans `Authorization: Bearer`."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Durée de vie en secondes.",
+            "example": 28800
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminUserDto"
+          },
+          "deviceToken": {
+            "type": "string",
+            "description": "Jeton d'appareil de confiance (aléatoire 256 bits, 30 jours), uniquement si `rememberDevice` était vrai. À stocker dans le cookie `drama_admin_device` et à renvoyer dans `deviceToken` au login."
+          },
+          "deviceTokenExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "TrustedDeviceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "example": "Chrome sur Linux"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "Appareil de la session courante (contrat v1.4)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "current",
+          "createdAt",
+          "lastUsedAt",
+          "expiresAt"
         ]
       },
       "ComponentHealthDto": {
@@ -8642,6 +10752,10 @@
               "unlocked"
             ]
           },
+          "unlocked": {
+            "type": "boolean",
+            "description": "Épisode débloqué automatiquement par cette requête (S07-BE-03 : `autoUnlock` activé et solde suffisant)"
+          },
           "manifestUrl": {
             "type": "string",
             "description": "URL du manifeste HLS maître, signée et expirante (S04-BE-02). Mode `hmac` : `?token=<base64url(hmac-sha256(secret, chemin du dossier + expires))>&expires=<epoch>` ; mode `plain` (dev MinIO) : URL publique.",
@@ -8682,6 +10796,7 @@
           "seriesId",
           "episodeNumber",
           "access",
+          "unlocked",
           "manifestUrl",
           "expiresAt",
           "drm",
@@ -8753,45 +10868,78 @@
           "idempotencyKey"
         ]
       },
-      "WalletDto": {
+      "ChargedDto": {
         "type": "object",
         "properties": {
-          "purchasedBalance": {
+          "bonus": {
             "type": "number",
-            "example": 120,
-            "description": "Pièces achetées"
+            "example": 4,
+            "description": "Pièces bonus débitées"
           },
-          "bonusBalance": {
+          "purchased": {
             "type": "number",
-            "example": 30,
-            "description": "Pièces bonus (consommées en premier, expirables)"
-          },
-          "totalBalance": {
+            "example": 6,
+            "description": "Pièces achetées débitées"
+          }
+        },
+        "required": [
+          "bonus",
+          "purchased"
+        ]
+      },
+      "BonusExpiringDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
             "type": "number",
-            "example": 150
+            "example": 20,
+            "description": "Pièces bonus restantes de ce lot"
           },
-          "nextBonusExpiryAt": {
+          "expiresAt": {
             "type": "string",
-            "nullable": true,
-            "format": "date-time",
-            "description": "Prochaine expiration de pièces bonus"
-          },
-          "isVip": {
-            "type": "boolean"
-          },
-          "vipExpiresAt": {
-            "type": "string",
-            "nullable": true,
             "format": "date-time"
           }
         },
         "required": [
-          "purchasedBalance",
-          "bonusBalance",
-          "totalBalance",
-          "nextBonusExpiryAt",
-          "isVip",
-          "vipExpiresAt"
+          "amount",
+          "expiresAt"
+        ]
+      },
+      "WalletDto": {
+        "type": "object",
+        "properties": {
+          "purchased": {
+            "type": "number",
+            "example": 120,
+            "description": "Pièces achetées (peut être négatif après remboursement)"
+          },
+          "bonus": {
+            "type": "number",
+            "example": 30,
+            "description": "Pièces bonus, consommées en premier, expirables"
+          },
+          "total": {
+            "type": "number",
+            "example": 150
+          },
+          "autoUnlock": {
+            "type": "boolean",
+            "description": "Déblocage automatique de l’épisode suivant (`PATCH /me`)"
+          },
+          "bonusExpiring": {
+            "description": "Lots de pièces bonus restants, du plus proche de l’expiration au plus lointain",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BonusExpiringDto"
+            }
+          }
+        },
+        "required": [
+          "purchased",
+          "bonus",
+          "total",
+          "autoUnlock",
+          "bonusExpiring"
         ]
       },
       "UnlockResultDto": {
@@ -8804,20 +10952,20 @@
           "method": {
             "type": "string",
             "enum": [
-              "COINS",
-              "AD",
-              "VIP",
-              "FREE"
+              "coins",
+              "ad",
+              "vip",
+              "free"
+            ],
+            "description": "`coins` (débit), `free` (épisode gratuit), `vip` (abonné), `ad` ; méthode d’origine si déjà débloqué"
+          },
+          "charged": {
+            "description": "`{ 0, 0 }` si déjà débloqué, gratuit ou VIP",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChargedDto"
+              }
             ]
-          },
-          "coinsDebited": {
-            "type": "number",
-            "example": 10,
-            "description": "Pièces débitées (0 si déjà débloqué)"
-          },
-          "alreadyUnlocked": {
-            "type": "boolean",
-            "description": "Appel déjà traité avec la même clé d’idempotence"
           },
           "wallet": {
             "$ref": "#/components/schemas/WalletDto"
@@ -8826,9 +10974,24 @@
         "required": [
           "episodeId",
           "method",
-          "coinsDebited",
-          "alreadyUnlocked",
+          "charged",
           "wallet"
+        ]
+      },
+      "SeriesUnlocksDto": {
+        "type": "object",
+        "properties": {
+          "unlockedEpisodeIds": {
+            "description": "Épisodes de la série débloqués par le compte",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "unlockedEpisodeIds"
         ]
       },
       "AdRewardCallbackDto": {
@@ -8895,7 +11058,25 @@
           "episodeId"
         ]
       },
-      "WalletTransactionDto": {
+      "LedgerReferenceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "unlock",
+            "description": "unlock, purchase, refund, admin_adjustment, account_merge, bonus_expiry"
+          },
+          "id": {
+            "type": "string",
+            "example": "0192f3b2-..."
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ]
+      },
+      "LedgerEntryDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -8905,7 +11086,7 @@
           "amount": {
             "type": "number",
             "example": -10,
-            "description": "Montant signé (+ crédit, - débit)"
+            "description": "Montant signé (+ crédit, − débit)"
           },
           "bucket": {
             "type": "string",
@@ -8922,27 +11103,29 @@
               "UNLOCK",
               "ADJUSTMENT",
               "EXPIRY",
-              "REFUND"
+              "REFUND",
+              "MERGE"
             ]
           },
-          "referenceType": {
+          "reference": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LedgerReferenceDto"
+              }
+            ]
+          },
+          "description": {
             "type": "string",
             "nullable": true,
-            "example": "unlock"
-          },
-          "referenceId": {
-            "type": "string",
-            "nullable": true
-          },
-          "note": {
-            "type": "string",
-            "nullable": true,
-            "description": "Libellé affichable"
+            "description": "Libellé technique (anglais)"
           },
           "expiresAt": {
             "type": "string",
             "nullable": true,
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Expiration du lot bonus concerné"
           },
           "createdAt": {
             "type": "string",
@@ -8954,9 +11137,8 @@
           "amount",
           "bucket",
           "type",
-          "referenceType",
-          "referenceId",
-          "note",
+          "reference",
+          "description",
           "expiresAt",
           "createdAt"
         ]
@@ -8965,142 +11147,145 @@
         "type": "object",
         "properties": {
           "items": {
+            "description": "Antichronologique",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/WalletTransactionDto"
+              "$ref": "#/components/schemas/LedgerEntryDto"
             }
           },
-          "nextCursor": {
-            "type": "string",
-            "nullable": true
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
           }
         },
         "required": [
           "items",
-          "nextCursor"
+          "total",
+          "page",
+          "pageSize"
         ]
       },
       "GoogleVerifyDto": {
         "type": "object",
         "properties": {
-          "kind": {
+          "purchaseToken": {
             "type": "string",
-            "enum": [
-              "coins",
-              "subscription"
-            ]
+            "description": "purchaseToken renvoyé par Play Billing (unique : idempotence). Vérificateur `fake` : `fake:<productId>:<nonce>`."
           },
           "productId": {
             "type": "string",
             "example": "coins_100",
-            "description": "SKU Google Play"
+            "description": "SKU Play Console (pack ou abonnement)"
           },
-          "purchaseToken": {
+          "type": {
             "type": "string",
-            "description": "purchaseToken renvoyé par Play Billing (unique, idempotence)"
+            "enum": [
+              "inapp",
+              "subs"
+            ],
+            "description": "`inapp` = pack de pièces, `subs` = VIP"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Clé d’idempotence côté app (UUID)",
+            "example": "6f1d2c3b-4a5e-4f60-8b7c-9d0e1f2a3b4c"
           }
         },
         "required": [
-          "kind",
+          "purchaseToken",
           "productId",
-          "purchaseToken"
+          "type",
+          "idempotencyKey"
         ]
       },
-      "SubscriptionDto": {
+      "SubscriptionStatusDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "plan": {
-            "type": "string",
-            "enum": [
-              "WEEKLY",
-              "MONTHLY",
-              "YEARLY"
-            ]
-          },
           "status": {
             "type": "string",
             "enum": [
-              "ACTIVE",
-              "IN_GRACE",
-              "ON_HOLD",
-              "CANCELED",
-              "EXPIRED"
+              "none",
+              "active",
+              "cancelled",
+              "expired",
+              "grace"
             ]
           },
-          "startsAt": {
+          "plan": {
+            "nullable": true,
+            "description": "Formule souscrite (prix dans la devise du pays)",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VipPlanDto"
+              }
+            ]
+          },
+          "startedAt": {
             "type": "string",
+            "nullable": true,
             "format": "date-time"
           },
-          "endsAt": {
+          "expiresAt": {
             "type": "string",
+            "nullable": true,
             "format": "date-time"
           },
           "autoRenew": {
             "type": "boolean"
+          },
+          "store": {
+            "type": "string",
+            "enum": [
+              "google"
+            ],
+            "description": "Magasin : géré depuis Google Play (M-33)"
           }
         },
         "required": [
-          "id",
-          "plan",
           "status",
-          "startsAt",
-          "endsAt",
-          "autoRenew"
+          "plan",
+          "startedAt",
+          "expiresAt",
+          "autoRenew",
+          "store"
         ]
       },
-      "PurchaseResultDto": {
+      "VerifyResultDto": {
         "type": "object",
         "properties": {
-          "purchaseId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "status": {
             "type": "string",
             "enum": [
-              "PENDING",
-              "VERIFIED",
-              "CREDITED",
-              "ACKNOWLEDGED",
-              "REFUNDED",
-              "FAILED"
+              "credited",
+              "already_processed",
+              "subscription_active"
             ]
           },
-          "coinsCredited": {
-            "type": "number",
-            "example": 100
-          },
-          "bonusCoinsCredited": {
-            "type": "number",
-            "example": 10
-          },
-          "alreadyProcessed": {
-            "type": "boolean",
-            "description": "Achat déjà crédité (même purchaseToken)"
-          },
           "wallet": {
-            "$ref": "#/components/schemas/WalletDto"
-          },
-          "subscription": {
-            "description": "Présent pour `kind: subscription`",
+            "description": "Présent pour un pack (`inapp`)",
             "allOf": [
               {
-                "$ref": "#/components/schemas/SubscriptionDto"
+                "$ref": "#/components/schemas/WalletDto"
+              }
+            ]
+          },
+          "vip": {
+            "description": "Présent pour un abonnement (`subs`)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionStatusDto"
               }
             ]
           }
         },
         "required": [
-          "purchaseId",
-          "status",
-          "coinsCredited",
-          "bonusCoinsCredited",
-          "alreadyProcessed",
-          "wallet"
+          "status"
         ]
       },
       "PubSubMessageDto": {
@@ -9113,13 +11298,22 @@
           "messageId": {
             "type": "string"
           },
+          "message_id": {
+            "type": "string"
+          },
           "publishTime": {
             "type": "string"
+          },
+          "publish_time": {
+            "type": "string"
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
         "required": [
-          "data",
-          "messageId"
+          "data"
         ]
       },
       "GoogleRtdnDto": {
@@ -9131,21 +11325,13 @@
           "subscription": {
             "type": "string",
             "description": "Nom de l’abonnement Pub/Sub"
+          },
+          "deliveryAttempt": {
+            "type": "string"
           }
         },
         "required": [
           "message"
-        ]
-      },
-      "WebhookAckDto": {
-        "type": "object",
-        "properties": {
-          "accepted": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "accepted"
         ]
       },
       "MobileMoneyWebhookDto": {
@@ -9169,6 +11355,17 @@
         "required": [
           "transactionId",
           "status"
+        ]
+      },
+      "WebhookAckDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accepted"
         ]
       },
       "CheckInResultDto": {
@@ -9790,193 +11987,6 @@
         },
         "required": [
           "message"
-        ]
-      },
-      "AdminLoginDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "example": "admin@drama.local"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 200
-          },
-          "deviceToken": {
-            "type": "string",
-            "description": "Jeton d'appareil de confiance (cookie `drama_admin_device`). S'il est valide pour ce compte et que la 2FA est enrôlée, la session est ouverte sans TOTP (`status: ok`). Un jeton invalide est ignoré."
-          }
-        },
-        "required": [
-          "email",
-          "password"
-        ]
-      },
-      "AdminUserDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "email": {
-            "type": "string",
-            "example": "admin@drama.local"
-          },
-          "displayName": {
-            "type": "string",
-            "example": "Administrateur"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "EDITOR",
-              "MONETIZATION",
-              "SUPPORT",
-              "ADMIN"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "displayName",
-          "role"
-        ]
-      },
-      "AdminLoginResponseDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "ok",
-              "totp_required",
-              "totp_setup_required"
-            ],
-            "description": "`totp_setup_required` à la première connexion : afficher le QR code (`otpauthUri`) puis appeler /totp/verify avec le premier code. `ok` : appareil de confiance reconnu, la session est ouverte directement (`accessToken`, `expiresIn`, `user`)."
-          },
-          "challengeToken": {
-            "type": "string",
-            "description": "À renvoyer tel quel à /admin/auth/totp/verify. Expire en 5 minutes. Absent si `status: ok`."
-          },
-          "accessToken": {
-            "type": "string",
-            "description": "JWT admin (uniquement si `status: ok`)."
-          },
-          "expiresIn": {
-            "type": "number",
-            "description": "Durée de vie en secondes (uniquement si `status: ok`)."
-          },
-          "user": {
-            "description": "Uniquement si `status: ok`.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AdminUserDto"
-              }
-            ]
-          },
-          "secret": {
-            "type": "string",
-            "description": "Secret TOTP base32 (uniquement si `totp_setup_required`).",
-            "example": "JBSWY3DPEHPK3PXP"
-          },
-          "otpauthUri": {
-            "type": "string",
-            "description": "URI otpauth:// à encoder en QR code (uniquement si `totp_setup_required`).",
-            "example": "otpauth://totp/DRAMA%20back-office%3Aadmin%40drama.local?secret=JBSWY3DPEHPK3PXP&issuer=DRAMA+back-office&algorithm=SHA1&digits=6&period=30"
-          }
-        },
-        "required": [
-          "status"
-        ]
-      },
-      "AdminTotpVerifyDto": {
-        "type": "object",
-        "properties": {
-          "challengeToken": {
-            "type": "string",
-            "description": "Jeton de défi renvoyé par /admin/auth/login (5 min)."
-          },
-          "code": {
-            "type": "string",
-            "description": "Code TOTP à 6 chiffres (fenêtre ±1 pas de 30 s).",
-            "example": "123456"
-          },
-          "rememberDevice": {
-            "type": "boolean",
-            "description": "Se souvenir de cet appareil (30 jours) : la réponse ajoute `deviceToken` et `deviceTokenExpiresAt`.",
-            "default": false
-          }
-        },
-        "required": [
-          "challengeToken",
-          "code"
-        ]
-      },
-      "AdminSessionDto": {
-        "type": "object",
-        "properties": {
-          "accessToken": {
-            "type": "string",
-            "description": "JWT admin (`aud: admin`), à présenter dans `Authorization: Bearer`."
-          },
-          "expiresIn": {
-            "type": "number",
-            "description": "Durée de vie en secondes.",
-            "example": 28800
-          },
-          "user": {
-            "$ref": "#/components/schemas/AdminUserDto"
-          },
-          "deviceToken": {
-            "type": "string",
-            "description": "Jeton d'appareil de confiance (aléatoire 256 bits, 30 jours), uniquement si `rememberDevice` était vrai. À stocker dans le cookie `drama_admin_device` et à renvoyer dans `deviceToken` au login."
-          },
-          "deviceTokenExpiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "accessToken",
-          "expiresIn",
-          "user"
-        ]
-      },
-      "TrustedDeviceDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "label": {
-            "type": "string",
-            "example": "Chrome sur Linux"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "lastUsedAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "createdAt",
-          "lastUsedAt",
-          "expiresAt"
         ]
       },
       "AnalyticsEventInputDto": {
@@ -11362,7 +13372,11 @@
               "admin_trusted_device",
               "campaign",
               "faq_entry",
-              "support_ticket"
+              "support_ticket",
+              "monetization_settings",
+              "coin_pack",
+              "vip_plan",
+              "wallet"
             ]
           },
           "targetId": {
@@ -11867,6 +13881,322 @@
         },
         "required": [
           "audienceCount"
+        ]
+      },
+      "AdminUserBalanceDto": {
+        "type": "object",
+        "properties": {
+          "purchased": {
+            "type": "number"
+          },
+          "bonus": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "purchased",
+          "bonus",
+          "total"
+        ]
+      },
+      "AdminUserSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "REGISTERED"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "BLOCKED",
+              "DELETION_PENDING",
+              "MERGED",
+              "DELETED"
+            ]
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "nullable": true
+          },
+          "vipStatus": {
+            "type": "string",
+            "enum": [
+              "none",
+              "active",
+              "expired"
+            ]
+          },
+          "vipExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "balance": {
+            "$ref": "#/components/schemas/AdminUserBalanceDto"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "displayName",
+          "email",
+          "phone",
+          "country",
+          "vipStatus",
+          "vipExpiresAt",
+          "balance",
+          "createdAt",
+          "lastSeenAt"
+        ]
+      },
+      "AdminUserListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserSummaryDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "AdminUserUnlockDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesTitle": {
+            "type": "string"
+          },
+          "episodeNumber": {
+            "type": "number"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "coins",
+              "ad",
+              "vip",
+              "free"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "episodeId",
+          "seriesId",
+          "seriesTitle",
+          "episodeNumber",
+          "method",
+          "at"
+        ]
+      },
+      "AdminUserPurchaseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "example": "coins_100"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "VERIFIED",
+              "CREDITED",
+              "ACKNOWLEDGED",
+              "REFUNDED",
+              "FAILED"
+            ]
+          },
+          "coins": {
+            "type": "number"
+          },
+          "bonusCoins": {
+            "type": "number"
+          },
+          "orderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "creditedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "status",
+          "coins",
+          "bonusCoins",
+          "orderId",
+          "createdAt",
+          "creditedAt"
+        ]
+      },
+      "AdminUserDetailDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserDto"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletDto"
+          },
+          "subscription": {
+            "$ref": "#/components/schemas/SubscriptionStatusDto"
+          },
+          "unlocks": {
+            "description": "50 derniers déblocages",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserUnlockDto"
+            }
+          },
+          "purchases": {
+            "description": "50 derniers achats",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserPurchaseDto"
+            }
+          },
+          "recentLedger": {
+            "description": "20 dernières lignes du grand livre",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntryDto"
+            }
+          },
+          "devices": {
+            "type": "number",
+            "description": "Appareils push enregistrés"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "user",
+          "wallet",
+          "subscription",
+          "unlocks",
+          "purchases",
+          "recentLedger",
+          "devices",
+          "lastSeenAt"
+        ]
+      },
+      "AdjustCoinsDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "example": 50,
+            "description": "Montant signé : positif = crédit, négatif = débit (jamais 0)"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "PURCHASED",
+              "BONUS"
+            ],
+            "description": "Bucket touché ; un crédit BONUS expire après `bonusValidityDays`"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Geste commercial après incident de lecture",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "amount",
+          "bucket",
+          "reason"
+        ]
+      },
+      "BlockUserDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Fraude au remboursement",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     }

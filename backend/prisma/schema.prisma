@@ -105,6 +105,8 @@ enum LedgerEntryType {
   ADJUSTMENT
   EXPIRY
   REFUND
+  /// Transfert de solde lors de la fusion d'un compte invité (M-50, contrat v1.4).
+  MERGE
 
   @@map("ledger_entry_type")
 }
@@ -148,10 +150,20 @@ enum SubscriptionStatus {
   ACTIVE
   IN_GRACE
   ON_HOLD
+  PAUSED
   CANCELED
   EXPIRED
 
   @@map("subscription_status")
+}
+
+/// Période d'une formule VIP exposée à l'application (contrat v1.4 `VipPlan.period`).
+enum VipPeriod {
+  WEEK
+  MONTH
+  YEAR
+
+  @@map("vip_period")
 }
 
 /// Rôles du back-office (B-13).
@@ -482,13 +494,15 @@ model CoinLedgerEntry {
 }
 
 model Unlock {
-  id            String       @id @default(uuid(7)) @db.Uuid
-  userId        String       @map("user_id") @db.Uuid
-  episodeId     String       @map("episode_id") @db.Uuid
-  method        UnlockMethod
+  id             String       @id @default(uuid(7)) @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  episodeId      String       @map("episode_id") @db.Uuid
+  method         UnlockMethod
   /// Ligne de débit associée (méthode COINS) — même transaction SQL.
-  ledgerEntryId String?      @unique @map("ledger_entry_id") @db.Uuid
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  ledgerEntryId  String?      @unique @map("ledger_entry_id") @db.Uuid
+  /// Clé d'idempotence fournie par l'application (`POST /episodes/{id}/unlock`, S07-BE-02).
+  idempotencyKey String?      @map("idempotency_key") @db.VarChar(128)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   episode     Episode          @relation(fields: [episodeId], references: [id], onDelete: Cascade)
@@ -533,24 +547,86 @@ model Purchase {
 }
 
 model Subscription {
-  id            String             @id @default(uuid(7)) @db.Uuid
-  userId        String             @map("user_id") @db.Uuid
-  plan          SubscriptionPlan
-  provider      PaymentProvider    @default(GOOGLE_PLAY)
-  productId     String             @map("product_id") @db.VarChar(120)
-  purchaseToken String?            @unique @map("purchase_token") @db.VarChar(512)
-  startsAt      DateTime           @map("starts_at") @db.Timestamptz(3)
-  endsAt        DateTime           @map("ends_at") @db.Timestamptz(3)
-  autoRenew     Boolean            @default(true) @map("auto_renew")
-  status        SubscriptionStatus @default(ACTIVE)
-  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                  String             @id @default(uuid(7)) @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  plan                SubscriptionPlan
+  provider            PaymentProvider    @default(GOOGLE_PLAY)
+  productId           String             @map("product_id") @db.VarChar(120)
+  purchaseToken       String?            @unique @map("purchase_token") @db.VarChar(512)
+  startsAt            DateTime           @map("starts_at") @db.Timestamptz(3)
+  endsAt              DateTime           @map("ends_at") @db.Timestamptz(3)
+  autoRenew           Boolean            @default(true) @map("auto_renew")
+  status              SubscriptionStatus @default(ACTIVE)
+  /// Jeton remplacé lors d'un changement de formule (`linkedPurchaseToken`).
+  linkedPurchaseToken String?            @map("linked_purchase_token") @db.VarChar(512)
+  /// Dernier état brut renvoyé par le magasin (diagnostic).
+  rawPayload          Json?              @map("raw_payload")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, status])
   @@index([endsAt])
   @@map("subscriptions")
+}
+
+// -----------------------------------------------------------------------------
+// Monétisation : paramètres, packs de pièces, formules VIP (B-06, B-08, S07-BE-05)
+// -----------------------------------------------------------------------------
+
+/// Paramètres de monétisation (une seule ligne, id `default`) ; les séries gardent leurs propres
+/// valeurs `free_episode_count` / `coin_cost_per_episode`, ces défauts s'appliquent à la création.
+model MonetizationSettings {
+  id                          String   @id @default("default") @db.VarChar(16)
+  defaultFreeEpisodes         Int      @default(5) @map("default_free_episodes")
+  defaultCoinCost             Int      @default(10) @map("default_coin_cost")
+  seriesUnlockDiscountPercent Int      @default(0) @map("series_unlock_discount_percent")
+  adDailyCap                  Int      @default(3) @map("ad_daily_cap")
+  autoUnlockDefault           Boolean  @default(false) @map("auto_unlock_default")
+  /// Durée de validité des pièces bonus créditées (jours).
+  bonusValidityDays           Int      @default(30) @map("bonus_validity_days")
+  /// Barème du check-in quotidien sur 7 jours (M-40, B-08).
+  checkinDays                 Int[]    @default([5, 5, 10, 10, 15, 20, 30]) @map("checkin_days")
+  checkinResetOnMiss          Boolean  @default(true) @map("checkin_reset_on_miss")
+  updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("monetization_settings")
+}
+
+/// Pack de pièces (M-30, B-06). `sku` = identifiant produit Play Console, immuable.
+/// `prices` : `[{ currency: XOF|NGN|GHS|EUR|USD, amountMinor }]`.
+model CoinPack {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  sku        String   @unique @db.VarChar(120)
+  coins      Int
+  bonusCoins Int      @default(0) @map("bonus_coins")
+  prices     Json
+  badge      String?  @db.VarChar(40)
+  position   Int      @default(0)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive, position])
+  @@map("coin_packs")
+}
+
+/// Formule VIP (M-33, B-06). `sku` = identifiant d'abonnement Play Console.
+model VipPlan {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  sku       String    @unique @db.VarChar(120)
+  period    VipPeriod
+  prices    Json
+  trialDays Int       @default(0) @map("trial_days")
+  badge     String?   @db.VarChar(40)
+  position  Int       @default(0)
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive, position])
+  @@map("vip_plans")
 }
 
 // -----------------------------------------------------------------------------

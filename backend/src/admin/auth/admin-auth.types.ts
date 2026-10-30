@@ -14,6 +14,8 @@ export interface AdminAccessPayload {
   jti: string;
   email: string;
   role: AdminRole;
+  /** Appareil de confiance ayant ouvert la session (login par `deviceToken` ou `rememberDevice`). */
+  did?: string;
   exp?: number;
 }
 

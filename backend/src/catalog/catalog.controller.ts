@@ -1,5 +1,6 @@
-import { Controller, Get, Headers, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import { Controller, Get, Headers, Param, Query } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiHeader,
   ApiNotFoundResponse,
@@ -9,6 +10,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import { ViewerCountry } from '../common/decorators/viewer-country.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
@@ -28,6 +30,7 @@ import {
   SearchSuggestQueryDto,
   SeriesDetailDto,
 } from './dto/catalog.dto.js';
+import { UuidPipe } from '../common/pipes/uuid.pipe.js';
 
 /**
  * Catalogue (§8.2). Routes publiques : un jeton valide est optionnel mais permet
@@ -40,9 +43,10 @@ import {
   name: 'X-Country',
   required: false,
   description:
-    'Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.',
+    'Pays du spectateur (ISO 3166-1 alpha-2, deux lettres, sinon 400 VALIDATION_ERROR) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.',
   example: 'TG',
 })
+@ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
 @ApiHeader({
   name: 'Accept-Language',
   required: false,
@@ -67,7 +71,7 @@ export class CatalogController {
   @ApiOkResponse({ type: HomeResponseDto })
   async getHome(
     @CurrentUser() user?: AuthenticatedUser,
-    @Headers('x-country') country?: string,
+    @ViewerCountry() country?: string,
     @Headers('accept-language') acceptLanguage?: string,
   ): Promise<HomeResponseDto> {
     const viewer = await this.catalog.viewerContext(user?.id, { country, acceptLanguage });
@@ -81,7 +85,7 @@ export class CatalogController {
   async list(
     @Query() query: ListSeriesQueryDto,
     @CurrentUser() user?: AuthenticatedUser,
-    @Headers('x-country') country?: string,
+    @ViewerCountry() country?: string,
   ): Promise<PaginatedSeriesDto> {
     return this.catalog.listSeries(query, await this.catalog.viewerContext(user?.id, { country }));
   }
@@ -93,9 +97,9 @@ export class CatalogController {
   @ApiOkResponse({ type: SeriesDetailDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   async detail(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentUser() user?: AuthenticatedUser,
-    @Headers('x-country') country?: string,
+    @ViewerCountry() country?: string,
   ): Promise<SeriesDetailDto> {
     return this.catalog.getSeries(id, await this.catalog.viewerContext(user?.id, { country }));
   }
@@ -112,9 +116,9 @@ export class CatalogController {
   @ApiOkResponse({ type: [EpisodeSummaryDto] })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   async episodes(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentUser() user?: AuthenticatedUser,
-    @Headers('x-country') country?: string,
+    @ViewerCountry() country?: string,
   ): Promise<EpisodeSummaryDto[]> {
     return this.catalog.listEpisodes(id, await this.catalog.viewerContext(user?.id, { country }));
   }
@@ -130,7 +134,7 @@ export class CatalogController {
   async feed(
     @Query() query: FeedQueryDto,
     @CurrentUser() user?: AuthenticatedUser,
-    @Headers('x-country') country?: string,
+    @ViewerCountry() country?: string,
   ): Promise<FeedResponseDto> {
     return this.catalog.getFeed(query, await this.catalog.viewerContext(user?.id, { country }));
   }
@@ -146,7 +150,7 @@ export class CatalogController {
   async searchSeries(
     @Query() query: SearchQueryDto,
     @CurrentUser() user?: AuthenticatedUser,
-    @Headers('x-country') country?: string,
+    @ViewerCountry() country?: string,
   ): Promise<SearchResponseDto> {
     const viewer = await this.catalog.viewerContext(user?.id, { country });
     const result = await this.search.search(query, viewer);
@@ -163,7 +167,7 @@ export class CatalogController {
   async suggest(
     @Query() query: SearchSuggestQueryDto,
     @CurrentUser() user?: AuthenticatedUser,
-    @Headers('x-country') country?: string,
+    @ViewerCountry() country?: string,
   ): Promise<SearchSuggestionsDto> {
     const viewer = await this.catalog.viewerContext(user?.id, { country });
     return { suggestions: await this.search.suggest(query.q, viewer) };

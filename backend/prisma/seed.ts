@@ -220,6 +220,137 @@ async function main(): Promise<void> {
     `home configuration: 1 banner, ${rows.length} rows (${rows.map((r) => r.key).join(', ')})`,
   );
 
+  // Monétisation (B-06, B-08, S07-BE-05) : paramètres par défaut, packs de pièces, formules VIP et
+  // barème de check-in. Upsert sur des clés stables ; les valeurs modifiées en back-office sont conservées.
+  const bonusValidityDays = Number.parseInt(process.env.BONUS_VALIDITY_DAYS ?? '30', 10) || 30;
+  await prisma.monetizationSettings.upsert({
+    where: { id: 'default' },
+    update: {},
+    create: {
+      id: 'default',
+      defaultFreeEpisodes: 5,
+      defaultCoinCost: 10,
+      seriesUnlockDiscountPercent: 0,
+      adDailyCap: 3,
+      autoUnlockDefault: false,
+      bonusValidityDays,
+      checkinDays: [5, 5, 10, 10, 15, 20, 30],
+      checkinResetOnMiss: true,
+    },
+  });
+  const packs = [
+    {
+      sku: 'coins_100',
+      coins: 100,
+      bonusCoins: 0,
+      badge: null,
+      prices: [
+        { currency: 'XOF', amountMinor: 600 },
+        { currency: 'NGN', amountMinor: 150000 },
+        { currency: 'GHS', amountMinor: 1500 },
+        { currency: 'EUR', amountMinor: 99 },
+        { currency: 'USD', amountMinor: 99 },
+      ],
+    },
+    {
+      sku: 'coins_300',
+      coins: 300,
+      bonusCoins: 30,
+      badge: 'Populaire',
+      prices: [
+        { currency: 'XOF', amountMinor: 1700 },
+        { currency: 'NGN', amountMinor: 420000 },
+        { currency: 'GHS', amountMinor: 4200 },
+        { currency: 'EUR', amountMinor: 279 },
+        { currency: 'USD', amountMinor: 299 },
+      ],
+    },
+    {
+      sku: 'coins_700',
+      coins: 700,
+      bonusCoins: 100,
+      badge: null,
+      prices: [
+        { currency: 'XOF', amountMinor: 3800 },
+        { currency: 'NGN', amountMinor: 950000 },
+        { currency: 'GHS', amountMinor: 9500 },
+        { currency: 'EUR', amountMinor: 599 },
+        { currency: 'USD', amountMinor: 649 },
+      ],
+    },
+    {
+      sku: 'coins_1500',
+      coins: 1500,
+      bonusCoins: 300,
+      badge: 'Meilleure offre',
+      prices: [
+        { currency: 'XOF', amountMinor: 7500 },
+        { currency: 'NGN', amountMinor: 1900000 },
+        { currency: 'GHS', amountMinor: 19000 },
+        { currency: 'EUR', amountMinor: 1199 },
+        { currency: 'USD', amountMinor: 1299 },
+      ],
+    },
+  ];
+  for (const [index, pack] of packs.entries()) {
+    await prisma.coinPack.upsert({
+      where: { sku: pack.sku },
+      update: {},
+      create: { ...pack, position: index + 1, isActive: true },
+    });
+  }
+  const plans = [
+    {
+      sku: 'vip_week',
+      period: 'WEEK' as const,
+      trialDays: 0,
+      badge: null,
+      prices: [
+        { currency: 'XOF', amountMinor: 1500 },
+        { currency: 'NGN', amountMinor: 380000 },
+        { currency: 'GHS', amountMinor: 3800 },
+        { currency: 'EUR', amountMinor: 249 },
+        { currency: 'USD', amountMinor: 249 },
+      ],
+    },
+    {
+      sku: 'vip_month',
+      period: 'MONTH' as const,
+      trialDays: 3,
+      badge: 'Populaire',
+      prices: [
+        { currency: 'XOF', amountMinor: 4500 },
+        { currency: 'NGN', amountMinor: 1150000 },
+        { currency: 'GHS', amountMinor: 11500 },
+        { currency: 'EUR', amountMinor: 699 },
+        { currency: 'USD', amountMinor: 749 },
+      ],
+    },
+    {
+      sku: 'vip_year',
+      period: 'YEAR' as const,
+      trialDays: 7,
+      badge: 'Meilleure offre',
+      prices: [
+        { currency: 'XOF', amountMinor: 39000 },
+        { currency: 'NGN', amountMinor: 9900000 },
+        { currency: 'GHS', amountMinor: 99000 },
+        { currency: 'EUR', amountMinor: 5999 },
+        { currency: 'USD', amountMinor: 6499 },
+      ],
+    },
+  ];
+  for (const [index, plan] of plans.entries()) {
+    await prisma.vipPlan.upsert({
+      where: { sku: plan.sku },
+      update: {},
+      create: { ...plan, position: index + 1, isActive: true },
+    });
+  }
+  console.log(
+    `monetization: settings (bonus ${bonusValidityDays} d), ${packs.length} coin packs, ${plans.length} VIP plans, check-in [5,5,10,10,15,20,30]`,
+  );
+
   // FAQ de départ (M-53) : seulement si aucune entrée n'existe, pour ne pas écraser le travail éditorial.
   if ((await prisma.faqEntry.count()) === 0) {
     const faq = [

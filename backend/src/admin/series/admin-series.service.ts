@@ -7,6 +7,7 @@ import {
 import { CatalogCacheService } from '../../cache/catalog-cache.service.js';
 import { type AuthenticatedAdmin } from '../../common/request-context.js';
 import { type Prisma, type Series } from '../../generated/prisma/client.js';
+import { MonetizationSettingsService } from '../../monetization/monetization-settings.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService, diffChanges } from '../audit/audit.service.js';
 import { slugify } from '../shared/slug.js';
@@ -51,6 +52,7 @@ export class AdminSeriesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly cache: CatalogCacheService,
+    private readonly settings: MonetizationSettingsService,
   ) {}
 
   async list(query: ListAdminSeriesQueryDto): Promise<AdminSeriesListDto> {
@@ -83,6 +85,7 @@ export class AdminSeriesService {
   async create(dto: CreateAdminSeriesDto, admin: AuthenticatedAdmin, ip?: string) {
     this.assertFieldsAllowed(dto, admin);
     const slug = await this.uniqueSlug(slugify(dto.title));
+    const defaults = await this.settings.get();
     const created = await this.prisma.$transaction(async (tx) => {
       const series = await tx.series.create({
         data: {
@@ -95,8 +98,8 @@ export class AdminSeriesService {
           ageRating: dto.ageRating ?? 'ALL',
           posterVerticalUrl: dto.posterVerticalUrl ?? null,
           posterHorizontalUrl: dto.posterHorizontalUrl ?? null,
-          freeEpisodeCount: dto.freeEpisodeCount,
-          coinCostPerEpisode: dto.coinCostPerEpisode,
+          freeEpisodeCount: dto.freeEpisodeCount ?? defaults.defaultFreeEpisodes,
+          coinCostPerEpisode: dto.coinCostPerEpisode ?? defaults.defaultCoinCost,
           territories: dto.territories ?? [],
         },
         include: adminSeriesInclude,

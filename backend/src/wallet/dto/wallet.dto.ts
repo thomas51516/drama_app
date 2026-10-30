@@ -1,39 +1,57 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { CoinBucket, LedgerEntryType } from '../../generated/prisma/client.js';
 
-/** Soldes (projection du grand livre `coin_ledger`). Planifié S07-BE-04. */
-export class WalletDto {
-  @ApiProperty({ example: 120, description: 'Pièces achetées' })
-  purchasedBalance: number;
+export class BonusExpiringDto {
+  @ApiProperty({ example: 20, description: 'Pièces bonus restantes de ce lot' })
+  amount: number;
 
-  @ApiProperty({ example: 30, description: 'Pièces bonus (consommées en premier, expirables)' })
-  bonusBalance: number;
-
-  @ApiProperty({ example: 150 })
-  totalBalance: number;
-
-  @ApiProperty({
-    type: String,
-    nullable: true,
-    format: 'date-time',
-    description: 'Prochaine expiration de pièces bonus',
-  })
-  nextBonusExpiryAt: string | null;
-
-  @ApiProperty()
-  isVip: boolean;
-
-  @ApiProperty({ type: String, nullable: true, format: 'date-time' })
-  vipExpiresAt: string | null;
+  @ApiProperty({ format: 'date-time' })
+  expiresAt: string;
 }
 
-export class WalletTransactionDto {
+/** `Wallet` (contrat v1.4) : projection du grand livre `coin_ledger`, le serveur fait foi. */
+export class WalletDto {
+  @ApiProperty({
+    example: 120,
+    description: 'Pièces achetées (peut être négatif après remboursement)',
+  })
+  purchased: number;
+
+  @ApiProperty({ example: 30, description: 'Pièces bonus, consommées en premier, expirables' })
+  bonus: number;
+
+  @ApiProperty({ example: 150 })
+  total: number;
+
+  @ApiProperty({ description: 'Déblocage automatique de l’épisode suivant (`PATCH /me`)' })
+  autoUnlock: boolean;
+
+  @ApiProperty({
+    type: [BonusExpiringDto],
+    description: 'Lots de pièces bonus restants, du plus proche de l’expiration au plus lointain',
+  })
+  bonusExpiring: BonusExpiringDto[];
+}
+
+export class LedgerReferenceDto {
+  @ApiProperty({
+    example: 'unlock',
+    description: 'unlock, purchase, refund, admin_adjustment, account_merge, bonus_expiry',
+  })
+  type: string;
+
+  @ApiProperty({ example: '0192f3b2-...' })
+  id: string;
+}
+
+/** `LedgerEntry` (contrat v1.4). */
+export class LedgerEntryDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 
-  @ApiProperty({ example: -10, description: 'Montant signé (+ crédit, - débit)' })
+  @ApiProperty({ example: -10, description: 'Montant signé (+ crédit, − débit)' })
   amount: number;
 
   @ApiProperty({ enum: Object.values(CoinBucket) })
@@ -42,16 +60,18 @@ export class WalletTransactionDto {
   @ApiProperty({ enum: Object.values(LedgerEntryType) })
   type: LedgerEntryType;
 
-  @ApiProperty({ type: String, nullable: true, example: 'unlock' })
-  referenceType: string | null;
+  @ApiProperty({ type: LedgerReferenceDto, nullable: true })
+  reference: LedgerReferenceDto | null;
 
-  @ApiProperty({ type: String, nullable: true })
-  referenceId: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Libellé technique (anglais)' })
+  description: string | null;
 
-  @ApiProperty({ type: String, nullable: true, description: 'Libellé affichable' })
-  note: string | null;
-
-  @ApiProperty({ type: String, nullable: true, format: 'date-time' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    format: 'date-time',
+    description: 'Expiration du lot bonus concerné',
+  })
   expiresAt: string | null;
 
   @ApiProperty({ format: 'date-time' })
@@ -59,25 +79,40 @@ export class WalletTransactionDto {
 }
 
 export class WalletTransactionsQueryDto {
-  @ApiPropertyOptional({ description: 'Curseur opaque renvoyé par l’appel précédent' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  cursor?: string;
-
-  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 50 })
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(50)
-  limit: number = 20;
+  page: number = 1;
+
+  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageSize: number = 20;
+
+  @ApiPropertyOptional({
+    enum: Object.values(LedgerEntryType),
+    description: 'Filtre par type de ligne',
+  })
+  @IsOptional()
+  @IsIn(Object.values(LedgerEntryType))
+  type?: LedgerEntryType;
 }
 
 export class WalletTransactionsDto {
-  @ApiProperty({ type: [WalletTransactionDto] })
-  items: WalletTransactionDto[];
+  @ApiProperty({ type: [LedgerEntryDto], description: 'Antichronologique' })
+  items: LedgerEntryDto[];
 
-  @ApiProperty({ type: String, nullable: true })
-  nextCursor: string | null;
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  pageSize: number;
 }

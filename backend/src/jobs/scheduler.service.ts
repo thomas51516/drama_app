@@ -3,6 +3,7 @@ import { AdminCampaignsService } from '../admin/campaigns/admin-campaigns.servic
 import { AppConfig } from '../config/app-config.js';
 import { RedisService } from '../redis/redis.service.js';
 import { AccountDeletionService } from '../users/account-deletion.service.js';
+import { WalletService } from '../wallet/wallet.service.js';
 import { PublishSchedulerService } from './publish-scheduler.service.js';
 
 export const SCHEDULER_TICK_MS = 60_000;
@@ -30,11 +31,13 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     publish: PublishSchedulerService,
     deletion: AccountDeletionService,
     campaigns: AdminCampaignsService,
+    wallet: WalletService,
   ) {
     this.tasks = [
       { name: 'publish-scheduler', run: (now) => publish.runOnce(now) },
       { name: 'account-anonymiser', run: (now) => deletion.runOnce(now) },
       { name: 'campaign-scheduler', run: (now) => campaigns.dispatchDue(now) },
+      { name: 'bonus-expiry', run: (now) => wallet.expireBonuses(now) },
     ];
   }
 

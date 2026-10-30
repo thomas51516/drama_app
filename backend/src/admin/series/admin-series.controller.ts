@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -38,6 +37,7 @@ import {
   ListAdminSeriesQueryDto,
   UpdateAdminSeriesDto,
 } from './dto/admin-series.dto.js';
+import { UuidPipe } from '../../common/pipes/uuid.pipe.js';
 
 /**
  * Séries (B-01, contrat admin v1). Lecture : tout compte interne actif.
@@ -81,7 +81,7 @@ export class AdminSeriesController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: AdminSeriesDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
-  get(@Param('id', ParseUUIDPipe) id: string): Promise<AdminSeriesDto> {
+  get(@Param('id', UuidPipe) id: string): Promise<AdminSeriesDto> {
     return this.series.get(id);
   }
 
@@ -96,7 +96,7 @@ export class AdminSeriesController {
   @ApiOkResponse({ type: AdminSeriesDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: UpdateAdminSeriesDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -113,7 +113,7 @@ export class AdminSeriesController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'SERIES_NO_READY_EPISODE' })
   publish(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<AdminSeriesDto> {
@@ -128,7 +128,7 @@ export class AdminSeriesController {
   @ApiOkResponse({ type: AdminSeriesDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   archive(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<AdminSeriesDto> {

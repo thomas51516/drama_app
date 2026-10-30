@@ -39,6 +39,12 @@ export class PlaySessionDto {
 
   @ApiProperty({
     description:
+      'Épisode débloqué automatiquement par cette requête (S07-BE-03 : `autoUnlock` activé et solde suffisant)',
+  })
+  unlocked: boolean;
+
+  @ApiProperty({
+    description:
       'URL du manifeste HLS maître, signée et expirante (S04-BE-02). Mode `hmac` : `?token=<base64url(hmac-sha256(secret, chemin du dossier + expires))>&expires=<epoch>` ; mode `plain` (dev MinIO) : URL publique.',
     example: 'https://cdn.example.com/hls/0192.../master.m3u8?token=...&expires=1761732000',
   })

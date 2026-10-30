@@ -1,9 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, Length, Min } from 'class-validator';
-import { UnlockMethod } from '../../generated/prisma/client.js';
 import { WalletDto } from '../../wallet/dto/wallet.dto.js';
 
-/** Planifié S07-BE-02. */
+export const UNLOCK_METHODS = ['coins', 'ad', 'vip', 'free'] as const;
+export type UnlockMethodLabel = (typeof UNLOCK_METHODS)[number];
+
+/** `POST /episodes/{id}/unlock` (contrat v1.4). */
 export class UnlockEpisodeDto {
   @ApiProperty({
     description:
@@ -15,21 +17,39 @@ export class UnlockEpisodeDto {
   idempotencyKey: string;
 }
 
+export class ChargedDto {
+  @ApiProperty({ example: 4, description: 'Pièces bonus débitées' })
+  bonus: number;
+
+  @ApiProperty({ example: 6, description: 'Pièces achetées débitées' })
+  purchased: number;
+}
+
 export class UnlockResultDto {
   @ApiProperty({ format: 'uuid' })
   episodeId: string;
 
-  @ApiProperty({ enum: Object.values(UnlockMethod) })
-  method: UnlockMethod;
+  @ApiProperty({
+    enum: UNLOCK_METHODS,
+    description:
+      '`coins` (débit), `free` (épisode gratuit), `vip` (abonné), `ad` ; méthode d’origine si déjà débloqué',
+  })
+  method: UnlockMethodLabel;
 
-  @ApiProperty({ example: 10, description: 'Pièces débitées (0 si déjà débloqué)' })
-  coinsDebited: number;
-
-  @ApiProperty({ description: 'Appel déjà traité avec la même clé d’idempotence' })
-  alreadyUnlocked: boolean;
+  @ApiProperty({ type: ChargedDto, description: '`{ 0, 0 }` si déjà débloqué, gratuit ou VIP' })
+  charged: ChargedDto;
 
   @ApiProperty({ type: WalletDto })
   wallet: WalletDto;
+}
+
+export class SeriesUnlocksDto {
+  @ApiProperty({
+    type: [String],
+    format: 'uuid',
+    description: 'Épisodes de la série débloqués par le compte',
+  })
+  unlockedEpisodeIds: string[];
 }
 
 /** Callback SSV de la régie (AdMob) — planifié S08-BE-03. Les champs exacts suivent la régie retenue (S02-PM-01). */

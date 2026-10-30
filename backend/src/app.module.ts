@@ -14,6 +14,7 @@ import { HelpModule } from './help/help.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { MediaModule } from './media/media.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
+import { MonetizationModule } from './monetization/monetization.module.js';
 import { PlaybackModule } from './playback/playback.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PushModule } from './push/push.module.js';
@@ -37,6 +38,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     MediaModule,
     RateLimitModule,
     PushModule,
+    MonetizationModule,
     HealthModule,
     AuthModule,
     CatalogModule,

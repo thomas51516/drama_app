@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -40,6 +39,7 @@ import {
   ResetAdminPasswordDto,
   UpdateAdminAccountDto,
 } from './dto/admin-account.dto.js';
+import { UuidPipe } from '../../common/pipes/uuid.pipe.js';
 
 /** Comptes internes et journal d'audit (B-13, contrat admin v1.1). Rôle ADMIN uniquement. */
 @ApiTags('admin-accounts')
@@ -91,7 +91,7 @@ export class AdminAccountsController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'ADMIN_ACCOUNT_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'LAST_ADMIN' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: UpdateAdminAccountDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -108,7 +108,7 @@ export class AdminAccountsController {
   @ApiOkResponse({ type: AdminAccountDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'ADMIN_ACCOUNT_NOT_FOUND' })
   resetTotp(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<AdminAccountDto> {
@@ -122,7 +122,7 @@ export class AdminAccountsController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'ADMIN_ACCOUNT_NOT_FOUND' })
   resetPassword(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: ResetAdminPasswordDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -139,7 +139,7 @@ export class AdminAccountsController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'ADMIN_ACCOUNT_NOT_FOUND' })
   revokeDevices(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {

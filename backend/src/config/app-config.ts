@@ -141,6 +141,18 @@ export class AppConfig {
     return { contactDailyLimit: this.env.SUPPORT_CONTACT_DAILY_LIMIT };
   }
 
+  /** Achats Google Play (S07-BE-06/07). */
+  get billing() {
+    return {
+      verifier: this.env.BILLING_VERIFIER,
+      serviceAccountJson: this.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON,
+      serviceAccountFile: this.env.GOOGLE_PLAY_SERVICE_ACCOUNT_FILE,
+      packageName: this.env.GOOGLE_PLAY_PACKAGE_NAME,
+      rtdnAuthToken: this.env.GOOGLE_RTDN_AUTH_TOKEN,
+      bonusValidityDays: this.env.BONUS_VALIDITY_DAYS,
+    };
+  }
+
   get uploadUrlTtlSeconds(): number {
     return this.env.UPLOAD_URL_TTL_SECONDS;
   }

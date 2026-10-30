@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -42,6 +41,7 @@ import {
   ListCampaignsQueryDto,
   UpdateCampaignDto,
 } from './dto/campaign.dto.js';
+import { UuidPipe } from '../../common/pipes/uuid.pipe.js';
 
 /** Campagnes push ciblées (B-10, contrat v1.3). Rôles MONETIZATION et ADMIN. */
 @ApiTags('admin-campaigns')
@@ -87,7 +87,7 @@ export class AdminCampaignsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: CampaignDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_FOUND' })
-  get(@Param('id', ParseUUIDPipe) id: string): Promise<CampaignDto> {
+  get(@Param('id', UuidPipe) id: string): Promise<CampaignDto> {
     return this.campaigns.get(id);
   }
 
@@ -98,7 +98,7 @@ export class AdminCampaignsController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_EDITABLE' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: UpdateCampaignDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -114,7 +114,7 @@ export class AdminCampaignsController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_DRAFT' })
   remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {
@@ -127,7 +127,7 @@ export class AdminCampaignsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: CampaignEstimateDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_FOUND' })
-  estimate(@Param('id', ParseUUIDPipe) id: string): Promise<CampaignEstimateDto> {
+  estimate(@Param('id', UuidPipe) id: string): Promise<CampaignEstimateDto> {
     return this.campaigns.estimate(id);
   }
 
@@ -143,7 +143,7 @@ export class AdminCampaignsController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_SENDABLE' })
   send(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<CampaignDto> {
@@ -158,7 +158,7 @@ export class AdminCampaignsController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'CAMPAIGN_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'CAMPAIGN_ALREADY_SENT' })
   cancel(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<CampaignDto> {

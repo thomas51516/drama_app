@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -46,6 +45,7 @@ import {
   UpdateHomeBannerDto,
   UpdateHomeRowDto,
 } from './dto/admin-home.dto.js';
+import { UuidPipe } from '../../common/pipes/uuid.pipe.js';
 
 /** Mise en avant (B-05, contrat admin v1.1). Lecture : tout compte actif ; écriture : EDITOR et ADMIN. */
 @ApiTags('admin-home')
@@ -115,7 +115,7 @@ export class AdminHomeController {
     description: 'HOME_BANNER_NOT_FOUND | SERIES_NOT_FOUND',
   })
   updateBanner(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: UpdateHomeBannerDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -131,7 +131,7 @@ export class AdminHomeController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'HOME_BANNER_NOT_FOUND' })
   removeBanner(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {
@@ -195,7 +195,7 @@ export class AdminHomeController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'HOME_ROW_NOT_FOUND | SERIES_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'HOME_ROW_KEY_TAKEN' })
   updateRow(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: UpdateHomeRowDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -211,7 +211,7 @@ export class AdminHomeController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'HOME_ROW_NOT_FOUND' })
   removeRow(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {

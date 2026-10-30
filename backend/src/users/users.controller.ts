@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -37,6 +36,7 @@ import {
 } from './dto/users.dto.js';
 import { FavoritesService } from './favorites.service.js';
 import { UsersService } from './users.service.js';
+import { UuidPipe } from '../common/pipes/uuid.pipe.js';
 
 /** Compte (S05-BE-04, M-52) et « Ma liste » (S05-BE-05, M-16). Jeton utilisateur obligatoire. */
 @ApiTags('users')
@@ -106,7 +106,7 @@ export class UsersController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   addFavorite(
-    @Param('seriesId', ParseUUIDPipe) seriesId: string,
+    @Param('seriesId', UuidPipe) seriesId: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
     return this.favorites.add(user.id, seriesId);
@@ -118,7 +118,7 @@ export class UsersController {
   @ApiParam({ name: 'seriesId', format: 'uuid' })
   @ApiNoContentResponse()
   removeFavorite(
-    @Param('seriesId', ParseUUIDPipe) seriesId: string,
+    @Param('seriesId', UuidPipe) seriesId: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
     return this.favorites.remove(user.id, seriesId);

@@ -129,6 +129,9 @@ export class TrustedDeviceDto {
   @ApiProperty({ example: 'Chrome sur Linux' })
   label: string;
 
+  @ApiProperty({ description: 'Appareil de la session courante (contrat v1.4)' })
+  current: boolean;
+
   @ApiProperty({ format: 'date-time' })
   createdAt: string;
 

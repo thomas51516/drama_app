@@ -33,7 +33,8 @@ export class EntitlementService {
     ]);
     if (!user) return NO_ENTITLEMENTS;
     return {
-      isVip: user.isVip && (user.vipExpiresAt === null || user.vipExpiresAt.getTime() > Date.now()),
+      // Droit VIP = `users.vip_expires_at` dans le futur (contrat v1.4) ; `subscriptions` garde l'historique.
+      isVip: user.vipExpiresAt !== null && user.vipExpiresAt.getTime() > Date.now(),
       unlocked: new Set(unlocks.map((u) => u.episodeId)),
       country: user.country,
     };

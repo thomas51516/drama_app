@@ -16,8 +16,12 @@ import { ApiErrorDto } from '../common/dto/api-error.dto.js';
  * v1.3 (sprint 5, contrat v1.3) : appareils de confiance du back-office (B-13+), notifications push,
  * historique in-app et campagnes (M-54, S06-BE-01, B-10), centre d'aide et support (M-53, S06-BE-02),
  * événements d'analyse (S06-BE-03) et compléments du tableau de bord.
+ * v1.4 (sprint 6, contrat v1.4) : portefeuille et grand livre (S07-BE-01/04), déblocage par pièces
+ * atomique et idempotent, déblocage automatique dans `/play` (S07-BE-02/03), boutique et achats Google
+ * Play avec RTDN et abonnement VIP (S07-BE-06/07), monétisation, barème de check-in et utilisateurs en
+ * back-office (B-06, B-08, B-09), `current` sur les appareils de confiance, défauts de recette DEF-002/003/004/008/009.
  */
-export const OPENAPI_VERSION = '1.3.0';
+export const OPENAPI_VERSION = '1.4.0';
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
@@ -30,13 +34,15 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         '',
         '**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).',
         '',
-        '**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN.',
+        '**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN. Épisode verrouillé : `403 EPISODE_LOCKED { coinCost, balance, canAutoUnlock }`, ou déblocage automatique dans la même requête (`unlocked: true`) quand `autoUnlock` est activé et le solde suffisant.',
+        '',
+        '**Pièces et achats** : le grand livre `coin_ledger` est la seule source de vérité (`GET /wallet`, `GET /wallet/transactions`) ; `POST /episodes/{id}/unlock` débite bonus puis achetées dans la même transaction que le déblocage (idempotent, `402 INSUFFICIENT_COINS`). `GET /shop` donne les prix dans la devise de `X-Country` ; `POST /billing/google/verify` vérifie le jeton côté serveur (`BILLING_VERIFIER=google|fake`), crédite une seule fois par `purchaseToken` et acquitte ; `POST /webhooks/google-rtdn` traite renouvellements, annulations et remboursements.',
         '',
         '**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).',
         '',
         '**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.',
         '',
-        '**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).',
+        '**Endpoints planifiés** : les opérations marquées « Planifié S0x » (pub récompensée, check-in, mobile money) répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).',
         '',
         '**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).',
         '',
@@ -90,6 +96,11 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('admin-stats', 'Back-office : tableau de bord v0 (B-11)')
     .addTag('admin-campaigns', 'Back-office : campagnes push ciblées (B-10)')
     .addTag('admin-help', 'Back-office : FAQ et boîte de réception du support (B-03bis)')
+    .addTag(
+      'admin-monetization',
+      'Back-office : paramètres de monétisation, packs, formules VIP, barème de check-in (B-06, B-08)',
+    )
+    .addTag('admin-users', 'Back-office : recherche d’utilisateurs, portefeuille, blocage (B-09)')
     .build();
 
   return SwaggerModule.createDocument(app, config, {

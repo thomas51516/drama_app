@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Ip,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -44,6 +43,7 @@ import {
   UpdateAdminEpisodeDto,
   UploadTargetDto,
 } from './dto/admin-episode.dto.js';
+import { UuidPipe } from '../../common/pipes/uuid.pipe.js';
 
 /** Épisodes et upload (B-02, contrat admin v1). Écriture : EDITOR et ADMIN. */
 @ApiTags('admin-episodes')
@@ -67,7 +67,7 @@ export class AdminEpisodesController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: [AdminEpisodeDto] })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
-  list(@Param('id', ParseUUIDPipe) seriesId: string): Promise<AdminEpisodeDto[]> {
+  list(@Param('id', UuidPipe) seriesId: string): Promise<AdminEpisodeDto[]> {
     return this.episodes.list(seriesId);
   }
 
@@ -80,7 +80,7 @@ export class AdminEpisodesController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'EPISODE_NUMBER_TAKEN' })
   create(
-    @Param('id', ParseUUIDPipe) seriesId: string,
+    @Param('id', UuidPipe) seriesId: string,
     @Body() dto: CreateAdminEpisodeDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -96,7 +96,7 @@ export class AdminEpisodesController {
   @ApiBadRequestResponse({ type: ApiErrorDto, description: 'EPISODE_ORDER_MISMATCH' })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'SERIES_NOT_FOUND' })
   reorder(
-    @Param('id', ParseUUIDPipe) seriesId: string,
+    @Param('id', UuidPipe) seriesId: string,
     @Body() dto: ReorderEpisodesDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -111,7 +111,7 @@ export class AdminEpisodesController {
   @ApiOkResponse({ type: AdminEpisodeDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'EPISODE_NOT_FOUND' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: UpdateAdminEpisodeDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -127,7 +127,7 @@ export class AdminEpisodesController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'EPISODE_NOT_FOUND' })
   remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<void> {
@@ -146,7 +146,7 @@ export class AdminEpisodesController {
   @ApiOkResponse({ type: UploadTargetDto })
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'EPISODE_NOT_FOUND' })
   uploadUrl(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @Body() dto: EpisodeUploadUrlDto,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
@@ -165,7 +165,7 @@ export class AdminEpisodesController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'EPISODE_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'SOURCE_MISSING | SOURCE_NOT_UPLOADED' })
   uploaded(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<AdminEpisodeDto> {
@@ -181,7 +181,7 @@ export class AdminEpisodesController {
   @ApiNotFoundResponse({ type: ApiErrorDto, description: 'EPISODE_NOT_FOUND' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'SOURCE_MISSING | SOURCE_NOT_UPLOADED' })
   retranscode(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentAdmin() admin: AuthenticatedAdmin,
     @Ip() ip: string,
   ): Promise<AdminEpisodeDto> {

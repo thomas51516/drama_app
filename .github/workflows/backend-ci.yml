@@ -83,6 +83,7 @@ jobs:
       PUSH_PROVIDER: log
       PUSH_QUEUE_ENABLED: 'false'
       SWAGGER_ENABLED: 'true'
+      BILLING_VERIFIER: fake
 
     steps:
       - uses: actions/checkout@v4

@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Delete,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-  Post,
-} from '@nestjs/common';
+import { Controller, Delete, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
@@ -21,6 +13,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
 import { FavoritesService } from './favorites.service.js';
+import { UuidPipe } from '../common/pipes/uuid.pipe.js';
 
 /** « J'aime » sur une série (S05-BE-05, M-16). Jeton utilisateur obligatoire. */
 @ApiTags('users')
@@ -37,7 +30,7 @@ export class LikesController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: LikeResultDto })
   like(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<LikeResultDto> {
     return this.favorites.like(user.id, id);
@@ -49,7 +42,7 @@ export class LikesController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: LikeResultDto })
   unlike(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', UuidPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<LikeResultDto> {
     return this.favorites.unlike(user.id, id);

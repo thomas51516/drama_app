@@ -2,6 +2,7 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AppConfig } from '../config/app-config.js';
+import { MonetizationSettingsService } from '../monetization/monetization-settings.service.js';
 import { type Prisma, type User, type UserIdentity } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
@@ -46,6 +47,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: AppConfig,
+    private readonly settings: MonetizationSettingsService,
   ) {}
 
   /**
@@ -53,6 +55,7 @@ export class AuthService {
    * dans la même transaction, puis émet la première paire de jetons.
    */
   async createGuest(dto: GuestAuthDto, meta: ClientMeta = {}): Promise<AuthResponseDto> {
+    const autoUnlock = (await this.settings.get()).autoUnlockDefault;
     const { user, tokens } = await this.prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
@@ -60,6 +63,7 @@ export class AuthService {
           deviceId: dto.deviceId,
           language: dto.language ?? 'fr',
           country: dto.country?.toUpperCase(),
+          autoUnlock,
           lastSeenAt: new Date(),
           wallet: { create: {} },
         },

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { toSeriesSummary } from './catalog.mapper.js';
-import { seriesInclude, type ViewerContext } from './catalog.where.js';
+import { publishedSeriesWhere, seriesInclude, type ViewerContext } from './catalog.where.js';
 import {
   type SearchQueryDto,
   type SearchResponseDto,
@@ -23,11 +23,13 @@ export class SearchService {
   constructor(private readonly prisma: PrismaService) {}
 
   async search(query: SearchQueryDto, viewer: ViewerContext): Promise<SearchResponseDto> {
-    const prepared = prepareSearch(query.q);
-    const empty = { items: [], total: 0, page: query.page, pageSize: query.pageSize };
-    if (prepared.terms.length === 0) return { ...empty, suggestions: [] };
-
     const genre = query.genre?.trim().toLowerCase() || null;
+    if (query.q === undefined || query.q.trim() === '') {
+      return genre ? this.byGenre(genre, query, viewer) : emptyPage(query, []);
+    }
+    const prepared = prepareSearch(query.q);
+    if (prepared.terms.length === 0) return emptyPage(query, []);
+
     const filters = Prisma.sql`
       s.status = 'PUBLISHED' AND s.published_at IS NOT NULL AND s.published_at <= now()
       ${viewer.country ? Prisma.sql`AND (cardinality(s.territories) = 0 OR ${viewer.country} = ANY(s.territories))` : Prisma.empty}
@@ -63,6 +65,32 @@ export class SearchService {
     };
   }
 
+  /** Recherche par genre seul (DEF-002) : séries publiées du genre, des plus récentes aux plus anciennes. */
+  private async byGenre(
+    genre: string,
+    query: SearchQueryDto,
+    viewer: ViewerContext,
+  ): Promise<SearchResponseDto> {
+    const where = { ...publishedSeriesWhere(viewer), genres: { has: genre } };
+    const [rows, total] = await Promise.all([
+      this.prisma.series.findMany({
+        where,
+        include: seriesInclude(),
+        orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      this.prisma.series.count({ where }),
+    ]);
+    return {
+      items: rows.map(toSeriesSummary),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+      suggestions: [],
+    };
+  }
+
   /** Suggestions : titres de séries publiées dont le titre (ou un mot du titre) commence par le préfixe. */
   async suggest(raw: string, viewer: ViewerContext): Promise<string[]> {
     const prepared = prepareSearch(raw);
@@ -89,4 +117,8 @@ export class SearchService {
     const byId = new Map(rows.map((s) => [s.id, toSeriesSummary(s)]));
     return ids.flatMap((id) => byId.get(id) ?? []);
   }
+}
+
+function emptyPage(query: SearchQueryDto, suggestions: string[]): SearchResponseDto {
+  return { items: [], total: 0, page: query.page, pageSize: query.pageSize, suggestions };
 }

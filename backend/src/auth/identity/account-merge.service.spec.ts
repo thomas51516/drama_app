@@ -77,7 +77,7 @@ function makeTx(guestWallet: { purchasedBalance: number; bonusBalance: number })
 }
 
 describe('AccountMergeService', () => {
-  it('transfers the guest balance with paired ADJUSTMENT ledger rows and updates both wallets', async () => {
+  it('transfers the guest balance with paired MERGE ledger rows and updates both wallets', async () => {
     const audit = { record: vi.fn(() => Promise.resolve()) };
     const { tx, ledger, walletUpdates, userUpdates } = makeTx({
       purchasedBalance: 40,
@@ -104,9 +104,9 @@ describe('AccountMergeService', () => {
     expect(ledger).toHaveLength(4);
     expect(ledger.reduce((sum, l) => sum + (l.amount as number), 0)).toBe(0);
     expect(new Set(ledger.map((l) => l.idempotencyKey)).size).toBe(4);
-    expect(
-      ledger.every((l) => l.type === 'ADJUSTMENT' && l.referenceType === 'account_merge'),
-    ).toBe(true);
+    expect(ledger.every((l) => l.type === 'MERGE' && l.referenceType === 'account_merge')).toBe(
+      true,
+    );
     const bonusIn = ledger.find((l) => l.bucket === 'BONUS' && (l.amount as number) > 0);
     expect(bonusIn).toMatchObject({
       userId: TARGET_ID,

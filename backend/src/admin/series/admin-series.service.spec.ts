@@ -66,7 +66,15 @@ function makeService(existing: AdminSeriesRecord | null, readyCount = 0) {
   };
   const audit = { record: vi.fn(() => Promise.resolve()) };
   const cache = { invalidateSeries: vi.fn(() => Promise.resolve(0)) };
-  const service = new AdminSeriesService(prisma as never, audit as never, cache as never);
+  const settings = {
+    get: vi.fn(() => Promise.resolve({ defaultFreeEpisodes: 5, defaultCoinCost: 10 })),
+  };
+  const service = new AdminSeriesService(
+    prisma as never,
+    audit as never,
+    cache as never,
+    settings as never,
+  );
   return { service, prisma, tx, audit, cache };
 }
 

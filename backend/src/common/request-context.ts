@@ -16,6 +16,8 @@ export interface AuthenticatedAdmin {
   jti: string;
   /** Expiration du jeton (secondes epoch). */
   exp: number;
+  /** Appareil de confiance lié à la session courante (`TrustedDevice.current`). */
+  deviceId?: string;
 }
 
 export type RequestWithContext = Request & {
