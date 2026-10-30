@@ -5,6 +5,7 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   IsUrl,
@@ -166,7 +167,19 @@ export class CreateAdminSeriesDto {
   territories?: string[];
 }
 
-export class UpdateAdminSeriesDto extends PartialType(CreateAdminSeriesDto) {}
+export class UpdateAdminSeriesDto extends PartialType(CreateAdminSeriesDto) {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    format: 'date-time',
+    description:
+      'Date de publication, future acceptée (publication programmée, B-04) : une série publiée reste invisible du public tant que la date n’est pas atteinte ; `null` efface la date (la série publiée redevient invisible).',
+  })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsISO8601({ strict: true })
+  publishedAt?: string | null;
+}
 
 export class ListAdminSeriesQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })

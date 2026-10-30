@@ -78,7 +78,12 @@ export class RateLimitGuard implements CanActivate {
 
   private subjectFor(rule: RateLimitRule, req: Request): string | undefined {
     if (rule.scope === 'ip') return req.ip ?? req.socket.remoteAddress ?? 'unknown';
-    const email = (req.body as Record<string, unknown> | undefined)?.email;
+    const body = req.body as Record<string, unknown> | undefined;
+    if (rule.scope === 'phone') {
+      const phone = body?.phone;
+      return typeof phone === 'string' && phone.length > 0 ? phone.replace(/\s+/g, '') : undefined;
+    }
+    const email = body?.email;
     return typeof email === 'string' && email.length > 0 ? email.trim().toLowerCase() : undefined;
   }
 }

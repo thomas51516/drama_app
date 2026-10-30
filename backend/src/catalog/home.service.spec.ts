@@ -66,7 +66,16 @@ function makeService(opts: {
         opts.cacheHit !== undefined && !fresh ? Promise.resolve(opts.cacheHit) : compute(),
     ),
   };
-  const service = new HomeService(prisma as never, entitlements as never, cache as never, config);
+  const personalization = {
+    decorate: vi.fn((_userId: string | undefined, items: unknown[]) => Promise.resolve(items)),
+  };
+  const service = new HomeService(
+    prisma as never,
+    entitlements as never,
+    cache as never,
+    config,
+    personalization as never,
+  );
   return { service, prisma, cache, entitlements };
 }
 

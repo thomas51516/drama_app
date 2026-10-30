@@ -132,6 +132,9 @@ export class AdminSeriesService {
     if (dto.freeEpisodeCount !== undefined) data.freeEpisodeCount = dto.freeEpisodeCount;
     if (dto.coinCostPerEpisode !== undefined) data.coinCostPerEpisode = dto.coinCostPerEpisode;
     if (dto.territories !== undefined) data.territories = dto.territories;
+    if (dto.publishedAt !== undefined) {
+      data.publishedAt = dto.publishedAt === null ? null : new Date(dto.publishedAt);
+    }
     if (Object.keys(data).length === 0) return toAdminSeries(before);
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -157,7 +160,10 @@ export class AdminSeriesService {
     return toAdminSeries(updated);
   }
 
-  /** Publication : refusée (409) tant qu'aucun épisode n'est READY. */
+  /**
+   * Publication : refusée (409) tant qu'aucun épisode n'est READY. Une date déjà renseignée (future :
+   * publication programmée, B-04) est conservée ; sinon la série est publiée immédiatement.
+   */
   async publish(id: string, admin: AuthenticatedAdmin, ip?: string): Promise<AdminSeriesDto> {
     const before = await this.findOrThrow(id);
     if (before.status === 'PUBLISHED') return toAdminSeries(before);

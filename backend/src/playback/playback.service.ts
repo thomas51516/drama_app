@@ -1,13 +1,19 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { resolveMediaUrl, toSubtitleTrack } from '../catalog/catalog.mapper.js';
-import { subtitleSelect, visibleEpisodeWhere } from '../catalog/catalog.where.js';
+import {
+  publishedSeriesWhere,
+  subtitleSelect,
+  visibleEpisodeWhere,
+} from '../catalog/catalog.where.js';
 import { computeAccess, EntitlementService } from '../catalog/entitlement.service.js';
 import { AppConfig } from '../config/app-config.js';
+import { MEDIA_URL_SIGNER, type MediaUrlSigner } from '../media/media-url-signer.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   type PlaySessionDto,
@@ -21,15 +27,16 @@ export class PlaybackService {
     private readonly prisma: PrismaService,
     private readonly entitlements: EntitlementService,
     private readonly config: AppConfig,
+    @Inject(MEDIA_URL_SIGNER) private readonly signer: MediaUrlSigner,
   ) {}
 
   /**
-   * Vérifie le droit d'accès puis renvoie la session de lecture.
-   * 403 EPISODE_LOCKED si l'épisode n'est ni gratuit, ni débloqué, ni couvert par le VIP.
+   * Vérifie le droit d'accès puis renvoie la session de lecture avec l'URL de manifeste signée
+   * (S04-BE-02). 403 EPISODE_LOCKED si l'épisode n'est ni gratuit, ni débloqué, ni couvert par le VIP.
    */
   async play(userId: string, episodeId: string): Promise<PlaySessionDto> {
     const episode = await this.prisma.episode.findFirst({
-      where: { id: episodeId, ...visibleEpisodeWhere(), series: { status: 'PUBLISHED' } },
+      where: { id: episodeId, ...visibleEpisodeWhere(), series: publishedSeriesWhere({}) },
       include: { series: true, subtitles: subtitleSelect },
     });
     if (!episode) {
@@ -51,7 +58,6 @@ export class PlaybackService {
       });
     }
 
-    // TODO S04-BE-02 : URL de manifeste signée et expirante (clé CDN), au lieu de l'URL brute.
     // TODO S10-BE-05 : DRM Widevine sur les épisodes payants.
     const manifestUrl = resolveMediaUrl(episode.hlsKey, this.config.cdnBaseUrl);
     if (!manifestUrl) {
@@ -60,6 +66,7 @@ export class PlaybackService {
         message: 'Episode has no manifest yet',
       });
     }
+    const signed = this.signer.sign(manifestUrl);
 
     const [progress, next] = await Promise.all([
       this.prisma.watchProgress.findUnique({
@@ -77,8 +84,8 @@ export class PlaybackService {
       seriesId: episode.seriesId,
       episodeNumber: episode.number,
       access,
-      manifestUrl,
-      expiresAt: new Date(Date.now() + this.config.playbackUrlTtlSeconds * 1000).toISOString(),
+      manifestUrl: signed.url,
+      expiresAt: signed.expiresAt,
       drm: { type: 'none' },
       subtitles: episode.subtitles.map((s) => toSubtitleTrack(s, this.config.cdnBaseUrl)),
       resumePositionSeconds: progress && !progress.completed ? progress.positionSeconds : 0,

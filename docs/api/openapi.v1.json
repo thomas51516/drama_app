@@ -192,9 +192,18 @@
     },
     "/auth/google": {
       "post": {
-        "description": "Vérifie l'ID token Google, crée ou retrouve le compte inscrit et rattache le compte invité (`deviceId`). Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+        "description": "Vérifie l'ID token (audiences `GOOGLE_CLIENT_IDS`) puis ouvre la session. Avec un jeton de compte invité dans `Authorization`, l'identité est rattachée : invité inscrit en place si l'identité est inconnue, fusion de l'invité dans le compte existant sinon (`linked=true`, M-50).",
         "operationId": "google",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -211,13 +220,43 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthResponseDto"
+                  "$ref": "#/components/schemas/AuthSessionDto"
                 }
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "401": {
+            "description": "GOOGLE_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED (30 / 15 min / IP)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "GOOGLE_AUTH_DISABLED",
             "content": {
               "application/json": {
                 "schema": {
@@ -227,7 +266,12 @@
             }
           }
         },
-        "summary": "Connexion Google (planifié S05-BE-01)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Connexion Google (M-51)",
         "tags": [
           "auth"
         ]
@@ -235,7 +279,7 @@
     },
     "/auth/otp/request": {
       "post": {
-        "description": "Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+        "description": "Code à 6 chiffres valable 5 min (5 essais), nouvel envoi possible après 60 s (`429 OTP_RESEND_TOO_SOON`). Limite : 3 demandes par numéro et 10 par IP par 15 min. En dev (`SMS_PROVIDER=console`), le code est dans les logs de l’API et dans Redis `otp:<requestId>`.",
         "operationId": "otpRequest",
         "parameters": [],
         "requestBody": {
@@ -259,8 +303,18 @@
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "429": {
+            "description": "RATE_LIMITED | OTP_RESEND_TOO_SOON (details.retryAfterSeconds)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SMS_DELIVERY_FAILED",
             "content": {
               "application/json": {
                 "schema": {
@@ -270,7 +324,7 @@
             }
           }
         },
-        "summary": "Demander un code OTP par SMS (planifié S05-BE-02)",
+        "summary": "Demander un code OTP par SMS (M-51)",
         "tags": [
           "auth"
         ]
@@ -278,9 +332,18 @@
     },
     "/auth/otp/verify": {
       "post": {
-        "description": "Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+        "description": "Consomme la demande ; mêmes règles de rattachement du compte invité que `/auth/google` (M-50).",
         "operationId": "otpVerify",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -297,13 +360,43 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthResponseDto"
+                  "$ref": "#/components/schemas/AuthSessionDto"
                 }
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "401": {
+            "description": "OTP_INVALID_CODE (details.attemptsLeft)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "OTP_REQUEST_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "OTP_TOO_MANY_ATTEMPTS",
             "content": {
               "application/json": {
                 "schema": {
@@ -313,7 +406,197 @@
             }
           }
         },
-        "summary": "Vérifier le code OTP et ouvrir la session (planifié S05-BE-02)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Vérifier le code OTP et ouvrir la session (M-51)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/email/register": {
+      "post": {
+        "description": "Mot de passe de 8 caractères minimum (Argon2id). Avec un jeton invité, le compte invité devient inscrit en place (`linked=true`). `409 EMAIL_TAKEN` si l’e-mail est déjà utilisé (se connecter à la place).",
+        "operationId": "emailRegister",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCredentialsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EMAIL_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED (10 / 15 min / IP)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Créer un compte e-mail + mot de passe (M-51)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/email/login": {
+      "post": {
+        "description": "Avec un jeton invité, l’invité est fusionné dans le compte retrouvé (`linked=true`, M-50).",
+        "operationId": "emailLogin",
+        "parameters": [
+          {
+            "name": "user-agent",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCredentialsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED (10 / e-mail et 30 / IP par 15 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Connexion e-mail + mot de passe (M-51)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "description": "Révoque le jeton de rafraîchissement (et sa famille) s’il appartient à l’utilisateur courant. Toujours 204.",
+        "operationId": "logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fermer la session",
         "tags": [
           "auth"
         ]
@@ -627,6 +910,7 @@
     },
     "/feed": {
       "get": {
+        "description": "Premier épisode de chaque série publiée. `previewUrl` est signée comme `/play` (`previewExpiresAt`), `episode` porte le statut d’accès du spectateur et `isFavorite` son favori (S04-BE-03).",
         "operationId": "feed",
         "parameters": [
           {
@@ -703,8 +987,8 @@
     },
     "/search": {
       "get": {
-        "description": "Recherche plein texte sur les séries publiées. Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
-        "operationId": "search",
+        "description": "Recherche plein texte PostgreSQL (titre, synopsis, tags, genres ; dictionnaires français et simple, accents ignorés, préfixes) sur les séries publiées et autorisées sur le territoire ; classement par pertinence. `suggestions` : titres commençant par le texte saisi (8 au plus).",
+        "operationId": "searchSeries",
         "parameters": [
           {
             "name": "Accept-Language",
@@ -730,10 +1014,20 @@
             "name": "q",
             "required": true,
             "in": "query",
-            "description": "Texte recherché (titre, synopsis, tags)",
+            "description": "Texte recherché (titre, synopsis, tags, genres ; accents ignorés)",
             "schema": {
               "minLength": 2,
               "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "genre",
+            "required": false,
+            "in": "query",
+            "description": "Filtre par genre",
+            "schema": {
+              "example": "romance",
               "type": "string"
             }
           },
@@ -757,6 +1051,14 @@
               "default": 20,
               "type": "number"
             }
+          },
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -765,17 +1067,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedSeriesDto"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
+                  "$ref": "#/components/schemas/SearchResponseDto"
                 }
               }
             }
@@ -786,7 +1078,75 @@
             "bearer": []
           }
         ],
-        "summary": "Recherche de séries (planifié S05-BE-06)",
+        "summary": "Recherche de séries (M-03)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/search/suggest": {
+      "get": {
+        "description": "Titres de séries publiées commençant par le préfixe saisi, 8 au plus.",
+        "operationId": "suggest",
+        "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Langue des titres de rangées : fr (défaut), en, es, pt.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr-FR,fr;q=0.9,en;q=0.8"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "description": "Pays du spectateur (ISO 3166-1 alpha-2) : filtre territorial et rangées / bannières par pays. Sinon pays du compte, sinon aucun filtre.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Préfixe saisi",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-country",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchSuggestionsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suggestions de titres (M-03)",
         "tags": [
           "catalog"
         ]
@@ -1562,23 +1922,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeDto"
+                  "$ref": "#/components/schemas/UserDto"
                 }
               }
             }
           },
           "401": {
             "description": "UNAUTHENTICATED | INVALID_TOKEN",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
             "content": {
               "application/json": {
                 "schema": {
@@ -1593,12 +1943,13 @@
             "bearer": []
           }
         ],
-        "summary": "Profil courant (planifié S05-BE-04)",
+        "summary": "Profil courant",
         "tags": [
           "users"
         ]
       },
       "patch": {
+        "description": "Nom affiché, langue, pays, préférences de notification (fusionnées champ par champ), déblocage automatique.",
         "operationId": "update",
         "parameters": [],
         "requestBody": {
@@ -1617,23 +1968,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeDto"
+                  "$ref": "#/components/schemas/UserDto"
                 }
               }
             }
           },
           "401": {
             "description": "UNAUTHENTICATED | INVALID_TOKEN",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
             "content": {
               "application/json": {
                 "schema": {
@@ -1648,17 +1989,17 @@
             "bearer": []
           }
         ],
-        "summary": "Modifier le profil (planifié S05-BE-04)",
+        "summary": "Modifier le profil",
         "tags": [
           "users"
         ]
       },
       "delete": {
-        "description": "Passe le compte en DELETION_PENDING ; purge différée (§14).",
+        "description": "Suppression différée de 30 jours (§14) : le compte passe en DELETION_PENDING, ses jetons sont révoqués, puis une tâche planifiée l’anonymise (e-mail, téléphone, identités, favoris et progression effacés ; grand livre et achats conservés). Se reconnecter puis appeler `POST /me/delete/cancel` annule la demande dans le délai.",
         "operationId": "remove",
         "parameters": [],
         "responses": {
-          "200": {
+          "202": {
             "description": "",
             "content": {
               "application/json": {
@@ -1678,8 +2019,8 @@
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "409": {
+            "description": "USER_NOT_ACTIVE",
             "content": {
               "application/json": {
                 "schema": {
@@ -1694,15 +2035,15 @@
             "bearer": []
           }
         ],
-        "summary": "Demander la suppression du compte (planifié S05-BE-04)",
+        "summary": "Demander la suppression du compte",
         "tags": [
           "users"
         ]
       }
     },
-    "/me/favorites": {
-      "get": {
-        "operationId": "favorites",
+    "/me/delete/cancel": {
+      "post": {
+        "operationId": "cancelDeletion",
         "parameters": [],
         "responses": {
           "200": {
@@ -1710,7 +2051,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FavoritesDto"
+                  "$ref": "#/components/schemas/UserDto"
                 }
               }
             }
@@ -1725,8 +2066,8 @@
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "409": {
+            "description": "DELETION_NOT_PENDING",
             "content": {
               "application/json": {
                 "schema": {
@@ -1741,14 +2082,73 @@
             "bearer": []
           }
         ],
-        "summary": "« Ma liste » (planifié S05-BE-05)",
+        "summary": "Annuler la suppression du compte (dans le délai, après reconnexion)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/favorites": {
+      "get": {
+        "operationId": "listFavorites",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoritesPageDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "« Ma liste » (M-16), paginée, du plus récent au plus ancien",
         "tags": [
           "users"
         ]
       }
     },
     "/me/favorites/{seriesId}": {
-      "post": {
+      "put": {
         "operationId": "addFavorite",
         "parameters": [
           {
@@ -1762,15 +2162,8 @@
           }
         ],
         "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FavoriteDto"
-                }
-              }
-            }
+          "204": {
+            "description": ""
           },
           "401": {
             "description": "UNAUTHENTICATED | INVALID_TOKEN",
@@ -1791,16 +2184,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -1808,7 +2191,7 @@
             "bearer": []
           }
         ],
-        "summary": "Ajouter une série à « Ma liste » (planifié S05-BE-05)",
+        "summary": "Ajouter une série à « Ma liste » (idempotent)",
         "tags": [
           "users"
         ]
@@ -1839,9 +2222,56 @@
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retirer une série de « Ma liste » (idempotent)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/series/{id}/like": {
+      "post": {
+        "operationId": "like",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeResultDto"
+                }
+              }
+            }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
             "content": {
               "application/json": {
                 "schema": {
@@ -1856,7 +2286,62 @@
             "bearer": []
           }
         ],
-        "summary": "Retirer une série de « Ma liste » (planifié S05-BE-05)",
+        "summary": "Aimer une série (idempotent)",
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "operationId": "unlike",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retirer son « J’aime » (idempotent)",
         "tags": [
           "users"
         ]
@@ -4653,7 +5138,8 @@
                 "home_banner",
                 "home_row",
                 "admin_account",
-                "upload"
+                "upload",
+                "user"
               ]
             }
           },
@@ -4729,12 +5215,132 @@
           "admin-accounts"
         ]
       }
+    },
+    "/admin/schedule": {
+      "get": {
+        "description": "Séries et épisodes dont `publishedAt` tombe dans la fenêtre `from`..`to` (défaut : 30 jours à partir de maintenant, 366 au plus). `willBeVisible` indique si l’élément apparaîtra bien au public à la date (série publiée, épisode READY). La tâche planifiée invalide le cache chaque minute quand une date est atteinte.",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Début de la fenêtre (défaut : maintenant)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Fin de la fenêtre (défaut : + 30 jours)",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | SCHEDULE_RANGE_INVALID | SCHEDULE_RANGE_TOO_WIDE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Calendrier des publications à venir",
+        "tags": [
+          "admin-schedule"
+        ]
+      }
+    },
+    "/admin/stats/overview": {
+      "get": {
+        "description": "Agrégats SQL sur `users` et `watch_progress` (`days` = fenêtre pour `newUsers`, `episodesStarted`, `episodesCompleted`, `topSeries` ; `activeUsers` toujours sur 1, 7 et 30 jours). Mis en cache 5 min par fenêtre.",
+        "operationId": "overview",
+        "parameters": [
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Fenêtre en jours pour nouveaux utilisateurs, épisodes et top séries",
+            "schema": {
+              "minimum": 1,
+              "maximum": 90,
+              "default": 7,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsOverviewDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Vue d’ensemble : utilisateurs actifs, nouveaux comptes, épisodes vus, top séries",
+        "tags": [
+          "admin-stats"
+        ]
+      }
     }
   },
   "info": {
     "title": "DRAMA API",
-    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique).\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/guest`, `/auth/refresh`, `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office.",
-    "version": "1.1.0",
+    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
+    "version": "1.2.0",
     "contact": {
       "name": "Équipe backend DRAMA",
       "url": "",
@@ -4776,7 +5382,7 @@
     },
     {
       "name": "users",
-      "description": "Profil, suppression de compte, favoris (M-16, M-52)"
+      "description": "Profil, suppression différée, favoris et « J’aime » (M-16, M-52)"
     },
     {
       "name": "webhooks",
@@ -4805,6 +5411,14 @@
     {
       "name": "admin-accounts",
       "description": "Back-office : comptes internes, rôles et journal d’audit (B-13)"
+    },
+    {
+      "name": "admin-schedule",
+      "description": "Back-office : calendrier des publications programmées (B-04)"
+    },
+    {
+      "name": "admin-stats",
+      "description": "Back-office : tableau de bord v0 (B-11)"
     }
   ],
   "servers": [
@@ -4979,6 +5593,7 @@
               "ACTIVE",
               "BLOCKED",
               "DELETION_PENDING",
+              "MERGED",
               "DELETED"
             ]
           },
@@ -5124,15 +5739,191 @@
         "properties": {
           "idToken": {
             "type": "string",
-            "description": "ID token Google (One Tap / Credential Manager)"
+            "description": "ID token Google (Credential Manager / One Tap)"
           },
           "deviceId": {
             "type": "string",
-            "description": "Identifiant d’installation, pour rattacher le compte invité courant"
+            "description": "Identifiant d'installation généré par l'app (M-50).",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "3f2c1a9e-5b7d-4c8e-9f0a-1b2c3d4e5f60"
           }
         },
         "required": [
-          "idToken"
+          "idToken",
+          "deviceId"
+        ]
+      },
+      "NotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "newEpisodes": {
+            "type": "boolean",
+            "description": "Nouvel épisode d’une série suivie (M-54)",
+            "default": true
+          },
+          "offers": {
+            "type": "boolean",
+            "description": "Offres et promotions",
+            "default": true
+          },
+          "checkinReminder": {
+            "type": "boolean",
+            "description": "Rappel de check-in quotidien",
+            "default": true
+          }
+        }
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "REGISTERED"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "BLOCKED",
+              "DELETION_PENDING",
+              "MERGED",
+              "DELETED"
+            ],
+            "description": "`DELETION_PENDING` : suppression programmée (voir `deletionScheduledAt`)"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Awa"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "example": "awa@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "+22890000000"
+          },
+          "country": {
+            "type": "string",
+            "nullable": true,
+            "example": "TG"
+          },
+          "language": {
+            "type": "string",
+            "example": "fr"
+          },
+          "vipStatus": {
+            "type": "string",
+            "enum": [
+              "none",
+              "active",
+              "expired"
+            ],
+            "description": "none, active ou expired"
+          },
+          "vipExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "providers": {
+            "type": "array",
+            "description": "Moyens de connexion rattachés (vide pour un invité)",
+            "example": [
+              "google"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "google",
+                "phone",
+                "email"
+              ]
+            }
+          },
+          "autoUnlock": {
+            "type": "boolean",
+            "description": "Déblocage automatique de l’épisode suivant si le solde le permet"
+          },
+          "notificationPreferences": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationPreferencesDto"
+              }
+            ]
+          },
+          "deletionScheduledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Date d’anonymisation prévue (statut DELETION_PENDING)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "displayName",
+          "email",
+          "phone",
+          "country",
+          "language",
+          "vipStatus",
+          "vipExpiresAt",
+          "providers",
+          "autoUnlock",
+          "notificationPreferences",
+          "deletionScheduledAt",
+          "createdAt"
+        ]
+      },
+      "AuthSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT à présenter dans `Authorization: Bearer <token>`."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Jeton opaque à usage unique, à renouveler avec `POST /auth/refresh` (rotation)."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Durée de vie du JWT d'accès en secondes.",
+            "example": 900
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserDto"
+          },
+          "linked": {
+            "type": "boolean",
+            "description": "`true` si le compte invité porté par le jeton de l'appel a été rattaché (inscrit en place) ou fusionné dans le compte retrouvé (M-50)."
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "user",
+          "linked"
         ]
       },
       "OtpRequestDto": {
@@ -5151,7 +5942,7 @@
       "OtpRequestResponseDto": {
         "type": "object",
         "properties": {
-          "challengeId": {
+          "requestId": {
             "type": "string",
             "format": "uuid",
             "description": "À renvoyer avec le code"
@@ -5161,37 +5952,81 @@
             "example": 300,
             "description": "Validité du code en secondes"
           },
-          "resendAfterSeconds": {
+          "resendAfter": {
             "type": "number",
             "example": 60,
-            "description": "Délai avant un nouvel envoi"
+            "description": "Délai en secondes avant de pouvoir redemander un code"
           }
         },
         "required": [
-          "challengeId",
+          "requestId",
           "expiresIn",
-          "resendAfterSeconds"
+          "resendAfter"
         ]
       },
       "OtpVerifyDto": {
         "type": "object",
         "properties": {
-          "challengeId": {
+          "requestId": {
             "type": "string",
             "format": "uuid"
           },
           "code": {
             "type": "string",
-            "example": "123456"
+            "example": "123456",
+            "description": "Code à 6 chiffres reçu par SMS"
           },
           "deviceId": {
             "type": "string",
-            "description": "Identifiant d’installation, pour rattacher le compte invité courant"
+            "description": "Identifiant d'installation généré par l'app (M-50).",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "3f2c1a9e-5b7d-4c8e-9f0a-1b2c3d4e5f60"
           }
         },
         "required": [
-          "challengeId",
-          "code"
+          "requestId",
+          "code",
+          "deviceId"
+        ]
+      },
+      "EmailCredentialsDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "awa@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "motdepasse-solide"
+          },
+          "deviceId": {
+            "type": "string",
+            "description": "Identifiant d'installation généré par l'app (M-50).",
+            "minLength": 8,
+            "maxLength": 128,
+            "example": "3f2c1a9e-5b7d-4c8e-9f0a-1b2c3d4e5f60"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "deviceId"
+        ]
+      },
+      "LogoutDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Jeton de rafraîchissement de la session à fermer."
+          }
+        },
+        "required": [
+          "refreshToken"
         ]
       },
       "HomeBannerDto": {
@@ -5256,6 +6091,15 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "isFavorite": {
+            "type": "boolean",
+            "description": "Série dans « Ma liste » du spectateur ; présent uniquement avec un jeton (M-16)"
+          },
+          "likes": {
+            "type": "number",
+            "description": "Nombre de « J’aime » ; présent uniquement avec un jeton (M-16)",
+            "example": 128
           },
           "bannerId": {
             "type": "string",
@@ -5357,6 +6201,15 @@
             "type": "string",
             "nullable": true,
             "format": "date-time"
+          },
+          "isFavorite": {
+            "type": "boolean",
+            "description": "Série dans « Ma liste » du spectateur ; présent uniquement avec un jeton (M-16)"
+          },
+          "likes": {
+            "type": "number",
+            "description": "Nombre de « J’aime » ; présent uniquement avec un jeton (M-16)",
+            "example": 128
           }
         },
         "required": [
@@ -5647,6 +6500,15 @@
             "nullable": true,
             "format": "date-time"
           },
+          "isFavorite": {
+            "type": "boolean",
+            "description": "Série dans « Ma liste » du spectateur ; présent uniquement avec un jeton (M-16)"
+          },
+          "likes": {
+            "type": "number",
+            "description": "Nombre de « J’aime » ; présent uniquement avec un jeton (M-16)",
+            "example": 128
+          },
           "synopsis": {
             "type": "string"
           },
@@ -5704,13 +6566,25 @@
           "previewUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Extrait de 15 s (HLS) lisible sans droit ; sinon appeler /episodes/{id}/play"
+            "description": "Extrait de 15 s (HLS) lisible sans droit, signé comme `/play` (S04-BE-02) ; sinon appeler /episodes/{id}/play"
+          },
+          "previewExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Expiration de `previewUrl` (redemander le flux ensuite)"
+          },
+          "isFavorite": {
+            "type": "boolean",
+            "description": "Série dans « Ma liste » du spectateur (false sans jeton)"
           }
         },
         "required": [
           "series",
           "episode",
-          "previewUrl"
+          "previewUrl",
+          "previewExpiresAt",
+          "isFavorite"
         ]
       },
       "FeedResponseDto": {
@@ -5730,6 +6604,58 @@
         "required": [
           "items",
           "nextCursor"
+        ]
+      },
+      "SearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSummaryDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "suggestions": {
+            "description": "Suggestions de titres (préfixe, 8 au plus)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total",
+          "suggestions"
+        ]
+      },
+      "SearchSuggestionsDto": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "description": "Titres de séries publiées commençant par le préfixe (8 au plus)",
+            "example": [
+              "Le Secret du Lagon"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "suggestions"
         ]
       },
       "PlayDrmDto": {
@@ -5801,13 +6727,13 @@
           },
           "manifestUrl": {
             "type": "string",
-            "description": "URL du manifeste HLS maître. Signée et expirante en S04-BE-02 (la signature sera portée par la query string, le champ ne change pas).",
-            "example": "https://cdn.example.com/hls/0192.../master.m3u8?exp=...&sig=..."
+            "description": "URL du manifeste HLS maître, signée et expirante (S04-BE-02). Mode `hmac` : `?token=<base64url(hmac-sha256(secret, chemin du dossier + expires))>&expires=<epoch>` ; mode `plain` (dev MinIO) : URL publique.",
+            "example": "https://cdn.example.com/hls/0192.../master.m3u8?token=...&expires=1761732000"
           },
           "expiresAt": {
             "type": "string",
             "format": "date-time",
-            "description": "Expiration de l'URL ; redemander /play ensuite."
+            "description": "Expiration de l'URL ; redemander /play ensuite ou sur une erreur 403 du CDN."
           },
           "drm": {
             "$ref": "#/components/schemas/PlayDrmDto"
@@ -6442,158 +7368,106 @@
           "wallet"
         ]
       },
-      "MeDto": {
+      "NotificationPreferencesUpdateDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "GUEST",
-              "REGISTERED"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "BLOCKED",
-              "DELETION_PENDING",
-              "DELETED"
-            ]
-          },
-          "language": {
-            "type": "string",
-            "example": "fr"
-          },
-          "country": {
-            "type": "string",
-            "nullable": true,
-            "example": "TG"
-          },
-          "isVip": {
-            "type": "boolean"
-          },
-          "vipExpiresAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "phone": {
-            "type": "string",
-            "nullable": true,
-            "example": "+22890000000"
-          },
-          "displayName": {
-            "type": "string",
-            "nullable": true
-          },
-          "autoUnlock": {
+          "newEpisodes": {
             "type": "boolean",
-            "description": "Déblocage automatique de l’épisode suivant si le solde le permet"
+            "description": "Nouvel épisode d’une série suivie (M-54)"
           },
-          "deletionScheduledAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time",
-            "description": "Suppression programmée (DELETION_PENDING)"
+          "offers": {
+            "type": "boolean",
+            "description": "Offres et promotions"
+          },
+          "checkinReminder": {
+            "type": "boolean",
+            "description": "Rappel de check-in quotidien"
           }
-        },
-        "required": [
-          "id",
-          "type",
-          "status",
-          "language",
-          "country",
-          "isVip",
-          "vipExpiresAt",
-          "createdAt",
-          "email",
-          "phone",
-          "displayName",
-          "autoUnlock",
-          "deletionScheduledAt"
-        ]
+        }
       },
       "UpdateMeDto": {
         "type": "object",
         "properties": {
           "displayName": {
             "type": "string",
-            "maxLength": 80
+            "maxLength": 80,
+            "example": "Awa"
           },
           "language": {
             "type": "string",
-            "example": "fr"
+            "example": "fr",
+            "description": "fr, en, es ou pt"
           },
           "country": {
             "type": "string",
-            "example": "TG"
+            "example": "TG",
+            "description": "ISO 3166-1 alpha-2"
+          },
+          "notificationPreferences": {
+            "$ref": "#/components/schemas/NotificationPreferencesUpdateDto"
           },
           "autoUnlock": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Déblocage automatique de l’épisode suivant (§3)"
           }
         }
       },
       "DeleteMeResultDto": {
         "type": "object",
         "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "DELETION_PENDING"
-            ]
-          },
-          "purgeAt": {
+          "scheduledFor": {
             "type": "string",
             "format": "date-time",
-            "description": "Purge définitive après le délai de rétractation"
+            "description": "Date d’anonymisation : le compte est désactivé immédiatement et ses jetons révoqués ; se reconnecter puis `POST /me/delete/cancel` avant cette date annule la suppression (§14)."
           }
         },
         "required": [
-          "status",
-          "purgeAt"
+          "scheduledFor"
         ]
       },
-      "FavoriteDto": {
-        "type": "object",
-        "properties": {
-          "series": {
-            "$ref": "#/components/schemas/SeriesSummaryDto"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "series",
-          "createdAt"
-        ]
-      },
-      "FavoritesDto": {
+      "FavoritesPageDto": {
         "type": "object",
         "properties": {
           "items": {
+            "description": "Du plus récent au plus ancien ajout",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/FavoriteDto"
+              "$ref": "#/components/schemas/SeriesSummaryDto"
             }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
           }
         },
         "required": [
-          "items"
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "LikeResultDto": {
+        "type": "object",
+        "properties": {
+          "likes": {
+            "type": "number",
+            "description": "Nombre total de « J’aime » de la série",
+            "example": 129
+          },
+          "liked": {
+            "type": "boolean",
+            "description": "Le spectateur courant aime cette série"
+          }
+        },
+        "required": [
+          "likes",
+          "liked"
         ]
       },
       "TranscodeWebhookDto": {
@@ -7102,6 +7976,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Date de publication, future acceptée (publication programmée, B-04) : une série publiée reste invisible du public tant que la date n’est pas atteinte ; `null` efface la date (la série publiée redevient invisible)."
           }
         }
       },
@@ -8009,7 +8889,8 @@
               "home_banner",
               "home_row",
               "admin_account",
-              "upload"
+              "upload",
+              "user"
             ]
           },
           "targetId": {
@@ -8072,6 +8953,220 @@
           "total",
           "page",
           "pageSize"
+        ]
+      },
+      "ScheduleItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "series",
+              "episode"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identifiant de la série ou de l’épisode"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesTitle": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "seriesStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "episodeNumber": {
+            "type": "number",
+            "nullable": true,
+            "example": 4,
+            "description": "Numéro (épisode)"
+          },
+          "episodeTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Titre (épisode)"
+          },
+          "transcodeStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "UPLOADED",
+              "PROCESSING",
+              "READY",
+              "FAILED"
+            ],
+            "nullable": true,
+            "description": "Statut de transcodage (épisode) : seul READY sera visible à la date"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "willBeVisible": {
+            "type": "boolean",
+            "description": "Sera visible du public à la date (série publiée, épisode READY) ; sinon il manque une étape"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "seriesId",
+          "seriesTitle",
+          "seriesStatus",
+          "episodeNumber",
+          "episodeTitle",
+          "transcodeStatus",
+          "publishedAt",
+          "willBeVisible"
+        ]
+      },
+      "ScheduleDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "description": "Triés par date de publication croissante",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleItemDto"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "items"
+        ]
+      },
+      "ActiveUsersDto": {
+        "type": "object",
+        "properties": {
+          "d1": {
+            "type": "number",
+            "description": "Actifs sur 24 h",
+            "example": 42
+          },
+          "d7": {
+            "type": "number",
+            "description": "Actifs sur 7 jours",
+            "example": 180
+          },
+          "d30": {
+            "type": "number",
+            "description": "Actifs sur 30 jours",
+            "example": 530
+          }
+        },
+        "required": [
+          "d1",
+          "d7",
+          "d30"
+        ]
+      },
+      "TopSeriesStatDto": {
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "example": "Le Secret du Lagon"
+          },
+          "viewers": {
+            "type": "number",
+            "description": "Spectateurs distincts sur la fenêtre",
+            "example": 120
+          },
+          "completions": {
+            "type": "number",
+            "description": "Épisodes terminés sur la fenêtre",
+            "example": 310
+          }
+        },
+        "required": [
+          "seriesId",
+          "title",
+          "viewers",
+          "completions"
+        ]
+      },
+      "StatsOverviewDto": {
+        "type": "object",
+        "properties": {
+          "activeUsers": {
+            "$ref": "#/components/schemas/ActiveUsersDto"
+          },
+          "newUsers": {
+            "type": "number",
+            "description": "Comptes créés sur la fenêtre",
+            "example": 25
+          },
+          "registeredUsers": {
+            "type": "number",
+            "description": "Comptes inscrits (Google, téléphone, e-mail), total",
+            "example": 300
+          },
+          "guestUsers": {
+            "type": "number",
+            "description": "Comptes invités, total",
+            "example": 1200
+          },
+          "episodesStarted": {
+            "type": "number",
+            "description": "Épisodes commencés sur la fenêtre (utilisateur × épisode)"
+          },
+          "episodesCompleted": {
+            "type": "number",
+            "description": "Épisodes terminés sur la fenêtre"
+          },
+          "topSeries": {
+            "description": "10 séries les plus regardées",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopSeriesStatDto"
+            }
+          },
+          "days": {
+            "type": "number",
+            "description": "Fenêtre utilisée, en jours",
+            "example": 7
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Calcul (mis en cache 5 min)"
+          }
+        },
+        "required": [
+          "activeUsers",
+          "newUsers",
+          "registeredUsers",
+          "guestUsers",
+          "episodesStarted",
+          "episodesCompleted",
+          "topSeries",
+          "days",
+          "generatedAt"
         ]
       }
     }

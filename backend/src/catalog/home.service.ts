@@ -14,6 +14,7 @@ import {
   visibleEpisodeWhere,
 } from './catalog.where.js';
 import { computeAccess, EntitlementService } from './entitlement.service.js';
+import { PersonalizationService } from './personalization.service.js';
 import {
   type HomeBannerDto,
   type HomeItemDto,
@@ -60,6 +61,7 @@ export class HomeService {
     private readonly entitlements: EntitlementService,
     private readonly cache: CatalogCacheService,
     private readonly config: AppConfig,
+    private readonly personalization: PersonalizationService,
   ) {}
 
   /** `fresh` contourne le cache (aperçu back-office). */
@@ -86,7 +88,25 @@ export class HomeService {
       const items = await this.continueWatchingItems(viewer.userId, country);
       if (items.length > 0) rows.push({ ...row, items });
     }
-    return { banners: shared.banners, rows };
+    return this.personalize(viewer.userId, { banners: shared.banners, rows });
+  }
+
+  /** `isFavorite` / `likes` par spectateur, calculés après le cache (S05-BE-05). */
+  private async personalize(
+    userId: string | undefined,
+    home: HomeResponseDto,
+  ): Promise<HomeResponseDto> {
+    if (!userId) return home;
+    const banners = await this.personalization.decorate(userId, home.banners);
+    const rows: HomeRowDto[] = [];
+    for (const row of home.rows) {
+      const series = await this.personalization.decorate(
+        userId,
+        row.items.map((i) => i.series),
+      );
+      rows.push({ ...row, items: row.items.map((item, i) => ({ ...item, series: series[i] })) });
+    }
+    return { banners, rows };
   }
 
   private async buildShared(country: string | null, lang: SupportedLanguage): Promise<SharedHome> {

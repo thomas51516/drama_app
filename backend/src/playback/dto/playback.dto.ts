@@ -39,14 +39,14 @@ export class PlaySessionDto {
 
   @ApiProperty({
     description:
-      'URL du manifeste HLS maître. Signée et expirante en S04-BE-02 (la signature sera portée par la query string, le champ ne change pas).',
-    example: 'https://cdn.example.com/hls/0192.../master.m3u8?exp=...&sig=...',
+      'URL du manifeste HLS maître, signée et expirante (S04-BE-02). Mode `hmac` : `?token=<base64url(hmac-sha256(secret, chemin du dossier + expires))>&expires=<epoch>` ; mode `plain` (dev MinIO) : URL publique.',
+    example: 'https://cdn.example.com/hls/0192.../master.m3u8?token=...&expires=1761732000',
   })
   manifestUrl: string;
 
   @ApiProperty({
     format: 'date-time',
-    description: "Expiration de l'URL ; redemander /play ensuite.",
+    description: "Expiration de l'URL ; redemander /play ensuite ou sur une erreur 403 du CDN.",
   })
   expiresAt: string;
 

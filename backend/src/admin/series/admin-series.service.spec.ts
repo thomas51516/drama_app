@@ -28,6 +28,7 @@ function series(partial: Partial<AdminSeriesRecord> = {}): AdminSeriesRecord {
     status: 'DRAFT',
     territories: [],
     ageRating: 'ALL',
+    likesCount: 0,
     publishedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),

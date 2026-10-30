@@ -9,8 +9,12 @@ import { ApiErrorDto } from '../common/dto/api-error.dto.js';
  * leurs DTO sont figés pour le mock Android) + back-office (contrat admin v1).
  * v1.1 (sprint 3, addendum du contrat admin) : sous-titres (B-03), mise en avant (B-05) et `GET /home`
  * paramétré (X-Country, Accept-Language, cache), comptes internes et journal d'audit (B-13).
+ * v1.2 (sprint 4, contrat public v1.2) : URLs de lecture signées (S04-BE-02), flux enrichi (S04-BE-03),
+ * connexion Google / OTP / e-mail et rattachement du compte invité (S05-BE-01 à 03), `/me` et
+ * suppression différée (S05-BE-04), favoris, « J'aime » et recherche (S05-BE-05, 06), publication
+ * programmée (B-04) et tableau de bord v0 (B-11).
  */
-export const OPENAPI_VERSION = '1.1.0';
+export const OPENAPI_VERSION = '1.2.0';
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
@@ -21,15 +25,17 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         '',
         '**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.',
         '',
-        '**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique).',
+        '**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).',
+        '',
+        '**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN.',
         '',
         '**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur.',
         '',
         '**Endpoints planifiés** : les opérations marquées « Planifié S0x » répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).',
         '',
-        '**Limitation de débit** : `/auth/guest`, `/auth/refresh`, `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).',
+        '**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).',
         '',
-        '**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office.',
+        '**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).',
       ].join('\n'),
     )
     .setVersion(OPENAPI_VERSION)
@@ -62,7 +68,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('wallet', 'Portefeuille et historique (M-30)')
     .addTag('billing', 'Google Play Billing et mobile money (§10)')
     .addTag('rewards', 'Check-in et tâches (M-40, M-41)')
-    .addTag('users', 'Profil, suppression de compte, favoris (M-16, M-52)')
+    .addTag('users', 'Profil, suppression différée, favoris et « J’aime » (M-16, M-52)')
     .addTag('webhooks', 'Rappels serveur à serveur (signature, pas de JWT)')
     .addTag('admin-auth', 'Back-office : connexion 2FA (B-13)')
     .addTag('admin-series', 'Back-office : séries (B-01)')
@@ -70,6 +76,8 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('admin-subtitles', 'Back-office : sous-titres SRT/VTT par langue (B-03)')
     .addTag('admin-home', 'Back-office : bannières et rangées de l’accueil, par pays (B-05)')
     .addTag('admin-accounts', 'Back-office : comptes internes, rôles et journal d’audit (B-13)')
+    .addTag('admin-schedule', 'Back-office : calendrier des publications programmées (B-04)')
+    .addTag('admin-stats', 'Back-office : tableau de bord v0 (B-11)')
     .build();
 
   return SwaggerModule.createDocument(app, config, {

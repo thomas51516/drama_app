@@ -22,6 +22,7 @@ const fallbacks: Record<string, string> = {
   // Aucune connexion Redis/BullMQ pendant l'export.
   TRANSCODE_PROVIDER: 'webhook',
   TRANSCODE_WORKER_ENABLED: 'false',
+  SCHEDULER_ENABLED: 'false',
 };
 for (const [key, value] of Object.entries(fallbacks)) process.env[key] ??= value;
 

@@ -46,9 +46,20 @@ enum UserStatus {
   ACTIVE
   BLOCKED
   DELETION_PENDING
+  /// Compte invité fusionné dans un compte inscrit (M-50) ; conservé pour l'historique comptable.
+  MERGED
   DELETED
 
   @@map("user_status")
+}
+
+/// Fournisseur d'identité d'un utilisateur final (M-51).
+enum IdentityProvider {
+  GOOGLE
+  PHONE
+  EMAIL
+
+  @@map("identity_provider")
 }
 
 enum SeriesStatus {
@@ -176,26 +187,33 @@ enum HomeRowType {
 // -----------------------------------------------------------------------------
 
 model User {
-  id           String     @id @default(uuid(7)) @db.Uuid
-  type         UserType   @default(GUEST)
-  status       UserStatus @default(ACTIVE)
-  phone        String?    @unique @db.VarChar(32)
-  email        String?    @unique @db.VarChar(320)
-  googleSub    String?    @unique @map("google_sub") @db.VarChar(255)
-  displayName  String?    @map("display_name") @db.VarChar(80)
+  id                      String     @id @default(uuid(7)) @db.Uuid
+  type                    UserType   @default(GUEST)
+  status                  UserStatus @default(ACTIVE)
+  phone                   String?    @unique @db.VarChar(32)
+  email                   String?    @unique @db.VarChar(320)
+  /// Hachage Argon2id du mot de passe (connexion e-mail, S05-BE-03).
+  passwordHash            String?    @map("password_hash")
+  displayName             String?    @map("display_name") @db.VarChar(80)
   /// ISO 3166-1 alpha-2 (ex. TG, CI, SN, FR).
-  country      String?    @db.Char(2)
+  country                 String?    @db.Char(2)
   /// BCP 47 court (fr, en, es, pt).
-  language     String     @default("fr") @db.VarChar(8)
+  language                String     @default("fr") @db.VarChar(8)
   /// Identifiant d'installation fourni par l'app pour le compte invité (M-50).
-  deviceId     String?    @map("device_id") @db.VarChar(128)
-  isVip        Boolean    @default(false) @map("is_vip")
-  vipExpiresAt DateTime?  @map("vip_expires_at") @db.Timestamptz(3)
+  deviceId                String?    @map("device_id") @db.VarChar(128)
+  isVip                   Boolean    @default(false) @map("is_vip")
+  vipExpiresAt            DateTime?  @map("vip_expires_at") @db.Timestamptz(3)
   /// Déblocage automatique de l'épisode suivant si le solde le permet (§3).
-  autoUnlock   Boolean    @default(false) @map("auto_unlock")
-  lastSeenAt   DateTime?  @map("last_seen_at") @db.Timestamptz(3)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  autoUnlock              Boolean    @default(false) @map("auto_unlock")
+  /// Préférences de notification `{ newEpisodes, offers, checkinReminder }` (M-52, M-54).
+  notificationPreferences Json?      @map("notification_preferences")
+  /// Date d'anonymisation prévue (statut DELETION_PENDING, délai de 30 jours — §14).
+  deletionScheduledAt     DateTime?  @map("deletion_scheduled_at") @db.Timestamptz(3)
+  /// Compte inscrit dans lequel cet invité a été fusionné (statut MERGED).
+  mergedIntoId            String?    @map("merged_into_id") @db.Uuid
+  lastSeenAt              DateTime?  @map("last_seen_at") @db.Timestamptz(3)
+  createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   wallet        Wallet?
   ledgerEntries CoinLedgerEntry[]
@@ -204,12 +222,31 @@ model User {
   subscriptions Subscription[]
   watchProgress WatchProgress[]
   favorites     Favorite[]
+  likes         Like[]
+  identities    UserIdentity[]
   refreshTokens RefreshToken[]
 
   @@index([deviceId])
   @@index([createdAt])
   @@index([isVip, vipExpiresAt])
+  @@index([status, deletionScheduledAt])
   @@map("users")
+}
+
+/// Identités externes rattachées à un compte (Google `sub`, téléphone E.164, e-mail normalisé).
+model UserIdentity {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  provider  IdentityProvider
+  /// Identifiant chez le fournisseur : `sub` Google, numéro E.164, e-mail en minuscules.
+  subject   String           @db.VarChar(320)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, subject])
+  @@index([userId])
+  @@map("user_identities")
 }
 
 // -----------------------------------------------------------------------------
@@ -217,34 +254,43 @@ model User {
 // -----------------------------------------------------------------------------
 
 model Series {
-  id                  String       @id @default(uuid(7)) @db.Uuid
-  slug                String       @unique @db.VarChar(160)
-  title               String       @db.VarChar(200)
+  id                  String                   @id @default(uuid(7)) @db.Uuid
+  slug                String                   @unique @db.VarChar(160)
+  title               String                   @db.VarChar(200)
   synopsis            String
   /// Genres libres au MVP (ex. "romance", "thriller") ; table dédiée si besoin.
-  genres              String[]     @default([])
-  tags                String[]     @default([])
-  originalLanguage    String       @default("fr") @map("original_language") @db.VarChar(8)
-  posterVerticalUrl   String?      @map("poster_vertical_url")
-  posterHorizontalUrl String?      @map("poster_horizontal_url")
+  genres              String[]                 @default([])
+  tags                String[]                 @default([])
+  originalLanguage    String                   @default("fr") @map("original_language") @db.VarChar(8)
+  posterVerticalUrl   String?                  @map("poster_vertical_url")
+  posterHorizontalUrl String?                  @map("poster_horizontal_url")
   /// Nombre d'épisodes gratuits en tête de série (§3, B-06).
-  freeEpisodeCount    Int          @default(5) @map("free_episode_count")
+  freeEpisodeCount    Int                      @default(5) @map("free_episode_count")
   /// Coût en pièces d'un épisode payant (B-06).
-  coinCostPerEpisode  Int          @default(10) @map("coin_cost_per_episode")
-  status              SeriesStatus @default(DRAFT)
+  coinCostPerEpisode  Int                      @default(10) @map("coin_cost_per_episode")
+  status              SeriesStatus             @default(DRAFT)
   /// Territoires autorisés (ISO 3166-1 alpha-2). Vide = monde entier (B-12).
-  territories         String[]     @default([])
-  ageRating           AgeRating    @default(ALL) @map("age_rating")
-  publishedAt         DateTime?    @map("published_at") @db.Timestamptz(3)
-  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  territories         String[]                 @default([])
+  ageRating           AgeRating                @default(ALL) @map("age_rating")
+  /// Projection du nombre de « J'aime » (table `likes`), mise à jour dans la même transaction.
+  likesCount          Int                      @default(0) @map("likes_count")
+  /// Vecteur de recherche plein texte (titre, synopsis, tags ; dictionnaires french + simple, unaccent),
+  /// maintenu par le trigger `series_search_vector_refresh` (S05-BE-06).
+  searchVector        Unsupported("tsvector")? @map("search_vector")
+  /// Date de publication ; peut être future (publication programmée, B-04) : la série reste
+  /// invisible du public tant qu'elle n'est pas atteinte.
+  publishedAt         DateTime?                @map("published_at") @db.Timestamptz(3)
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   episodes    Episode[]
   favorites   Favorite[]
+  likes       Like[]
   homeBanners HomeBanner[]
 
   @@index([status, publishedAt(sort: Desc)])
   @@index([genres], type: Gin)
+  @@index([searchVector], type: Gin)
   @@map("series")
 }
 
@@ -490,6 +536,20 @@ model Favorite {
 
   @@id([userId, seriesId])
   @@map("favorites")
+}
+
+/// « J'aime » sur une série (M-16) ; `series.likes_count` en est la projection.
+model Like {
+  userId    String   @map("user_id") @db.Uuid
+  seriesId  String   @map("series_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  series Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@id([userId, seriesId])
+  @@index([seriesId])
+  @@map("likes")
 }
 
 // -----------------------------------------------------------------------------

@@ -82,6 +82,38 @@ export class AppConfig {
     return this.env.PLAYBACK_URL_TTL_SECONDS;
   }
 
+  /** Signature des URLs média (S04-BE-02). */
+  get mediaSigner() {
+    return {
+      mode: this.env.MEDIA_SIGNER,
+      key: this.env.MEDIA_SIGNING_KEY,
+      ttlSeconds: this.env.PLAYBACK_URL_TTL_SECONDS,
+    };
+  }
+
+  /** Audiences Google acceptées ; liste vide = connexion Google désactivée (503 GOOGLE_AUTH_DISABLED). */
+  get googleClientIds(): string[] {
+    return this.env.GOOGLE_CLIENT_IDS.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  get sms() {
+    return {
+      provider: this.env.SMS_PROVIDER,
+      httpUrl: this.env.SMS_HTTP_URL,
+      httpToken: this.env.SMS_HTTP_TOKEN,
+    };
+  }
+
+  get accountDeletionGraceDays(): number {
+    return this.env.ACCOUNT_DELETION_GRACE_DAYS;
+  }
+
+  get schedulerEnabled(): boolean {
+    return this.env.SCHEDULER_ENABLED;
+  }
+
   get admin() {
     return {
       jwtSecret: this.env.ADMIN_JWT_SECRET,

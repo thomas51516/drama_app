@@ -9,9 +9,15 @@ export interface ViewerContext {
   lang?: SupportedLanguage;
 }
 
-/** Séries visibles par le public : publiées et autorisées sur le territoire du spectateur. */
-export function publishedSeriesWhere(viewer: ViewerContext): Prisma.SeriesWhereInput {
-  const where: Prisma.SeriesWhereInput = { status: 'PUBLISHED' };
+/**
+ * Séries visibles par le public : publiées, date de publication atteinte (publication programmée,
+ * B-04) et autorisées sur le territoire du spectateur.
+ */
+export function publishedSeriesWhere(
+  viewer: ViewerContext,
+  now = new Date(),
+): Prisma.SeriesWhereInput {
+  const where: Prisma.SeriesWhereInput = { status: 'PUBLISHED', publishedAt: { lte: now } };
   if (viewer.country) {
     where.OR = [{ territories: { isEmpty: true } }, { territories: { has: viewer.country } }];
   }

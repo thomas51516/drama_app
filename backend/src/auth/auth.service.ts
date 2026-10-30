@@ -2,15 +2,22 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AppConfig } from '../config/app-config.js';
-import { type Prisma, type User } from '../generated/prisma/client.js';
+import { type Prisma, type User, type UserIdentity } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   type AuthResponseDto,
   type AuthTokensDto,
   type AuthUserDto,
 } from './dto/auth-response.dto.js';
+import { type AuthSessionDto } from './dto/auth-session.dto.js';
 import { type GuestAuthDto } from './dto/guest-auth.dto.js';
 import { type RefreshTokenDto } from './dto/refresh.dto.js';
+import {
+  type AuthProvider,
+  type NotificationPreferencesDto,
+  type UserDto,
+  type VipStatus,
+} from './dto/user.dto.js';
 import { type AccessTokenPayload, type ClientMeta } from './auth.types.js';
 
 type Tx = Prisma.TransactionClient;
@@ -20,6 +27,18 @@ interface IssueOptions {
   deviceId?: string;
   userAgent?: string;
 }
+
+export interface SessionOptions {
+  deviceId?: string;
+  userAgent?: string;
+  /** Le compte invité de l'appel a été rattaché ou fusionné (M-50). */
+  linked: boolean;
+}
+
+export type UserWithIdentities = User & { identities: Pick<UserIdentity, 'provider'>[] };
+
+/** Statuts qui interdisent toute ouverture ou prolongation de session. */
+export const LOCKED_USER_STATUSES = new Set<User['status']>(['BLOCKED', 'MERGED', 'DELETED']);
 
 @Injectable()
 export class AuthService {
@@ -91,7 +110,7 @@ export class AuthService {
     }
 
     const user = stored.user;
-    if (user.status !== 'ACTIVE') {
+    if (LOCKED_USER_STATUSES.has(user.status)) {
       throw new ForbiddenException({ code: 'USER_BLOCKED', message: 'Account is not active' });
     }
 
@@ -110,6 +129,54 @@ export class AuthService {
     });
 
     return { user: toAuthUser(user), tokens };
+  }
+
+  /**
+   * Ouvre une session (connexion Google, OTP, e-mail — S05-BE-01 à 03) : nouvelle famille de
+   * jetons, mêmes JWT d'accès et jetons de rafraîchissement que le compte invité.
+   */
+  async openSession(userId: string, opts: SessionOptions): Promise<AuthSessionDto> {
+    const { user, tokens } = await this.prisma.$transaction(async (tx) => {
+      const found = await tx.user.update({
+        where: { id: userId },
+        data: { lastSeenAt: new Date() },
+        include: { identities: { select: { provider: true } } },
+      });
+      const issued = await this.issueTokens(tx, found, {
+        family: randomUUID(),
+        deviceId: opts.deviceId,
+        userAgent: opts.userAgent,
+      });
+      return { user: found, tokens: issued.tokens };
+    });
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.accessTokenExpiresIn,
+      user: toUserDto(user),
+      linked: opts.linked,
+    };
+  }
+
+  /** Ferme la session : révoque la famille du jeton présenté s'il appartient à l'utilisateur. */
+  async logout(userId: string, rawRefreshToken: string): Promise<void> {
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash: this.hashRefreshToken(rawRefreshToken) },
+      select: { family: true, userId: true, subjectType: true },
+    });
+    if (!stored || stored.subjectType !== 'USER' || stored.userId !== userId) return;
+    await this.prisma.refreshToken.updateMany({
+      where: { family: stored.family, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /** Révoque tous les jetons actifs d'un utilisateur (fusion, suppression de compte). */
+  static revokeAllTokens(tx: Tx, userId: string): Promise<{ count: number }> {
+    return tx.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
   /** Hachage HMAC-SHA256 (pepper = JWT_REFRESH_SECRET) : la base ne stocke jamais le jeton en clair. */
@@ -150,6 +217,43 @@ export class AuthService {
       },
     };
   }
+}
+
+const PROVIDER_LABELS: Record<UserIdentity['provider'], AuthProvider> = {
+  GOOGLE: 'google',
+  PHONE: 'phone',
+  EMAIL: 'email',
+};
+
+export function vipStatusOf(
+  user: Pick<User, 'isVip' | 'vipExpiresAt'>,
+  now = Date.now(),
+): VipStatus {
+  if (!user.isVip) return 'none';
+  if (user.vipExpiresAt !== null && user.vipExpiresAt.getTime() <= now) return 'expired';
+  return 'active';
+}
+
+/** Profil exposé par les sessions et `/me` (contrat public v1.2 `UserDto`). */
+export function toUserDto(user: UserWithIdentities): UserDto {
+  return {
+    id: user.id,
+    type: user.type,
+    status: user.status,
+    displayName: user.displayName,
+    email: user.email,
+    phone: user.phone,
+    country: user.country,
+    language: user.language,
+    vipStatus: vipStatusOf(user),
+    vipExpiresAt: user.vipExpiresAt?.toISOString() ?? null,
+    providers: [...new Set(user.identities.map((i) => PROVIDER_LABELS[i.provider]))],
+    autoUnlock: user.autoUnlock,
+    notificationPreferences:
+      (user.notificationPreferences as NotificationPreferencesDto | null) ?? null,
+    deletionScheduledAt: user.deletionScheduledAt?.toISOString() ?? null,
+    createdAt: user.createdAt.toISOString(),
+  };
 }
 
 export function toAuthUser(user: User): AuthUserDto {

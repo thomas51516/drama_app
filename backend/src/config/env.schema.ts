@@ -32,6 +32,19 @@ export const envSchema = z.object({
 
   CDN_BASE_URL: z.url().default('http://localhost:9000/drama-media'),
   PLAYBACK_URL_TTL_SECONDS: z.coerce.number().int().min(30).default(300),
+  // Signature des URLs média (S04-BE-02) : `plain` (dev MinIO) ou `hmac` (CDN à jeton).
+  MEDIA_SIGNER: z.enum(['plain', 'hmac']).default('plain'),
+  MEDIA_SIGNING_KEY: z.string().min(16).optional(),
+
+  // Connexion Google (S05-BE-01) : audiences acceptées, séparées par des virgules ; vide = désactivé.
+  GOOGLE_CLIENT_IDS: z.string().default(''),
+  // OTP SMS (S05-BE-02) : `console` (code dans les logs et Redis) ou `http` (POST JSON générique).
+  SMS_PROVIDER: z.enum(['console', 'http']).default('console'),
+  SMS_HTTP_URL: z.url().optional(),
+  SMS_HTTP_TOKEN: z.string().min(1).optional(),
+  // Suppression de compte différée (S05-BE-04, §14) et tâches planifiées (B-04).
+  ACCOUNT_DELETION_GRACE_DAYS: z.coerce.number().int().min(0).max(365).default(30),
+  SCHEDULER_ENABLED: bool.default(true),
 
   // Back-office (S03-BE-04) : JWT admin distinct du JWT utilisateur, secret TOTP chiffré au repos.
   ADMIN_JWT_SECRET: z.string().min(32, 'ADMIN_JWT_SECRET must be at least 32 characters'),
@@ -70,8 +83,25 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+const envSchemaWithRules = envSchema.superRefine((env, ctx) => {
+  if (env.MEDIA_SIGNER === 'hmac' && !env.MEDIA_SIGNING_KEY) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['MEDIA_SIGNING_KEY'],
+      message: 'MEDIA_SIGNING_KEY is required when MEDIA_SIGNER=hmac',
+    });
+  }
+  if (env.SMS_PROVIDER === 'http' && !env.SMS_HTTP_URL) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['SMS_HTTP_URL'],
+      message: 'SMS_HTTP_URL is required when SMS_PROVIDER=http',
+    });
+  }
+});
+
 export function validateEnv(raw: NodeJS.ProcessEnv): Env {
-  const result = envSchema.safeParse(raw);
+  const result = envSchemaWithRules.safeParse(raw);
   if (!result.success) {
     throw new Error(`Invalid environment configuration:\n${z.prettifyError(result.error)}`);
   }

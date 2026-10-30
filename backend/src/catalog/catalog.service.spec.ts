@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { AppConfig } from '../config/app-config.js';
 import { type Env } from '../config/env.schema.js';
+import { PlainMediaUrlSigner } from '../media/plain-media-url-signer.js';
 import { CatalogService } from './catalog.service.js';
 import { computeAccess, NO_ENTITLEMENTS } from './entitlement.service.js';
 
@@ -66,13 +67,19 @@ function makeService(cached: Map<string, unknown> = new Map()) {
       return value;
     }),
   };
+  const personalization = {
+    decorate: vi.fn((_userId: string | undefined, items: unknown[]) => Promise.resolve(items)),
+  };
+  const signer = new PlainMediaUrlSigner(300);
   const service = new CatalogService(
     prisma as never,
     entitlements as never,
     config,
     cache as never,
+    personalization as never,
+    signer,
   );
-  return { service, prisma, entitlements, cache, cached };
+  return { service, prisma, entitlements, cache, cached, personalization };
 }
 
 describe('computeAccess', () => {
@@ -144,7 +151,11 @@ describe('CatalogService.listSeries', () => {
 
     expect(prisma.series.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: 'PUBLISHED', genres: { has: 'romance' } },
+        where: {
+          status: 'PUBLISHED',
+          publishedAt: { lte: expect.any(Date) },
+          genres: { has: 'romance' },
+        },
         skip: 40,
         take: 20,
       }),
@@ -169,6 +180,7 @@ describe('CatalogService.listSeries', () => {
     expect(prisma.series.count).toHaveBeenCalledWith({
       where: {
         status: 'PUBLISHED',
+        publishedAt: { lte: expect.any(Date) },
         OR: [{ territories: { isEmpty: true } }, { territories: { has: 'TG' } }],
       },
     });

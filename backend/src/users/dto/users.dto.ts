@@ -1,77 +1,103 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, Length, Matches } from 'class-validator';
-import { AuthUserDto } from '../../auth/dto/auth-response.dto.js';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { SeriesSummaryDto } from '../../catalog/dto/catalog.dto.js';
 
-/** Planifié S05-BE-04. */
-export class MeDto extends AuthUserDto {
-  @ApiProperty({ type: String, nullable: true })
-  email: string | null;
+export class NotificationPreferencesUpdateDto {
+  @ApiPropertyOptional({ description: 'Nouvel épisode d’une série suivie (M-54)' })
+  @IsOptional()
+  @IsBoolean()
+  newEpisodes?: boolean;
 
-  @ApiProperty({ type: String, nullable: true, example: '+22890000000' })
-  phone: string | null;
+  @ApiPropertyOptional({ description: 'Offres et promotions' })
+  @IsOptional()
+  @IsBoolean()
+  offers?: boolean;
 
-  @ApiProperty({ type: String, nullable: true })
-  displayName: string | null;
-
-  @ApiProperty({ description: 'Déblocage automatique de l’épisode suivant si le solde le permet' })
-  autoUnlock: boolean;
-
-  @ApiProperty({
-    type: String,
-    nullable: true,
-    format: 'date-time',
-    description: 'Suppression programmée (DELETION_PENDING)',
-  })
-  deletionScheduledAt: string | null;
+  @ApiPropertyOptional({ description: 'Rappel de check-in quotidien' })
+  @IsOptional()
+  @IsBoolean()
+  checkinReminder?: boolean;
 }
 
+/** `PATCH /me` (contrat public v1.2) ; les champs absents sont inchangés. */
 export class UpdateMeDto {
-  @ApiPropertyOptional({ maxLength: 80 })
+  @ApiPropertyOptional({ maxLength: 80, example: 'Awa' })
   @IsOptional()
   @IsString()
   @Length(1, 80)
   displayName?: string;
 
-  @ApiPropertyOptional({ example: 'fr' })
+  @ApiPropertyOptional({ example: 'fr', description: 'fr, en, es ou pt' })
   @IsOptional()
   @IsString()
-  @Matches(/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/)
+  @Matches(/^(fr|en|es|pt)$/, { message: 'language must be one of fr, en, es, pt' })
   language?: string;
 
-  @ApiPropertyOptional({ example: 'TG' })
+  @ApiPropertyOptional({ example: 'TG', description: 'ISO 3166-1 alpha-2' })
   @IsOptional()
   @IsString()
   @Matches(/^[A-Za-z]{2}$/)
   country?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: NotificationPreferencesUpdateDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NotificationPreferencesUpdateDto)
+  notificationPreferences?: NotificationPreferencesUpdateDto;
+
+  @ApiPropertyOptional({ description: 'Déblocage automatique de l’épisode suivant (§3)' })
   @IsOptional()
   @IsBoolean()
   autoUnlock?: boolean;
 }
 
 export class DeleteMeResultDto {
-  @ApiProperty({ enum: ['DELETION_PENDING'] })
-  status: 'DELETION_PENDING';
-
   @ApiProperty({
     format: 'date-time',
-    description: 'Purge définitive après le délai de rétractation',
+    description:
+      'Date d’anonymisation : le compte est désactivé immédiatement et ses jetons révoqués ; se reconnecter puis `POST /me/delete/cancel` avant cette date annule la suppression (§14).',
   })
-  purgeAt: string;
+  scheduledFor: string;
 }
 
-/** Planifié S05-BE-05. */
-export class FavoriteDto {
-  @ApiProperty({ type: SeriesSummaryDto })
-  series: SeriesSummaryDto;
+export class FavoritesQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
 
-  @ApiProperty({ format: 'date-time' })
-  createdAt: string;
+  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  pageSize: number = 20;
 }
 
-export class FavoritesDto {
-  @ApiProperty({ type: [FavoriteDto] })
-  items: FavoriteDto[];
+export class FavoritesPageDto {
+  @ApiProperty({ type: [SeriesSummaryDto], description: 'Du plus récent au plus ancien ajout' })
+  items: SeriesSummaryDto[];
+
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  pageSize: number;
 }

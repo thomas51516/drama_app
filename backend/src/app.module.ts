@@ -9,6 +9,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
 import { ConfigModule } from './config/config.module.js';
 import { HealthModule } from './health/health.module.js';
+import { JobsModule } from './jobs/jobs.module.js';
+import { MediaModule } from './media/media.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { PlaybackModule } from './playback/playback.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -29,6 +31,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     CatalogCacheModule,
     MetricsModule,
     StorageModule,
+    MediaModule,
     RateLimitModule,
     HealthModule,
     AuthModule,
@@ -41,6 +44,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     UsersModule,
     TranscodeModule,
     AdminModule,
+    JobsModule,
   ],
   providers: [
     {

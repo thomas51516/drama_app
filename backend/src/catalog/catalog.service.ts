@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CatalogCacheService, SERIES_CACHE_TTL_SECONDS } from '../cache/catalog-cache.service.js';
 import { normalizeCountry, pickLanguage } from '../common/i18n/accept-language.js';
 import { AppConfig } from '../config/app-config.js';
+import { MEDIA_URL_SIGNER, type MediaUrlSigner } from '../media/media-url-signer.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   resolveMediaUrl,
@@ -18,6 +19,7 @@ import {
   visibleEpisodeWhere,
 } from './catalog.where.js';
 import { computeAccess, EntitlementService, NO_ENTITLEMENTS } from './entitlement.service.js';
+import { PersonalizationService } from './personalization.service.js';
 import {
   type EpisodeSummaryDto,
   type FeedQueryDto,
@@ -25,6 +27,7 @@ import {
   type ListSeriesQueryDto,
   type PaginatedSeriesDto,
   type SeriesDetailDto,
+  type SeriesSummaryDto,
 } from './dto/catalog.dto.js';
 
 /** En-têtes optionnels envoyés par l'application pour personnaliser le catalogue. */
@@ -49,6 +52,8 @@ export class CatalogService {
     private readonly entitlements: EntitlementService,
     private readonly config: AppConfig,
     private readonly cache: CatalogCacheService,
+    private readonly personalization: PersonalizationService,
+    @Inject(MEDIA_URL_SIGNER) private readonly signer: MediaUrlSigner,
   ) {}
 
   /**
@@ -69,6 +74,11 @@ export class CatalogService {
     return { userId, country, lang };
   }
 
+  /** `isFavorite` / `likes` pour un spectateur authentifié (après cache, jamais dans le cache). */
+  personalize<T extends SeriesSummaryDto>(userId: string | undefined, items: T[]): Promise<T[]> {
+    return this.personalization.decorate(userId, items);
+  }
+
   async listSeries(query: ListSeriesQueryDto, viewer: ViewerContext): Promise<PaginatedSeriesDto> {
     const where = publishedSeriesWhere(viewer);
     if (query.genre) where.genres = { has: query.genre.toLowerCase() };
@@ -85,12 +95,17 @@ export class CatalogService {
       this.prisma.series.count({ where }),
     ]);
 
-    return { items: items.map(toSeriesSummary), page: query.page, pageSize: query.pageSize, total };
+    return {
+      items: await this.personalization.decorate(viewer.userId, items.map(toSeriesSummary)),
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+    };
   }
 
-  /** Fiche série : non personnalisée, mise en cache 120 s par (série, pays). */
-  getSeries(id: string, viewer: ViewerContext): Promise<SeriesDetailDto> {
-    return this.cache.remember(
+  /** Fiche série : mise en cache 120 s par (série, pays) ; `isFavorite` / `likes` ajoutés après le cache. */
+  async getSeries(id: string, viewer: ViewerContext): Promise<SeriesDetailDto> {
+    const detail = await this.cache.remember(
       CatalogCacheService.seriesKey(id, 'detail', viewer.country),
       SERIES_CACHE_TTL_SECONDS,
       async () => {
@@ -104,6 +119,8 @@ export class CatalogService {
         return toSeriesDetail(series);
       },
     );
+    const [decorated] = await this.personalization.decorate(viewer.userId, [detail]);
+    return decorated ?? detail;
   }
 
   /**
@@ -154,7 +171,10 @@ export class CatalogService {
     };
   }
 
-  /** Flux vertical « Pour vous » (M-02) : premier épisode de chaque série publiée. TODO S04-BE-03 personnalisation. */
+  /**
+   * Flux vertical « Pour vous » (M-02, S04-BE-03) : premier épisode de chaque série publiée, extrait
+   * signé comme `/play`, statut d'accès et favori du spectateur. Pagination par curseur.
+   */
   async getFeed(query: FeedQueryDto, viewer: ViewerContext): Promise<FeedResponseDto> {
     const offset = decodeCursor(query.cursor);
     const episodes = await this.prisma.episode.findMany({
@@ -167,22 +187,36 @@ export class CatalogService {
 
     const hasMore = episodes.length > query.limit;
     const page = hasMore ? episodes.slice(0, query.limit) : episodes;
-    const entitlements = await this.entitlements.forViewer(
-      viewer.userId,
-      page.map((e) => e.id),
-    );
+    const [entitlements, series] = await Promise.all([
+      this.entitlements.forViewer(
+        viewer.userId,
+        page.map((e) => e.id),
+      ),
+      this.personalization.decorate(
+        viewer.userId,
+        page.map((e) => toSeriesSummary(e.series)),
+      ),
+    ]);
+    const now = new Date();
 
     return {
-      items: page.map((e) => ({
-        series: toSeriesSummary(e.series),
-        episode: toEpisodeSummary(
-          e,
-          computeAccess(e, e.series, entitlements),
-          e.series.coinCostPerEpisode,
-          this.config.cdnBaseUrl,
-        ),
-        previewUrl: resolveMediaUrl(e.previewKey, this.config.cdnBaseUrl),
-      })),
+      items: page.map((e, i) => {
+        const preview = resolveMediaUrl(e.previewKey, this.config.cdnBaseUrl);
+        const signed = preview ? this.signer.sign(preview, now) : null;
+        const summary = series[i] ?? toSeriesSummary(e.series);
+        return {
+          series: summary,
+          episode: toEpisodeSummary(
+            e,
+            computeAccess(e, e.series, entitlements),
+            e.series.coinCostPerEpisode,
+            this.config.cdnBaseUrl,
+          ),
+          previewUrl: signed?.url ?? null,
+          previewExpiresAt: signed?.expiresAt ?? null,
+          isFavorite: summary.isFavorite ?? false,
+        };
+      }),
       nextCursor: hasMore ? encodeCursor(offset + query.limit) : null,
     };
   }

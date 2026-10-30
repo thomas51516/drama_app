@@ -77,6 +77,9 @@ jobs:
       TRANSCODE_PROVIDER: webhook
       TRANSCODE_WORKER_ENABLED: 'false'
       TRANSCODE_WEBHOOK_SECRET: ci-only-transcode-webhook-secret-0123456789
+      MEDIA_SIGNER: plain
+      SMS_PROVIDER: console
+      SCHEDULER_ENABLED: 'false'
       SWAGGER_ENABLED: 'true'
 
     steps:

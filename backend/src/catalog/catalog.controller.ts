@@ -3,7 +3,6 @@ import {
   ApiBearerAuth,
   ApiHeader,
   ApiNotFoundResponse,
-  ApiNotImplementedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -12,10 +11,10 @@ import {
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
-import { notImplemented } from '../common/errors/not-implemented.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
 import { CatalogService } from './catalog.service.js';
 import { HomeService } from './home.service.js';
+import { SearchService } from './search.service.js';
 import {
   EpisodeSummaryDto,
   FeedQueryDto,
@@ -24,13 +23,16 @@ import {
   ListSeriesQueryDto,
   PaginatedSeriesDto,
   SearchQueryDto,
+  SearchResponseDto,
+  SearchSuggestionsDto,
+  SearchSuggestQueryDto,
   SeriesDetailDto,
 } from './dto/catalog.dto.js';
 
 /**
  * Catalogue (§8.2). Routes publiques : un jeton valide est optionnel mais permet
- * la personnalisation (statut des épisodes, « Continuer à regarder », territoires).
- * `GET /search` : planifié S05-BE-06 (501 en attendant).
+ * la personnalisation (statut des épisodes, « Continuer à regarder », territoires,
+ * `isFavorite` / `likes` sur les résumés de séries).
  */
 @ApiTags('catalog')
 @ApiBearerAuth()
@@ -52,6 +54,7 @@ export class CatalogController {
   constructor(
     private readonly catalog: CatalogService,
     private readonly home: HomeService,
+    private readonly search: SearchService,
   ) {}
 
   @Public()
@@ -118,7 +121,11 @@ export class CatalogController {
 
   @Public()
   @Get('feed')
-  @ApiOperation({ summary: 'Flux vertical « Pour vous » (M-02), pagination par curseur' })
+  @ApiOperation({
+    summary: 'Flux vertical « Pour vous » (M-02), pagination par curseur',
+    description:
+      'Premier épisode de chaque série publiée. `previewUrl` est signée comme `/play` (`previewExpiresAt`), `episode` porte le statut d’accès du spectateur et `isFavorite` son favori (S04-BE-03).',
+  })
   @ApiOkResponse({ type: FeedResponseDto })
   async feed(
     @Query() query: FeedQueryDto,
@@ -128,17 +135,37 @@ export class CatalogController {
     return this.catalog.getFeed(query, await this.catalog.viewerContext(user?.id, { country }));
   }
 
-  // TODO S05-BE-06 : recherche plein texte PostgreSQL (titre, synopsis, tags)
   @Public()
   @Get('search')
   @ApiOperation({
-    summary: 'Recherche de séries (planifié S05-BE-06)',
+    summary: 'Recherche de séries (M-03)',
     description:
-      "Recherche plein texte sur les séries publiées. Répond 501 `NOT_IMPLEMENTED` jusqu'au sprint 5.",
+      'Recherche plein texte PostgreSQL (titre, synopsis, tags, genres ; dictionnaires français et simple, accents ignorés, préfixes) sur les séries publiées et autorisées sur le territoire ; classement par pertinence. `suggestions` : titres commençant par le texte saisi (8 au plus).',
   })
-  @ApiOkResponse({ type: PaginatedSeriesDto })
-  @ApiNotImplementedResponse({ type: ApiErrorDto, description: 'NOT_IMPLEMENTED' })
-  search(@Query() _query: SearchQueryDto): never {
-    return notImplemented('S05-BE-06');
+  @ApiOkResponse({ type: SearchResponseDto })
+  async searchSeries(
+    @Query() query: SearchQueryDto,
+    @CurrentUser() user?: AuthenticatedUser,
+    @Headers('x-country') country?: string,
+  ): Promise<SearchResponseDto> {
+    const viewer = await this.catalog.viewerContext(user?.id, { country });
+    const result = await this.search.search(query, viewer);
+    return { ...result, items: await this.catalog.personalize(viewer.userId, result.items) };
+  }
+
+  @Public()
+  @Get('search/suggest')
+  @ApiOperation({
+    summary: 'Suggestions de titres (M-03)',
+    description: 'Titres de séries publiées commençant par le préfixe saisi, 8 au plus.',
+  })
+  @ApiOkResponse({ type: SearchSuggestionsDto })
+  async suggest(
+    @Query() query: SearchSuggestQueryDto,
+    @CurrentUser() user?: AuthenticatedUser,
+    @Headers('x-country') country?: string,
+  ): Promise<SearchSuggestionsDto> {
+    const viewer = await this.catalog.viewerContext(user?.id, { country });
+    return { suggestions: await this.search.suggest(query.q, viewer) };
   }
 }

@@ -39,6 +39,17 @@ export class SeriesSummaryDto {
 
   @ApiProperty({ type: String, nullable: true, format: 'date-time' })
   publishedAt: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Série dans « Ma liste » du spectateur ; présent uniquement avec un jeton (M-16)',
+  })
+  isFavorite?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Nombre de « J’aime » ; présent uniquement avec un jeton (M-16)',
+    example: 128,
+  })
+  likes?: number;
 }
 
 export class SeriesDetailDto extends SeriesSummaryDto {
@@ -204,7 +215,7 @@ export class ListSeriesQueryDto {
 
 export class SearchQueryDto {
   @ApiProperty({
-    description: 'Texte recherché (titre, synopsis, tags)',
+    description: 'Texte recherché (titre, synopsis, tags, genres ; accents ignorés)',
     minLength: 2,
     maxLength: 100,
   })
@@ -212,6 +223,12 @@ export class SearchQueryDto {
   @MinLength(2)
   @MaxLength(100)
   q: string;
+
+  @ApiPropertyOptional({ description: 'Filtre par genre', example: 'romance' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  genre?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -243,6 +260,36 @@ export class PaginatedSeriesDto {
   total: number;
 }
 
+export class SearchSuggestQueryDto {
+  @ApiProperty({ description: 'Préfixe saisi', minLength: 1, maxLength: 100 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  q: string;
+}
+
+export class SearchSuggestionsDto {
+  @ApiProperty({
+    type: [String],
+    description: 'Titres de séries publiées commençant par le préfixe (8 au plus)',
+    example: ['Le Secret du Lagon'],
+  })
+  suggestions: string[];
+}
+
+export class SearchResponseDto extends PaginatedSeriesDto {
+  @ApiProperty({ type: [String], description: 'Suggestions de titres (préfixe, 8 au plus)' })
+  suggestions: string[];
+}
+
+export class LikeResultDto {
+  @ApiProperty({ description: 'Nombre total de « J’aime » de la série', example: 129 })
+  likes: number;
+
+  @ApiProperty({ description: 'Le spectateur courant aime cette série' })
+  liked: boolean;
+}
+
 export class FeedQueryDto {
   @ApiPropertyOptional({ description: 'Curseur opaque renvoyé par l’appel précédent' })
   @IsOptional()
@@ -269,9 +316,21 @@ export class FeedItemDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Extrait de 15 s (HLS) lisible sans droit ; sinon appeler /episodes/{id}/play',
+    description:
+      'Extrait de 15 s (HLS) lisible sans droit, signé comme `/play` (S04-BE-02) ; sinon appeler /episodes/{id}/play',
   })
   previewUrl: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    format: 'date-time',
+    description: 'Expiration de `previewUrl` (redemander le flux ensuite)',
+  })
+  previewExpiresAt: string | null;
+
+  @ApiProperty({ description: 'Série dans « Ma liste » du spectateur (false sans jeton)' })
+  isFavorite: boolean;
 }
 
 export class FeedResponseDto {

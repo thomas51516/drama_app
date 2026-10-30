@@ -11,12 +11,15 @@ export const AUDIT_TARGET_TYPES = [
   'home_row',
   'admin_account',
   'upload',
+  'user',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 
 export interface AuditEntry {
-  /** Auteur ; `null` pour une action système (worker de transcodage, webhook). */
+  /** Auteur ; `null` pour une action système (worker de transcodage, webhook) ou un utilisateur final. */
   actor: Pick<AuthenticatedAdmin, 'id' | 'email'> | null;
+  /** Libellé de l'auteur quand ce n'est pas un compte interne (`user:<id>`, `job:<nom>`). */
+  actorLabel?: string;
   /** Verbe stable `<cible>.<action>` : `series.update`, `episode.reorder`, `admin.login`... */
   action: string;
   targetType: AuditTargetType;
@@ -38,7 +41,7 @@ export class AuditService {
     await tx.auditLog.create({
       data: {
         actorId: entry.actor?.id ?? null,
-        actorLabel: entry.actor?.email ?? 'system',
+        actorLabel: entry.actorLabel ?? entry.actor?.email ?? 'system',
         action: entry.action,
         targetType: entry.targetType,
         targetId: entry.targetId ?? null,

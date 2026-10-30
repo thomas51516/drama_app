@@ -2,8 +2,8 @@ import { SetMetadata } from '@nestjs/common';
 
 export const RATE_LIMIT_KEY = 'rateLimit';
 
-/** Portée du compteur : adresse IP du client ou e-mail du corps de requête (login admin). */
-export type RateLimitScope = 'ip' | 'email';
+/** Portée du compteur : adresse IP du client, e-mail ou numéro de téléphone du corps de requête. */
+export type RateLimitScope = 'ip' | 'email' | 'phone';
 
 export interface RateLimitRule {
   /** Nom stable de la limite (préfixe de clé Redis). */
