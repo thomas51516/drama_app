@@ -9,11 +9,11 @@ Contrat partagé : `docs/api/contract-v1.4-sprint6.md`.
 
 | ID | Lot | Ticket | Statut |
 | --- | --- | --- | --- |
-| DEF-002..009 | BE/WEB/A | Défauts mineurs de la recette du 30 octobre | DEF-005 corrigé (web) ; autres en cours |
-| B-13+ | BE | `current` sur les appareils de confiance | En cours |
-| S07-BE-01 à 05 | BE | Grand livre, portefeuille, déblocage atomique et idempotent, déblocage automatique, paramètres de monétisation (avancé) | En cours |
-| S07-BE-06, 07 | BE | Vérification des achats Google Play, RTDN, abonnements (avancé) | En cours |
-| B-06, B-08, B-09 | BE/WEB | Monétisation, barème des récompenses, utilisateurs et support (avancé) | Web terminé, vérifié, commité ; backend en cours |
+| DEF-002..009 | BE/WEB/A | Défauts mineurs de la recette du 30 octobre | DEF-002/003/004/005/008/009 corrigés ; DEF-006/007 côté Android en cours |
+| B-13+ | BE | `current` sur les appareils de confiance | Terminé, vérifié, commité |
+| S07-BE-01 à 05 | BE | Grand livre, portefeuille, déblocage atomique et idempotent, déblocage automatique, paramètres de monétisation (avancé) | Terminé, vérifié, commité |
+| S07-BE-06, 07 | BE | Vérification des achats Google Play, RTDN, abonnements (avancé) | Terminé, vérifié, commité (vérificateur simulé en dev) |
+| B-06, B-08, B-09 | BE/WEB | Monétisation, barème des récompenses, utilisateurs et support (avancé) | Terminé, vérifié, commité |
 | S07-A1-01 à 03 | A1 | Paywall, déblocage par pièces et automatique, portefeuille (avancé) | En cours |
 | S07-A2-01 à 03 | A2 | Google Play Billing, boutique, achat de pack (avancé ; facturation simulée en debug) | En cours |
 | S06-QA-01 | QA | Recette complète du lot « regarder » et du compte, sur le téléphone et les émulateurs | En cours |
