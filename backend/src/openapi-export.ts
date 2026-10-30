@@ -25,6 +25,8 @@ const fallbacks: Record<string, string> = {
   SCHEDULER_ENABLED: 'false',
   PUSH_QUEUE_ENABLED: 'false',
   BILLING_VERIFIER: 'fake',
+  AD_PROVIDER: 'fake',
+  MOBILE_MONEY_PROVIDER: 'fake',
 };
 for (const [key, value] of Object.entries(fallbacks)) process.env[key] ??= value;
 

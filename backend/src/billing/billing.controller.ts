@@ -1,23 +1,11 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Headers,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiNoContentResponse,
-  ApiNotImplementedResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -30,13 +18,11 @@ import { BillingService } from './billing.service.js';
 import {
   GoogleRtdnDto,
   GoogleVerifyDto,
-  MobileMoneyWebhookDto,
   SubscriptionStatusDto,
   VerifyResultDto,
-  WebhookAckDto,
 } from './dto/billing.dto.js';
 
-/** Paiements (§10, contrat v1.4) : Google Play (S07-BE-06/07) ; mobile money planifié S09-BE-01. */
+/** Paiements (§10, contrat v1.4) : Google Play (S07-BE-06/07) ; mobile money : `topup/` (S09-BE-01). */
 @Controller()
 export class BillingController {
   constructor(private readonly billing: BillingService) {}
@@ -101,23 +87,5 @@ export class BillingController {
       ? authorization.slice(7).trim()
       : undefined;
     await this.billing.handleGoogleRtdn(payload, token ?? bearer);
-  }
-
-  // TODO S09-BE-01 : authentifié par la signature de l'agrégateur
-  @ApiTags('webhooks')
-  @Public()
-  @Post('webhooks/mobile-money/:provider')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Webhook agrégateur mobile money (planifié S09-BE-01)',
-    description:
-      'Signature vérifiée, idempotent par identifiant de transaction, crédit par grand livre.',
-  })
-  @ApiParam({ name: 'provider', example: 'cinetpay' })
-  @ApiOkResponse({ type: WebhookAckDto })
-  @ApiNotImplementedResponse({ type: ApiErrorDto, description: 'NOT_IMPLEMENTED' })
-  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_WEBHOOK_SIGNATURE' })
-  mobileMoney(@Param('provider') provider: string, @Body() payload: MobileMoneyWebhookDto): never {
-    return this.billing.handleMobileMoneyWebhook(provider, payload);
   }
 }

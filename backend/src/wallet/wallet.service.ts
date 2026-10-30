@@ -38,6 +38,12 @@ export interface Charged {
   purchased: number;
 }
 
+export interface DebitResult {
+  charged: Charged;
+  entryIds: string[];
+  balances: Balances;
+}
+
 export interface CoinAdjustment {
   amount: number;
   bucket: CoinBucket;
@@ -150,14 +156,42 @@ export class WalletService {
   }
 
   /** Débit d'un déblocage (S07-BE-02) : bonus d'abord, puis achetées ; `null` si solde insuffisant. */
-  async debitForUnlock(
+  debitForUnlock(
     tx: Tx,
     userId: string,
     state: LedgerState,
     cost: number,
     unlockId: string,
     now = new Date(),
-  ): Promise<{ charged: Charged; entryIds: string[]; balances: Balances } | null> {
+  ): Promise<DebitResult | null> {
+    return this.debit(
+      tx,
+      userId,
+      state,
+      cost,
+      {
+        referenceType: 'unlock',
+        referenceId: unlockId,
+        idempotencyPrefix: `unlock:${unlockId}`,
+        note: 'Episode unlocked',
+      },
+      now,
+    );
+  }
+
+  /**
+   * Débit générique (déblocage d'un épisode ou d'une série entière, S10-BE-02) : une ligne UNLOCK par
+   * lot bonus consommé (du plus proche de l'expiration au plus lointain) puis une ligne PURCHASED pour
+   * le reste ; `null` si le solde dépensable est insuffisant ou si un bucket est négatif.
+   */
+  async debit(
+    tx: Tx,
+    userId: string,
+    state: LedgerState,
+    cost: number,
+    ref: { referenceType: string; referenceId: string; idempotencyPrefix: string; note: string },
+    now = new Date(),
+  ): Promise<DebitResult | null> {
     if (!canAfford(state, cost, now)) return null;
     const plan = planBonusConsumption(state.lots, cost, now);
     const entryIds: string[] = [];
@@ -168,11 +202,11 @@ export class WalletService {
         amount: -debit.amount,
         bucket: 'BONUS',
         type: 'UNLOCK',
-        referenceType: 'unlock',
-        referenceId: unlockId,
-        idempotencyKey: `unlock:${unlockId}:${n++}`,
+        referenceType: ref.referenceType,
+        referenceId: ref.referenceId,
+        idempotencyKey: `${ref.idempotencyPrefix}:${n++}`,
         expiresAt: debit.expiresAt,
-        note: 'Episode unlocked with bonus coins',
+        note: `${ref.note} with bonus coins`,
       });
       entryIds.push(row.id);
     }
@@ -182,11 +216,11 @@ export class WalletService {
         amount: -plan.remainder,
         bucket: 'PURCHASED',
         type: 'UNLOCK',
-        referenceType: 'unlock',
-        referenceId: unlockId,
-        idempotencyKey: `unlock:${unlockId}:${n}`,
+        referenceType: ref.referenceType,
+        referenceId: ref.referenceId,
+        idempotencyKey: `${ref.idempotencyPrefix}:${n}`,
         expiresAt: null,
-        note: 'Episode unlocked with purchased coins',
+        note: `${ref.note} with purchased coins`,
       });
       entryIds.push(row.id);
     }
@@ -196,6 +230,40 @@ export class WalletService {
       entryIds,
       balances,
     };
+  }
+
+  /**
+   * Crédit de pièces bonus (check-in, tâche, code promo — §4.5, M-24) : une ligne BONUS expirable
+   * (`bonusValidityDays`), idempotente par clé. Verrouille et reprojette le portefeuille.
+   */
+  async creditBonus(
+    tx: Tx,
+    userId: string,
+    credit: {
+      amount: number;
+      referenceType: string;
+      referenceId: string;
+      idempotencyKey: string;
+      note: string;
+    },
+    now = new Date(),
+  ): Promise<Balances> {
+    await this.lockAndProject(tx, userId, now);
+    if (credit.amount > 0) {
+      const validityDays = await this.settings.bonusValidityDays();
+      await this.appendOnce(tx, {
+        userId,
+        amount: credit.amount,
+        bucket: 'BONUS',
+        type: 'BONUS',
+        referenceType: credit.referenceType,
+        referenceId: credit.referenceId,
+        idempotencyKey: credit.idempotencyKey,
+        expiresAt: new Date(now.getTime() + validityDays * 86_400_000),
+        note: credit.note,
+      });
+    }
+    return this.syncProjection(tx, userId);
   }
 
   /** Crédit d'un pack (S07-BE-06) : une ligne PURCHASE + une ligne BONUS expirable. Idempotent par achat. */

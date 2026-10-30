@@ -129,28 +129,3 @@ export class GoogleRtdnDto {
   @IsString()
   deliveryAttempt?: string;
 }
-
-/** Corps brut de l’agrégateur mobile money (CinetPay, FedaPay, PayDunya…) — planifié S09-BE-01. */
-export class MobileMoneyWebhookDto {
-  @ApiProperty({ description: 'Identifiant de transaction agrégateur (idempotence)' })
-  @IsString()
-  transactionId: string;
-
-  @ApiProperty({ example: 'ACCEPTED', description: 'Statut selon l’agrégateur' })
-  @IsString()
-  status: string;
-
-  @ApiPropertyOptional({
-    type: 'object',
-    additionalProperties: true,
-    description: 'Charge utile complète conservée telle quelle',
-  })
-  @IsOptional()
-  @IsObject()
-  payload?: Record<string, unknown>;
-}
-
-export class WebhookAckDto {
-  @ApiProperty()
-  accepted: boolean;
-}

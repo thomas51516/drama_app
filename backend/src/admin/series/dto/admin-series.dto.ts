@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  IsBoolean,
   IsArray,
   IsEnum,
   IsInt,
@@ -61,6 +62,9 @@ export class AdminSeriesDto {
 
   @ApiProperty({ example: 10 })
   coinCostPerEpisode: number;
+
+  @ApiProperty({ description: 'Déblocage par pub récompensée autorisé (M-22, contrat v1.5)' })
+  adUnlockEnabled: boolean;
 
   @ApiProperty({ enum: Object.values(SeriesStatus) })
   status: SeriesStatus;
@@ -153,6 +157,15 @@ export class CreateAdminSeriesDto {
   @Min(0)
   @Max(10_000)
   coinCostPerEpisode?: number;
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'Déblocage par pub récompensée autorisé sur la série (rôles MONETIZATION et ADMIN)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  adUnlockEnabled?: boolean;
 
   @ApiPropertyOptional({ type: [String], example: ['TG', 'CI'], description: 'Vide = monde' })
   @IsOptional()

@@ -25,7 +25,11 @@ import {
 } from './dto/admin-series.dto.js';
 
 /** Champs réservés aux rôles MONETIZATION et ADMIN (contrat admin v1, B-06). */
-export const MONETIZATION_FIELDS = ['freeEpisodeCount', 'coinCostPerEpisode'] as const;
+export const MONETIZATION_FIELDS = [
+  'freeEpisodeCount',
+  'coinCostPerEpisode',
+  'adUnlockEnabled',
+] as const;
 
 /** Champs éditables (contrat admin v1) suivis dans le journal d'audit. */
 const AUDITED_FIELDS = [
@@ -39,6 +43,7 @@ const AUDITED_FIELDS = [
   'posterHorizontalUrl',
   'freeEpisodeCount',
   'coinCostPerEpisode',
+  'adUnlockEnabled',
   'territories',
   'status',
   'publishedAt',
@@ -100,6 +105,7 @@ export class AdminSeriesService {
           posterHorizontalUrl: dto.posterHorizontalUrl ?? null,
           freeEpisodeCount: dto.freeEpisodeCount ?? defaults.defaultFreeEpisodes,
           coinCostPerEpisode: dto.coinCostPerEpisode ?? defaults.defaultCoinCost,
+          adUnlockEnabled: dto.adUnlockEnabled ?? true,
           territories: dto.territories ?? [],
         },
         include: adminSeriesInclude,
@@ -134,6 +140,7 @@ export class AdminSeriesService {
     if (dto.posterHorizontalUrl !== undefined) data.posterHorizontalUrl = dto.posterHorizontalUrl;
     if (dto.freeEpisodeCount !== undefined) data.freeEpisodeCount = dto.freeEpisodeCount;
     if (dto.coinCostPerEpisode !== undefined) data.coinCostPerEpisode = dto.coinCostPerEpisode;
+    if (dto.adUnlockEnabled !== undefined) data.adUnlockEnabled = dto.adUnlockEnabled;
     if (dto.territories !== undefined) data.territories = dto.territories;
     if (dto.publishedAt !== undefined) {
       data.publishedAt = dto.publishedAt === null ? null : new Date(dto.publishedAt);

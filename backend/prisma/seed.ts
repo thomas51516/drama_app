@@ -223,6 +223,24 @@ async function main(): Promise<void> {
   // Monétisation (B-06, B-08, S07-BE-05) : paramètres par défaut, packs de pièces, formules VIP et
   // barème de check-in. Upsert sur des clés stables ; les valeurs modifiées en back-office sont conservées.
   const bonusValidityDays = Number.parseInt(process.env.BONUS_VALIDITY_DAYS ?? '30', 10) || 30;
+  const rewardTasks: {
+    key: string;
+    coins: number;
+    target: number;
+    period: 'DAY' | 'WEEK' | 'ONCE';
+    position: number;
+  }[] = [
+    { key: 'watch_3_episodes', coins: 5, target: 3, period: 'DAY', position: 1 },
+    { key: 'watch_10_episodes', coins: 20, target: 10, period: 'WEEK', position: 2 },
+    { key: 'enable_notifications', coins: 10, target: 1, period: 'ONCE', position: 3 },
+    { key: 'share_series', coins: 5, target: 1, period: 'ONCE', position: 4 },
+    { key: 'complete_profile', coins: 10, target: 1, period: 'ONCE', position: 5 },
+    { key: 'add_favorite', coins: 5, target: 1, period: 'ONCE', position: 6 },
+  ];
+  for (const task of rewardTasks) {
+    await prisma.rewardTask.upsert({ where: { key: task.key }, update: {}, create: task });
+  }
+
   await prisma.monetizationSettings.upsert({
     where: { id: 'default' },
     update: {},

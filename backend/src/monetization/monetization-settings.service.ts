@@ -39,7 +39,13 @@ export class MonetizationSettingsService {
     const value = await this.prisma.monetizationSettings.upsert({
       where: { id: SETTINGS_ID },
       update: {},
-      create: { id: SETTINGS_ID, bonusValidityDays: this.config.billing.bonusValidityDays },
+      create: {
+        id: SETTINGS_ID,
+        bonusValidityDays: this.config.billing.bonusValidityDays,
+        welcomeOfferActive: this.config.welcomeOffer.active,
+        welcomeOfferBonusPercent: this.config.welcomeOffer.bonusPercent,
+        welcomeOfferHours: this.config.welcomeOffer.hours,
+      },
     });
     this.cached = { value, at: Date.now() };
     return value;

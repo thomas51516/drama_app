@@ -84,6 +84,9 @@ jobs:
       PUSH_QUEUE_ENABLED: 'false'
       SWAGGER_ENABLED: 'true'
       BILLING_VERIFIER: fake
+      AD_PROVIDER: fake
+      MOBILE_MONEY_PROVIDER: fake
+      TOPUP_PUBLIC_BASE_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4

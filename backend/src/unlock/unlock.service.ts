@@ -12,13 +12,13 @@ import {
   visibleEpisodeWhere,
 } from '../catalog/catalog.where.js';
 import { computeAccess, EntitlementService } from '../catalog/entitlement.service.js';
-import { notImplemented } from '../common/errors/not-implemented.js';
 import {
   type Episode,
   Prisma,
   type Series,
   type UnlockMethod,
 } from '../generated/prisma/client.js';
+import { MonetizationSettingsService } from '../monetization/monetization-settings.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { type WalletDto } from '../wallet/dto/wallet.dto.js';
 import {
@@ -30,9 +30,12 @@ import {
 } from '../wallet/wallet.service.js';
 import {
   type SeriesUnlocksDto,
+  type UnlockAllQuoteDto,
+  type UnlockAllResultDto,
   type UnlockMethodLabel,
   type UnlockResultDto,
 } from './dto/unlock.dto.js';
+import { quoteUnlockAll } from './unlock-all-pricing.js';
 
 export type UnlockOutcome =
   | {
@@ -64,6 +67,7 @@ export class UnlockService {
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
     private readonly entitlements: EntitlementService,
+    private readonly settings: MonetizationSettingsService,
   ) {}
 
   async unlockWithCoins(
@@ -140,7 +144,7 @@ export class UnlockService {
       };
     }
     if (entitlements.isVip) {
-      await this.recordWithoutDebit(userId, episode.id, 'VIP', opts.idempotencyKey);
+      await this.recordWithoutDebit(this.prisma, userId, episode.id, 'VIP', opts.idempotencyKey);
       const balance = (await this.wallet.balances(userId)).total;
       return {
         kind: 'unlocked',
@@ -210,6 +214,169 @@ export class UnlockService {
     }
   }
 
+  // ------------------------------------------------------------------ série entière (M-23, S10-BE-02)
+
+  async quoteUnlockAll(
+    userId: string,
+    seriesId: string,
+    viewer: ViewerContext,
+    now = new Date(),
+  ): Promise<UnlockAllQuoteDto> {
+    const { series, locked } = await this.lockedEpisodes(userId, seriesId, viewer, now);
+    const discount = (await this.settings.get()).seriesUnlockDiscountPercent;
+    return quoteUnlockAll(locked.length, series.coinCostPerEpisode, discount);
+  }
+
+  /**
+   * Déblocage de tous les épisodes verrouillés d'une série : une transaction (verrou du portefeuille,
+   * relecture des déblocages, création des `unlocks`, une ligne de débit par lot consommé) ;
+   * idempotent par `idempotencyKey` (rejeu → même liste, aucun second débit) et par `unlocks (user, episode)`.
+   */
+  async unlockAll(
+    userId: string,
+    seriesId: string,
+    idempotencyKey: string,
+    viewer: ViewerContext,
+    now = new Date(),
+  ): Promise<UnlockAllResultDto> {
+    await this.assertActive(userId);
+    const replay = await this.replayUnlockAll(userId, seriesId, idempotencyKey);
+    if (replay) return { ...replay, wallet: await this.wallet.getWallet(userId, now) };
+
+    const { series, locked } = await this.lockedEpisodes(userId, seriesId, viewer, now);
+    const discount = (await this.settings.get()).seriesUnlockDiscountPercent;
+    if (locked.length === 0) {
+      return {
+        unlockedEpisodeIds: [],
+        charged: { bonus: 0, purchased: 0 },
+        wallet: await this.wallet.getWallet(userId, now),
+      };
+    }
+    const prefix = `series_unlock:${userId}:${seriesId}:${idempotencyKey}`;
+    try {
+      const outcome = await this.prisma.$transaction(async (tx) => {
+        const state = await this.wallet.lockAndProject(tx, userId, now);
+        const already = await tx.unlock.findMany({
+          where: { userId, episodeId: { in: locked.map((e) => e.id) } },
+          select: { episodeId: true },
+        });
+        const done = new Set(already.map((u) => u.episodeId));
+        const toUnlock = locked.filter((e) => !done.has(e.id));
+        const quote = quoteUnlockAll(toUnlock.length, series.coinCostPerEpisode, discount);
+        if (toUnlock.length === 0) {
+          return { unlockedEpisodeIds: [] as string[], charged: { bonus: 0, purchased: 0 } };
+        }
+        if (!this.canPay(state, quote.price, now)) {
+          throw new InsufficientCoins(quote.price, spendable(state, now));
+        }
+        await tx.unlock.createMany({
+          data: toUnlock.map((e) => ({
+            userId,
+            episodeId: e.id,
+            method: 'COINS' as const,
+            idempotencyKey,
+          })),
+        });
+        const debit =
+          quote.price > 0
+            ? await this.wallet.debit(
+                tx,
+                userId,
+                state,
+                quote.price,
+                {
+                  referenceType: 'series_unlock',
+                  referenceId: seriesId,
+                  idempotencyPrefix: prefix,
+                  note: `Series unlocked (${toUnlock.length} episodes)`,
+                },
+                now,
+              )
+            : null;
+        if (quote.price > 0 && !debit) {
+          throw new InsufficientCoins(quote.price, spendable(state, now));
+        }
+        return {
+          unlockedEpisodeIds: toUnlock.map((e) => e.id),
+          charged: debit?.charged ?? { bonus: 0, purchased: 0 },
+        };
+      });
+      return { ...outcome, wallet: await this.wallet.getWallet(userId, now) };
+    } catch (err) {
+      if (err instanceof InsufficientCoins) {
+        throw new HttpException(
+          {
+            code: 'INSUFFICIENT_COINS',
+            message: 'Not enough coins to unlock this series',
+            details: { cost: err.cost, balance: err.balance },
+          },
+          HttpStatus.PAYMENT_REQUIRED,
+        );
+      }
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        // Course perdue (déblocage concurrent ou rejeu simultané) : la relecture donne le même résultat.
+        this.logger.warn(`Concurrent unlock-all for ${userId}/${seriesId}, retrying once`);
+        const replayed = await this.replayUnlockAll(userId, seriesId, idempotencyKey);
+        if (replayed) return { ...replayed, wallet: await this.wallet.getWallet(userId, now) };
+        return this.unlockAll(userId, seriesId, idempotencyKey, viewer, now);
+      }
+      throw err;
+    }
+  }
+
+  private canPay(
+    state: Awaited<ReturnType<WalletService['lockAndProject']>>,
+    cost: number,
+    now: Date,
+  ) {
+    return state.purchased >= 0 && state.bonus >= 0 && spendable(state, now) >= cost;
+  }
+
+  /** Rejeu d'un `unlock-all` déjà exécuté avec la même clé : liste et débit d'origine. */
+  private async replayUnlockAll(
+    userId: string,
+    seriesId: string,
+    idempotencyKey: string,
+  ): Promise<{ unlockedEpisodeIds: string[]; charged: Charged } | null> {
+    const unlocks = await this.prisma.unlock.findMany({
+      where: { userId, idempotencyKey, episode: { seriesId } },
+      select: { episodeId: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (unlocks.length === 0) return null;
+    const lines = await this.prisma.coinLedgerEntry.findMany({
+      where: {
+        userId,
+        idempotencyKey: { startsWith: `series_unlock:${userId}:${seriesId}:${idempotencyKey}:` },
+      },
+      select: { amount: true, bucket: true },
+    });
+    const charged = { bonus: 0, purchased: 0 };
+    for (const l of lines) charged[l.bucket === 'BONUS' ? 'bonus' : 'purchased'] -= l.amount;
+    return { unlockedEpisodeIds: unlocks.map((u) => u.episodeId), charged };
+  }
+
+  /** Série visible et ses épisodes visibles encore verrouillés pour le compte. */
+  private async lockedEpisodes(userId: string, seriesId: string, viewer: ViewerContext, now: Date) {
+    const series = await this.prisma.series.findFirst({
+      where: { id: seriesId, ...publishedSeriesWhere(viewer, now) },
+      select: { id: true, freeEpisodeCount: true, coinCostPerEpisode: true },
+    });
+    if (!series)
+      throw new NotFoundException({ code: 'SERIES_NOT_FOUND', message: 'Series not found' });
+    const episodes = await this.prisma.episode.findMany({
+      where: { seriesId, ...visibleEpisodeWhere(now) },
+      select: { id: true, number: true },
+      orderBy: { number: 'asc' },
+    });
+    const entitlements = await this.entitlements.forViewer(
+      userId,
+      episodes.map((e) => e.id),
+    );
+    const locked = episodes.filter((e) => computeAccess(e, series, entitlements) === 'locked');
+    return { series, locked };
+  }
+
   /** Solde dépensable et coût pour la réponse `EPISODE_LOCKED` (details.balance, canAutoUnlock). */
   async quote(
     userId: string,
@@ -230,13 +397,15 @@ export class UnlockService {
     return this.wallet.getWallet(userId);
   }
 
-  private async recordWithoutDebit(
+  /** Déblocage sans débit (VIP, pub récompensée) : insertion idempotente sur `unlocks (user, episode)`. */
+  async recordWithoutDebit(
+    tx: Prisma.TransactionClient | PrismaService,
     userId: string,
     episodeId: string,
     method: UnlockMethod,
     idempotencyKey?: string,
   ): Promise<void> {
-    await this.prisma.$executeRaw`
+    await tx.$executeRaw`
       INSERT INTO unlocks (id, user_id, episode_id, method, idempotency_key, created_at)
       VALUES (gen_random_uuid(), ${userId}::uuid, ${episodeId}::uuid, ${method}::unlock_method, ${idempotencyKey ?? null}, now())
       ON CONFLICT (user_id, episode_id) DO NOTHING`;
@@ -261,11 +430,6 @@ export class UnlockService {
     if (!user || (user.status !== 'ACTIVE' && user.status !== 'DELETION_PENDING')) {
       throw new ForbiddenException({ code: 'USER_BLOCKED', message: 'Account is not active' });
     }
-  }
-
-  // TODO S08-BE-03 : callback SSV AdMob signé, plafond quotidien Redis
-  rewardFromAd(_payload: unknown): never {
-    return notImplemented('S08-BE-03');
   }
 }
 

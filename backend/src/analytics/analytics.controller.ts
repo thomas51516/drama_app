@@ -31,7 +31,7 @@ export class AnalyticsController {
   @ApiOperation({
     summary: 'Envoyer un lot d’événements d’analyse (50 max)',
     description:
-      'Noms limités au plan de marquage du §13 (`app_open`, `series_view`, `episode_start`, `episode_complete`, `paywall_view`, `unlock`, `purchase`, `subscription_start`, `ad_reward`, `checkin`, `push_open`, `login`, `signup`, `share`, `search`) ; `params` ≤ 2 Ko. Le jeton utilisateur est facultatif (événements avant la session invité) ; `X-Country` renseigne le pays.',
+      'Noms limités au plan de marquage du §13 (`app_open`, `series_view`, `episode_start`, `episode_complete`, `paywall_view`, `unlock`, `purchase`, `subscription_start`, `ad_reward`, `checkin`, `push_open`, `login`, `signup`, `share`, `search`, `push_permission_granted`) ; `params` ≤ 2 Ko. `share` et `push_permission_granted` alimentent la progression des tâches récompensées (M-41). Le jeton utilisateur est facultatif (événements avant la session invité) ; `X-Country` renseigne le pays.',
   })
   @ApiHeader({ name: 'X-Country', required: false, description: 'ISO 3166-1 alpha-2' })
   @ApiAcceptedResponse({ type: PostEventsResultDto })

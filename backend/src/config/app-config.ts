@@ -153,6 +153,39 @@ export class AppConfig {
     };
   }
 
+  /** Pub récompensée (S08-BE-03). */
+  get ads() {
+    return {
+      provider: this.env.AD_PROVIDER,
+      fakeSecret: this.env.AD_SSV_FAKE_SECRET,
+      admobRewardedUnitId: this.env.ADMOB_REWARDED_UNIT_ID,
+      admobKeysUrl: this.env.ADMOB_SSV_KEYS_URL,
+    };
+  }
+
+  /** Recharge mobile money (S09-BE-01/02). */
+  get topup() {
+    return {
+      provider: this.env.MOBILE_MONEY_PROVIDER,
+      fakeSecret: this.env.MOBILE_MONEY_FAKE_SECRET,
+      cinetpayApiKey: this.env.CINETPAY_API_KEY,
+      cinetpaySiteId: this.env.CINETPAY_SITE_ID,
+      cinetpaySecret: this.env.CINETPAY_SECRET,
+      cinetpayBaseUrl: this.env.CINETPAY_BASE_URL.replace(/\/+$/, ''),
+      publicBaseUrl: this.env.TOPUP_PUBLIC_BASE_URL.replace(/\/+$/, ''),
+      returnUrl: this.env.TOPUP_RETURN_URL,
+    };
+  }
+
+  /** Offre de bienvenue (M-24) : défauts appliqués à la création de `monetization_settings`. */
+  get welcomeOffer() {
+    return {
+      active: this.env.WELCOME_OFFER_ACTIVE,
+      bonusPercent: this.env.WELCOME_OFFER_BONUS_PERCENT,
+      hours: this.env.WELCOME_OFFER_HOURS,
+    };
+  }
+
   get uploadUrlTtlSeconds(): number {
     return this.env.UPLOAD_URL_TTL_SECONDS;
   }

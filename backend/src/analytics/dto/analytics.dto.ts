@@ -30,6 +30,7 @@ export const ANALYTICS_EVENT_NAMES = [
   'signup',
   'share',
   'search',
+  'push_permission_granted',
 ] as const;
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 

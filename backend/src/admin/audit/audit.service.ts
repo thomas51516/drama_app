@@ -20,6 +20,10 @@ export const AUDIT_TARGET_TYPES = [
   'coin_pack',
   'vip_plan',
   'wallet',
+  'reward_task',
+  'promo_code',
+  'limited_offer',
+  'topup_order',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

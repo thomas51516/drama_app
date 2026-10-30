@@ -2,6 +2,8 @@ import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@ne
 import { AdminCampaignsService } from '../admin/campaigns/admin-campaigns.service.js';
 import { AppConfig } from '../config/app-config.js';
 import { RedisService } from '../redis/redis.service.js';
+import { TopupReconciliationService } from '../topup/reconciliation.service.js';
+import { TopupService } from '../topup/topup.service.js';
 import { AccountDeletionService } from '../users/account-deletion.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
 import { PublishSchedulerService } from './publish-scheduler.service.js';
@@ -32,12 +34,16 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     deletion: AccountDeletionService,
     campaigns: AdminCampaignsService,
     wallet: WalletService,
+    topup: TopupService,
+    reconciliation: TopupReconciliationService,
   ) {
     this.tasks = [
       { name: 'publish-scheduler', run: (now) => publish.runOnce(now) },
       { name: 'account-anonymiser', run: (now) => deletion.runOnce(now) },
       { name: 'campaign-scheduler', run: (now) => campaigns.dispatchDue(now) },
       { name: 'bonus-expiry', run: (now) => wallet.expireBonuses(now) },
+      { name: 'topup-expiry', run: (now) => topup.expirePending(now) },
+      { name: 'topup-reconciliation', run: (now) => reconciliation.runDaily(now) },
     ];
   }
 

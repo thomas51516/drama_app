@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Length, Min } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, Length } from 'class-validator';
 import { WalletDto } from '../../wallet/dto/wallet.dto.js';
 
 export const UNLOCK_METHODS = ['coins', 'ad', 'vip', 'free'] as const;
@@ -52,53 +52,28 @@ export class SeriesUnlocksDto {
   unlockedEpisodeIds: string[];
 }
 
-/** Callback SSV de la régie (AdMob) — planifié S08-BE-03. Les champs exacts suivent la régie retenue (S02-PM-01). */
-export class AdRewardCallbackDto {
-  @ApiProperty({ example: 'admob' })
-  @IsString()
-  provider: string;
+/** `GET /series/{id}/unlock-all/quote` (contrat v1.5, M-23). */
+export class UnlockAllQuoteDto {
+  @ApiProperty({ example: 7, description: 'Épisodes visibles encore verrouillés pour le compte' })
+  lockedCount: number;
 
-  @ApiProperty({ description: 'Identifiant unique de la transaction côté régie (idempotence)' })
-  @IsString()
-  transactionId: string;
+  @ApiProperty({ example: 70, description: 'Somme des coûts unitaires' })
+  fullPrice: number;
 
-  @ApiProperty({ format: 'uuid', description: 'Utilisateur DRAMA (user_id SSV)' })
-  @IsString()
-  userId: string;
+  @ApiProperty({ example: 15, description: '`seriesUnlockDiscountPercent` des paramètres' })
+  discountPercent: number;
 
-  @ApiProperty({ example: 1 })
-  @IsInt()
-  @Min(0)
-  rewardAmount: number;
-
-  @ApiPropertyOptional({ description: 'Données personnalisées (episodeId visé)' })
-  @IsOptional()
-  @IsString()
-  customData?: string;
-
-  @ApiProperty({ description: 'Signature de la régie, vérifiée côté serveur' })
-  @IsString()
-  signature: string;
-
-  @ApiProperty({ example: '1730112000000' })
-  @IsString()
-  timestamp: string;
-
-  @ApiPropertyOptional({ description: 'Identifiant de la clé de signature' })
-  @IsOptional()
-  @IsString()
-  keyId?: string;
+  @ApiProperty({ example: 60, description: 'Prix remisé, arrondi au supérieur' })
+  price: number;
 }
 
-export class AdRewardAckDto {
-  @ApiProperty()
-  accepted: boolean;
+export class UnlockAllResultDto {
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Épisodes débloqués par cet appel' })
+  unlockedEpisodeIds: string[];
 
-  @ApiProperty({
-    type: String,
-    nullable: true,
-    format: 'uuid',
-    description: 'Épisode débloqué par la pub',
-  })
-  episodeId: string | null;
+  @ApiProperty({ type: ChargedDto })
+  charged: ChargedDto;
+
+  @ApiProperty({ type: WalletDto })
+  wallet: WalletDto;
 }

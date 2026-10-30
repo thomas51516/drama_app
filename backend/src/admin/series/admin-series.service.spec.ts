@@ -25,6 +25,7 @@ function series(partial: Partial<AdminSeriesRecord> = {}): AdminSeriesRecord {
     posterHorizontalUrl: null,
     freeEpisodeCount: 5,
     coinCostPerEpisode: 10,
+    adUnlockEnabled: true,
     status: 'DRAFT',
     territories: [],
     ageRating: 'ALL',

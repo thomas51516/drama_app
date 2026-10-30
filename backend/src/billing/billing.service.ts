@@ -6,7 +6,6 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { notImplemented } from '../common/errors/not-implemented.js';
 import { currencyForCountry } from '../common/money/currency.js';
 import { AppConfig } from '../config/app-config.js';
 import {
@@ -20,6 +19,7 @@ import {
 } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ShopService, toVipPlanDto } from '../monetization/shop.service.js';
+import { OffersService } from '../offers/offers.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
 import {
   type GoogleRtdnDto,
@@ -63,7 +63,7 @@ const STATUS_BY_STATE: Record<SubscriptionState, SubscriptionStatus> = {
  * Paiements Google Play (§10, S07-BE-06/07) : vérification serveur par le port `PurchaseVerifier`,
  * crédit par le grand livre (idempotent par `purchases.purchase_token`), acquittement après crédit,
  * abonnements VIP (`subscriptions` + `users.vip_expires_at`), RTDN (renouvellement, annulation,
- * remboursement, pause). Mobile money planifié S09-BE-01.
+ * remboursement, pause). Mobile money : `topup/` (S09-BE-01).
  */
 @Injectable()
 export class BillingService {
@@ -75,6 +75,7 @@ export class BillingService {
     private readonly shop: ShopService,
     private readonly config: AppConfig,
     @Inject(PURCHASE_VERIFIER) private readonly verifier: PurchaseVerifier,
+    private readonly offers: OffersService,
   ) {}
 
   async verifyGooglePurchase(userId: string, dto: GoogleVerifyDto): Promise<VerifyResultDto> {
@@ -107,9 +108,12 @@ export class BillingService {
     if (verified.state !== 'purchased') throw invalid(verified.state);
 
     const { purchase, alreadyCredited } = await this.prisma.$transaction(async (tx) => {
+      // Offre de bienvenue (premier achat, fenêtre) et offre limitée du pack, appliquées au crédit (M-24).
+      const offerBonus = await this.offers.purchaseBonus(tx, userId, pack.sku, pack.coins);
+      const bonusCoins = pack.bonusCoins + offerBonus.extraBonus;
       const inserted = await tx.$queryRaw<{ id: string }[]>`
         INSERT INTO purchases (id, user_id, provider, product_id, purchase_token, order_id, currency, coins, bonus_coins, status, raw_payload, verified_at, created_at, updated_at)
-        VALUES (gen_random_uuid(), ${userId}::uuid, 'GOOGLE_PLAY', ${dto.productId}, ${dto.purchaseToken}, ${verified.orderId}, ${verified.regionCode ? currencyForCountry(verified.regionCode) : null}, ${pack.coins}, ${pack.bonusCoins}, 'VERIFIED', ${JSON.stringify(verified.raw)}::jsonb, now(), now(), now())
+        VALUES (gen_random_uuid(), ${userId}::uuid, 'GOOGLE_PLAY', ${dto.productId}, ${dto.purchaseToken}, ${verified.orderId}, ${verified.regionCode ? currencyForCountry(verified.regionCode) : null}, ${pack.coins}, ${bonusCoins}, 'VERIFIED', ${JSON.stringify(verified.raw)}::jsonb, now(), now(), now())
         ON CONFLICT (purchase_token) DO NOTHING
         RETURNING id`;
       const row = await tx.purchase.findUniqueOrThrow({
@@ -397,11 +401,6 @@ export class BillingService {
     this.logger.log(
       `Purchase ${purchase.id} refunded: ${purchase.coins} coins debited from ${purchase.userId}`,
     );
-  }
-
-  // TODO S09-BE-01 : webhook agrégateur (CinetPay / FedaPay / PayDunya), signature, idempotence
-  handleMobileMoneyWebhook(_provider: string, _payload: unknown): never {
-    return notImplemented('S09-BE-01');
   }
 }
 

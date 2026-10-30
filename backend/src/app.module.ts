@@ -1,6 +1,7 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { AdminModule } from './admin/admin.module.js';
+import { AdsModule } from './ads/ads.module.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BillingModule } from './billing/billing.module.js';
@@ -15,12 +16,14 @@ import { JobsModule } from './jobs/jobs.module.js';
 import { MediaModule } from './media/media.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { MonetizationModule } from './monetization/monetization.module.js';
+import { OffersModule } from './offers/offers.module.js';
 import { PlaybackModule } from './playback/playback.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PushModule } from './push/push.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { RewardsModule } from './rewards/rewards.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { TopupModule } from './topup/topup.module.js';
 import { TranscodeModule } from './transcode/transcode.module.js';
 import { UnlockModule } from './unlock/unlock.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -44,8 +47,11 @@ import { WalletModule } from './wallet/wallet.module.js';
     CatalogModule,
     PlaybackModule,
     UnlockModule,
+    AdsModule,
     WalletModule,
+    OffersModule,
     BillingModule,
+    TopupModule,
     RewardsModule,
     UsersModule,
     HelpModule,

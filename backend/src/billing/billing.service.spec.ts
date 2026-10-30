@@ -68,6 +68,11 @@ function makeService(
     shop as never,
     config as never,
     verifier as never,
+    {
+      purchaseBonus: vi.fn(() =>
+        Promise.resolve({ welcomePercent: 0, limitedPercent: 0, extraBonus: 0 }),
+      ),
+    } as never,
   );
   return { service, prisma, tx, wallet, verifier };
 }

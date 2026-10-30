@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,6 +12,7 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../../common/i18n/accept-language.js';
 import { AgeRating, HomeRowType, SeriesStatus } from '../../generated/prisma/client.js';
 
 export const EPISODE_ACCESS = ['free', 'unlocked', 'locked'] as const;
@@ -355,4 +357,67 @@ export class FeedResponseDto {
 
   @ApiProperty({ type: String, nullable: true })
   nextCursor: string | null;
+}
+
+// ----------------------------------------------------------------------------- classements et genres (contrat v1.5)
+
+export const RANKING_PERIODS = ['day', 'week', 'all'] as const;
+export type RankingPeriod = (typeof RANKING_PERIODS)[number];
+
+export class RankingsQueryDto {
+  @ApiPropertyOptional({ enum: RANKING_PERIODS, default: 'week' })
+  @IsOptional()
+  @IsIn(RANKING_PERIODS)
+  period: RankingPeriod = 'week';
+
+  @ApiPropertyOptional({ example: 'romance', description: 'Clé de genre (voir `GET /genres`)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  genre?: string;
+}
+
+export class RankingItemDto {
+  @ApiProperty({ example: 1 })
+  rank: number;
+
+  @ApiProperty({ type: SeriesSummaryDto })
+  series: SeriesSummaryDto;
+
+  @ApiProperty({ example: 1280, description: 'Spectateurs distincts sur la période' })
+  viewers: number;
+}
+
+export class RankingsDto {
+  @ApiProperty({ enum: RANKING_PERIODS })
+  period: RankingPeriod;
+
+  @ApiProperty({ type: [RankingItemDto] })
+  items: RankingItemDto[];
+}
+
+export class GenresQueryDto {
+  @ApiPropertyOptional({
+    enum: SUPPORTED_LANGUAGES,
+    description: 'Langue des libellés (sinon `Accept-Language`)',
+  })
+  @IsOptional()
+  @IsIn(SUPPORTED_LANGUAGES)
+  lang?: SupportedLanguage;
+}
+
+export class GenreDto {
+  @ApiProperty({ example: 'drame' })
+  key: string;
+
+  @ApiProperty({ example: 'Drama' })
+  label: string;
+}
+
+export class GenresDto {
+  @ApiProperty({ enum: SUPPORTED_LANGUAGES })
+  lang: SupportedLanguage;
+
+  @ApiProperty({ type: [GenreDto] })
+  items: GenreDto[];
 }

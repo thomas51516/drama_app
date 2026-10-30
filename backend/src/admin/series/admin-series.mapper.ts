@@ -21,6 +21,7 @@ export function toAdminSeries(s: AdminSeriesRecord): AdminSeriesDto {
     posterHorizontalUrl: s.posterHorizontalUrl,
     freeEpisodeCount: s.freeEpisodeCount,
     coinCostPerEpisode: s.coinCostPerEpisode,
+    adUnlockEnabled: s.adUnlockEnabled,
     status: s.status,
     territories: s.territories,
     episodeCount: s._count.episodes,

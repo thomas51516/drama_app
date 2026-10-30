@@ -26,7 +26,7 @@ describe('Analytics events (§13, S06-BE-03)', () => {
       ['arrayMaxSize'],
     ]);
     expect(ANALYTICS_EVENT_NAMES).toContain('push_open');
-    expect(ANALYTICS_EVENT_NAMES).toHaveLength(15);
+    expect(ANALYTICS_EVENT_NAMES).toHaveLength(16);
   });
 
   it('rejects params above 2 KB with a stable code', () => {

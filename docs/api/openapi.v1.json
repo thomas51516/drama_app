@@ -2461,6 +2461,144 @@
         ]
       }
     },
+    "/rankings": {
+      "get": {
+        "description": "`period=day|week|all` : spectateurs distincts dont la progression a bougé sur la période ; séries publiées et autorisées sur le territoire (`X-Country`), filtre `genre` optionnel ; 20 séries max ; cache 10 min. Avec un jeton, `isFavorite` / `likes` sont ajoutés après le cache.",
+        "operationId": "getRankings",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "week",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "genre",
+            "required": false,
+            "in": "query",
+            "description": "Clé de genre (voir `GET /genres`)",
+            "schema": {
+              "example": "romance",
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Classement des séries par spectateurs distincts (M-04)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/genres": {
+      "get": {
+        "description": "Genres connus (romance, drame, comédie, action, thriller, fantastique, famille) dans la langue `lang` (sinon `Accept-Language`, repli fr), complétés par les genres présents dans les séries publiées (libellé = clé). `SeriesSummary.genres` reste la liste des clés.",
+        "operationId": "getGenres",
+        "parameters": [
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "description": "Langue des libellés (sinon `Accept-Language`)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fr",
+                "en",
+                "es",
+                "pt"
+              ]
+            }
+          },
+          {
+            "name": "accept-language",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "en"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenresDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Genres avec libellés localisés (DEF-012)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/episodes/{id}/play": {
       "post": {
         "description": "Vérifie le droit (gratuit, débloqué, VIP) puis renvoie le manifeste HLS, les sous-titres, la position de reprise et l'épisode suivant. Le serveur fait foi (§8.4). Épisode verrouillé : si `autoUnlock` est activé et le solde suffisant, l'épisode est débloqué dans la même requête (`unlocked: true`) ; sinon `403 EPISODE_LOCKED { details: { coinCost, balance, canAutoUnlock } }`. Abonné VIP : toujours autorisé (déblocage `vip` enregistré sans débit).",
@@ -2802,17 +2940,103 @@
         ]
       }
     },
-    "/ads/reward": {
+    "/series/{id}/unlock-all/quote": {
+      "get": {
+        "description": "`lockedCount` = épisodes visibles encore verrouillés pour le compte ; `fullPrice` = somme des coûts unitaires ; `price` = remise `seriesUnlockDiscountPercent` appliquée, arrondie au supérieur.",
+        "operationId": "unlockAllQuote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnlockAllQuoteDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Devis du déblocage de la série entière (M-23)",
+        "tags": [
+          "unlock"
+        ]
+      }
+    },
+    "/series/{id}/unlock-all": {
       "post": {
-        "description": "Appelé par la régie, jamais par l’app. Crédit uniquement après vérification de la signature ; plafond quotidien par utilisateur (Redis). Idempotent par `transactionId`.",
-        "operationId": "adReward",
-        "parameters": [],
+        "description": "Une transaction : verrou du portefeuille, création de tous les déblocages et une ligne de débit par lot consommé (bonus d’abord). Idempotent par `idempotencyKey` (rejeu → même liste, aucun second débit). Solde insuffisant → `402 INSUFFICIENT_COINS { cost, balance }` ; série déjà débloquée → liste vide, `charged: {0,0}`.",
+        "operationId": "unlockAll",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AdRewardCallbackDto"
+                "$ref": "#/components/schemas/UnlockEpisodeDto"
               }
             }
           }
@@ -2823,13 +3047,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdRewardAckDto"
+                  "$ref": "#/components/schemas/UnlockAllResultDto"
                 }
               }
             }
           },
-          "401": {
-            "description": "INVALID_AD_SIGNATURE",
+          "400": {
+            "description": "VALIDATION_ERROR",
             "content": {
               "application/json": {
                 "schema": {
@@ -2838,8 +3062,38 @@
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "INSUFFICIENT_COINS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
             "content": {
               "application/json": {
                 "schema": {
@@ -2849,7 +3103,12 @@
             }
           }
         },
-        "summary": "Callback SSV de la régie publicitaire (planifié S08-BE-03)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Débloquer tous les épisodes verrouillés de la série (M-23)",
         "tags": [
           "unlock"
         ]
@@ -2968,6 +3227,1043 @@
         "summary": "Historique du grand livre (paginé, filtre par type)",
         "tags": [
           "wallet"
+        ]
+      }
+    },
+    "/ads/eligibility": {
+      "get": {
+        "description": "Raisons de refus : `CAP_REACHED` (plafond `adDailyCap` atteint, jour civil du pays), `SERIES_NOT_ELIGIBLE` (`series.adUnlockEnabled` faux), `ALREADY_UNLOCKED` (gratuit, débloqué ou VIP), `NO_PROVIDER` (bloc AdMob non configuré). `adUnitId` à charger côté app ; `provider` = `fake` (régie simulée en debug) ou `admob`.",
+        "operationId": "eligibility",
+        "parameters": [
+          {
+            "name": "episodeId",
+            "required": true,
+            "in": "query",
+            "description": "Épisode que la pub débloquerait",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Country",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdEligibilityDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Éligibilité d’un épisode à la pub récompensée",
+        "tags": [
+          "unlock"
+        ]
+      }
+    },
+    "/ads/sessions": {
+      "post": {
+        "description": "Vérifie l’éligibilité (`409 AD_NOT_ELIGIBLE { details.reason }`) puis crée la session. L’app passe `customData` en `custom_data` SSV et son identifiant de compte en `user_id`, puis sonde `GET /ads/sessions/{id}` après la pub.",
+        "operationId": "createSession",
+        "parameters": [
+          {
+            "name": "X-Country",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "TG"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdSessionCreatedDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EPISODE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "AD_NOT_ELIGIBLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ouvrir une session de pub récompensée (10 min)",
+        "tags": [
+          "unlock"
+        ]
+      }
+    },
+    "/ads/sessions/{id}": {
+      "get": {
+        "operationId": "getSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdSessionStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "AD_SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "État d’une session (sondage de l’app après la pub)",
+        "tags": [
+          "unlock"
+        ]
+      }
+    },
+    "/ads/reward": {
+      "get": {
+        "description": "Appelé par la régie (AdMob SSV), jamais par l’app : paramètres `ad_network, ad_unit, custom_data, reward_amount, reward_item, timestamp, transaction_id, user_id, signature, key_id` dans la chaîne de requête. La signature (ECDSA P-256 avec les clés publiques Google en mode `admob`, HMAC-SHA256 de `AD_SSV_FAKE_SECRET` en mode `fake`) couvre tout ce qui précède `&signature=`. `custom_data` = `customData` de la session ; déblocage `method: ad` sans débit, plafond quotidien, idempotent par `transaction_id`. Toujours `200` une fois la signature valide (`accepted: false` + `reason` sinon).",
+        "operationId": "rewardGet",
+        "parameters": [
+          {
+            "name": "key_id",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "signature",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "user_id",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "transaction_id",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "custom_data",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdRewardAckDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "AD_CALLBACK_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_AD_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Callback SSV de la régie (GET, AdMob)",
+        "tags": [
+          "unlock",
+          "webhooks"
+        ]
+      },
+      "post": {
+        "description": "Appelé par la régie (AdMob SSV), jamais par l’app : paramètres `ad_network, ad_unit, custom_data, reward_amount, reward_item, timestamp, transaction_id, user_id, signature, key_id` dans la chaîne de requête. La signature (ECDSA P-256 avec les clés publiques Google en mode `admob`, HMAC-SHA256 de `AD_SSV_FAKE_SECRET` en mode `fake`) couvre tout ce qui précède `&signature=`. `custom_data` = `customData` de la session ; déblocage `method: ad` sans débit, plafond quotidien, idempotent par `transaction_id`. Toujours `200` une fois la signature valide (`accepted: false` + `reason` sinon).",
+        "operationId": "rewardPost",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdRewardAckDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "AD_CALLBACK_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_AD_SIGNATURE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Callback SSV de la régie (POST, mêmes paramètres de requête)",
+        "tags": [
+          "unlock",
+          "webhooks"
+        ]
+      }
+    },
+    "/offers": {
+      "get": {
+        "description": "`welcome` : bonus en % sur le premier achat pendant `welcomeOfferHours` après la création du compte (null si inapplicable : déjà acheté, fenêtre passée, offre inactive) ; `limited` : offres limitées actives (bonus % sur un pack). Les pourcentages sont appliqués par le serveur au crédit de l’achat (Google Play ou mobile money), jamais par l’app.",
+        "operationId": "getOffers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffersDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Offres en cours pour le compte (M-24)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/promo/redeem": {
+      "post": {
+        "description": "Code insensible à la casse. Crédit BONUS expirable, idempotent par `idempotencyKey`. `404 PROMO_INVALID` (inconnu, inactif, pas encore commencé), `409 PROMO_EXPIRED | PROMO_EXHAUSTED | PROMO_ALREADY_USED`.",
+        "operationId": "redeem",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemPromoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemPromoResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PROMO_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PROMO_ALREADY_USED | PROMO_EXPIRED | PROMO_EXHAUSTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Utiliser un code promo (M-24)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/admin/offers/welcome": {
+      "get": {
+        "operationId": "getWelcome",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WelcomeOfferSettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Offre de bienvenue (bonus % sur le premier achat)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "put": {
+        "operationId": "putWelcome",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WelcomeOfferSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WelcomeOfferSettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier l’offre de bienvenue ; audit `welcome_offer.update`",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/offers/limited": {
+      "get": {
+        "operationId": "listLimited",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LimitedOfferAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Offres limitées dans le temps (toutes)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "post": {
+        "operationId": "createLimited",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLimitedOfferDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitedOfferAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer une offre limitée (bonus % sur un pack pendant une fenêtre)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/offers/limited/{id}": {
+      "patch": {
+        "operationId": "updateLimited",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLimitedOfferDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitedOfferAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "OFFER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une offre limitée",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteLimited",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "OFFER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer une offre limitée",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/promo-codes": {
+      "get": {
+        "operationId": "listPromoCodes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromoCodeAdminDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Codes promo (tous, avec compteurs d’utilisation)",
+        "tags": [
+          "admin-monetization"
+        ]
+      },
+      "post": {
+        "operationId": "createPromoCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromoCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoCodeAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PROMO_CODE_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Créer un code promo (mis en majuscules, unique)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/promo-codes/{id}": {
+      "patch": {
+        "operationId": "updatePromoCode",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePromoCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoCodeAdminDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PROMO_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier un code promo (pièces, limites, fenêtre, activation)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/promo-codes/{id}/redemptions": {
+      "get": {
+        "operationId": "redemptions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoRedemptionsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PROMO_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Utilisations d’un code promo",
+        "tags": [
+          "admin-monetization"
         ]
       }
     },
@@ -3133,10 +4429,213 @@
         ]
       }
     },
+    "/topup/orders": {
+      "post": {
+        "description": "Prix du pack dans la devise du `country` (XOF, NGN, GHS, EUR, repli USD). `paymentUrl` = page de paiement de l’agrégateur (`MOBILE_MONEY_PROVIDER=cinetpay`) ou page simulée `/topup/fake/{orderId}` (`fake`, dev). Idempotent par `idempotencyKey`. La commande expire après 1 h ; les pièces sont créditées uniquement par le webhook signé.",
+        "operationId": "createOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTopupOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupOrderCreatedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | PACK_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "USER_BLOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PACK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "PAYMENT_PROVIDER_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Créer une commande de recharge mobile money",
+        "tags": [
+          "billing"
+        ]
+      },
+      "get": {
+        "operationId": "listOrders",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupOrdersDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Historique des recharges du compte",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/topup/orders/{id}": {
+      "get": {
+        "description": "`PENDING | PAID | FAILED | EXPIRED` ; `creditedAt` renseigné quand le portefeuille a été crédité.",
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupOrderDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ORDER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "État d’une commande (sondage du site après paiement)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/webhooks/mobile-money/{provider}": {
       "post": {
-        "description": "Signature vérifiée, idempotent par identifiant de transaction, crédit par grand livre.",
-        "operationId": "mobileMoney",
+        "description": "`cinetpay` : notification `application/x-www-form-urlencoded` (`cpm_trans_id` = id de commande) avec en-tête `x-token` = HMAC-SHA256(`CINETPAY_SECRET`, champs concaténés), puis confirmation `POST /v2/payment/check`. `fake` : JSON `{ orderId, reference, status: paid|failed }` signé `X-Fake-Signature: sha256=<HMAC-SHA256(MOBILE_MONEY_FAKE_SECRET, corps brut)>`. Crédit idempotent par commande et par référence agrégateur (PURCHASE + BONUS du pack + offres).",
+        "operationId": "webhook",
         "parameters": [
           {
             "name": "provider",
@@ -3148,16 +4647,6 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MobileMoneyWebhookDto"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "",
@@ -3179,8 +4668,8 @@
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "404": {
+            "description": "UNKNOWN_PROVIDER",
             "content": {
               "application/json": {
                 "schema": {
@@ -3190,31 +4679,78 @@
             }
           }
         },
-        "summary": "Webhook agrégateur mobile money (planifié S09-BE-01)",
+        "summary": "Webhook agrégateur mobile money (signé)",
         "tags": [
-          "Billing",
+          "billing",
           "webhooks"
         ]
       }
     },
-    "/rewards/checkin": {
-      "post": {
-        "description": "Barème sur 7 jours, crédit en pièces bonus expirables, idempotent par jour.",
-        "operationId": "checkIn",
-        "parameters": [],
+    "/topup/fake/{orderId}": {
+      "get": {
+        "description": "HTML français avec les boutons « Payer » / « Échouer » qui déclenchent le webhook `fake` signé. 404 avec un autre agrégateur.",
+        "operationId": "fakePage",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page HTML"
+          },
+          "404": {
+            "description": "ORDER_NOT_FOUND",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Page de paiement simulée (agrégateur `fake`, dev uniquement)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/admin/topup/reconciliation": {
+      "get": {
+        "description": "Commandes payées du jour rapprochées des lignes PURCHASE du grand livre : `credited` = commandes dont la ligne existe avec le bon montant ; `mismatches` = `NOT_CREDITED`, `AMOUNT_MISMATCH`, `LEDGER_WITHOUT_ORDER`. La tâche planifiée `topup-reconciliation` journalise le même rapport chaque jour pour la veille.",
+        "operationId": "reconcile",
+        "parameters": [
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "Jour UTC `YYYY-MM-DD` ; défaut : hier",
+            "schema": {
+              "example": "2026-10-30",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CheckInResultDto"
+                  "$ref": "#/components/schemas/ReconciliationDto"
                 }
               }
             }
           },
           "401": {
-            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
             "content": {
               "application/json": {
                 "schema": {
@@ -3223,8 +4759,46 @@
               }
             }
           },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Réconciliation des recharges d’un jour (UTC)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/rewards/checkin": {
+      "get": {
+        "description": "Barème sur 7 jours (`scale`), jour atteint par la série en cours (`streakDay`, 0 = aucune), `claimedToday` et `nextClaimAt`. Le jour civil est celui du fuseau du pays du compte (Africa/Lome par défaut pour les pays servis, sinon UTC). `resetOnMiss` : un jour manqué remet le cycle au jour 1.",
+        "operationId": "getCheckin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
             "content": {
               "application/json": {
                 "schema": {
@@ -3239,7 +4813,63 @@
             "bearer": []
           }
         ],
-        "summary": "Check-in quotidien (planifié S08-BE-04)",
+        "summary": "État du check-in quotidien (M-40)",
+        "tags": [
+          "rewards"
+        ]
+      },
+      "post": {
+        "description": "Crédite les pièces bonus du jour du cycle (ligne BONUS expirable, validité `bonusValidityDays`). Idempotent par (compte, jour) : un rejeu avec la même `idempotencyKey` renvoie le même résultat ; un second appel avec une autre clé → `409 CHECKIN_ALREADY_CLAIMED { details.nextClaimAt }`.",
+        "operationId": "checkIn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinClaimResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CHECKIN_ALREADY_CLAIMED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Faire le check-in du jour (M-40)",
         "tags": [
           "rewards"
         ]
@@ -3247,8 +4877,27 @@
     },
     "/rewards/tasks": {
       "get": {
+        "description": "Clés fixes : `watch_3_episodes` (jour), `watch_10_episodes` (semaine), `enable_notifications`, `share_series`, `complete_profile`, `add_favorite`. Progression calculée côté serveur (`watch_progress`, appareils push, événements `share` / `push_permission_granted`, favoris, profil). Libellés dans la langue de `Accept-Language`.",
         "operationId": "tasks",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "accept-language",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "fr"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -3269,16 +4918,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -3286,7 +4925,7 @@
             "bearer": []
           }
         ],
-        "summary": "Tâches récompensées (planifié M-41, P2)",
+        "summary": "Tâches récompensées et progression (M-41)",
         "tags": [
           "rewards"
         ]
@@ -3294,6 +4933,7 @@
     },
     "/rewards/tasks/{id}/claim": {
       "post": {
+        "description": "Tâche `CLAIMABLE` uniquement ; crédit BONUS idempotent par (compte, tâche, période). `409 TASK_NOT_CLAIMABLE { details.reason: in_progress | already_claimed }`.",
         "operationId": "claim",
         "parameters": [
           {
@@ -3306,6 +4946,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -3338,17 +4988,7 @@
             }
           },
           "409": {
-            "description": "TASK_NOT_CLAIMABLE | TASK_ALREADY_CLAIMED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "NOT_IMPLEMENTED",
+            "description": "TASK_NOT_CLAIMABLE",
             "content": {
               "application/json": {
                 "schema": {
@@ -3363,9 +5003,136 @@
             "bearer": []
           }
         ],
-        "summary": "Réclamer la récompense d’une tâche (planifié M-41, P2)",
+        "summary": "Réclamer la récompense d’une tâche (M-41)",
         "tags": [
           "rewards"
+        ]
+      }
+    },
+    "/admin/rewards/tasks": {
+      "get": {
+        "operationId": "list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminRewardTaskDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Tâches récompensées (clés fixes du MVP, montants et cibles)",
+        "tags": [
+          "admin-monetization"
+        ]
+      }
+    },
+    "/admin/rewards/tasks/{key}": {
+      "patch": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "watch_3_episodes",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRewardTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRewardTaskDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier une tâche (pièces, cible, activation) ; audit `reward_task.update`",
+        "tags": [
+          "admin-monetization"
         ]
       }
     },
@@ -4579,7 +6346,7 @@
     },
     "/events": {
       "post": {
-        "description": "Noms limités au plan de marquage du §13 (`app_open`, `series_view`, `episode_start`, `episode_complete`, `paywall_view`, `unlock`, `purchase`, `subscription_start`, `ad_reward`, `checkin`, `push_open`, `login`, `signup`, `share`, `search`) ; `params` ≤ 2 Ko. Le jeton utilisateur est facultatif (événements avant la session invité) ; `X-Country` renseigne le pays.",
+        "description": "Noms limités au plan de marquage du §13 (`app_open`, `series_view`, `episode_start`, `episode_complete`, `paywall_view`, `unlock`, `purchase`, `subscription_start`, `ad_reward`, `checkin`, `push_open`, `login`, `signup`, `share`, `search`, `push_permission_granted`) ; `params` ≤ 2 Ko. `share` et `push_permission_granted` alimentent la progression des tâches récompensées (M-41). Le jeton utilisateur est facultatif (événements avant la session invité) ; `X-Country` renseigne le pays.",
         "operationId": "post",
         "parameters": [
           {
@@ -7320,7 +9087,11 @@
                 "monetization_settings",
                 "coin_pack",
                 "vip_plan",
-                "wallet"
+                "wallet",
+                "reward_task",
+                "promo_code",
+                "limited_offer",
+                "topup_order"
               ]
             }
           },
@@ -8511,8 +10282,8 @@
   },
   "info": {
     "title": "DRAMA API",
-    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN. Épisode verrouillé : `403 EPISODE_LOCKED { coinCost, balance, canAutoUnlock }`, ou déblocage automatique dans la même requête (`unlocked: true`) quand `autoUnlock` est activé et le solde suffisant.\n\n**Pièces et achats** : le grand livre `coin_ledger` est la seule source de vérité (`GET /wallet`, `GET /wallet/transactions`) ; `POST /episodes/{id}/unlock` débite bonus puis achetées dans la même transaction que le déblocage (idempotent, `402 INSUFFICIENT_COINS`). `GET /shop` donne les prix dans la devise de `X-Country` ; `POST /billing/google/verify` vérifie le jeton côté serveur (`BILLING_VERIFIER=google|fake`), crédite une seule fois par `purchaseToken` et acquitte ; `POST /webhooks/google-rtdn` traite renouvellements, annulations et remboursements.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).\n\n**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.\n\n**Endpoints planifiés** : les opérations marquées « Planifié S0x » (pub récompensée, check-in, mobile money) répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
-    "version": "1.4.0",
+    "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN. Épisode verrouillé : `403 EPISODE_LOCKED { coinCost, balance, canAutoUnlock }`, ou déblocage automatique dans la même requête (`unlocked: true`) quand `autoUnlock` est activé et le solde suffisant.\n\n**Pièces et achats** : le grand livre `coin_ledger` est la seule source de vérité (`GET /wallet`, `GET /wallet/transactions`) ; `POST /episodes/{id}/unlock` débite bonus puis achetées dans la même transaction que le déblocage (idempotent, `402 INSUFFICIENT_COINS`). `GET /shop` donne les prix dans la devise de `X-Country` ; `POST /billing/google/verify` vérifie le jeton côté serveur (`BILLING_VERIFIER=google|fake`), crédite une seule fois par `purchaseToken` et acquitte ; `POST /webhooks/google-rtdn` traite renouvellements, annulations et remboursements.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).\n\n**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.\n\n**Récompenses et pub** : `GET/POST /rewards/checkin` (barème sur 7 jours, jour civil du fuseau du pays, `409 CHECKIN_ALREADY_CLAIMED`), `GET /rewards/tasks` + `POST /rewards/tasks/{id}/claim` (progression calculée côté serveur) ; pub récompensée : `GET /ads/eligibility`, `POST /ads/sessions` → `customData` à passer à la régie, callback SSV `GET|POST /ads/reward` (signature ECDSA AdMob ou HMAC `fake`) qui crée le déblocage `method: ad`, `GET /ads/sessions/{id}` pour le sondage.\n\n**Série entière, offres, recharge** : `GET /series/{id}/unlock-all/quote` et `POST /series/{id}/unlock-all` (remise `seriesUnlockDiscountPercent`, une transaction) ; `GET /offers` (bienvenue, offres limitées) et `POST /promo/redeem` ; recharge mobile money `POST /topup/orders` → `paymentUrl`, `GET /topup/orders/{id}`, webhook signé `POST /webhooks/mobile-money/{provider}` (crédit idempotent), réconciliation `GET /admin/topup/reconciliation?date`. `GET /rankings?period` (spectateurs distincts, cache 10 min) et `GET /genres?lang` (libellés localisés).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
+    "version": "1.5.0",
     "contact": {
       "name": "Équipe backend DRAMA",
       "url": "",
@@ -10685,6 +12456,92 @@
           "suggestions"
         ]
       },
+      "RankingItemDto": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "number",
+            "example": 1
+          },
+          "series": {
+            "$ref": "#/components/schemas/SeriesSummaryDto"
+          },
+          "viewers": {
+            "type": "number",
+            "example": 1280,
+            "description": "Spectateurs distincts sur la période"
+          }
+        },
+        "required": [
+          "rank",
+          "series",
+          "viewers"
+        ]
+      },
+      "RankingsDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "all"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RankingItemDto"
+            }
+          }
+        },
+        "required": [
+          "period",
+          "items"
+        ]
+      },
+      "GenreDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "drame"
+          },
+          "label": {
+            "type": "string",
+            "example": "Drama"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ]
+      },
+      "GenresDto": {
+        "type": "object",
+        "properties": {
+          "lang": {
+            "type": "string",
+            "enum": [
+              "fr",
+              "en",
+              "es",
+              "pt"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GenreDto"
+            }
+          }
+        },
+        "required": [
+          "lang",
+          "items"
+        ]
+      },
       "PlayDrmDto": {
         "type": "object",
         "properties": {
@@ -10994,68 +12851,59 @@
           "unlockedEpisodeIds"
         ]
       },
-      "AdRewardCallbackDto": {
+      "UnlockAllQuoteDto": {
         "type": "object",
         "properties": {
-          "provider": {
-            "type": "string",
-            "example": "admob"
-          },
-          "transactionId": {
-            "type": "string",
-            "description": "Identifiant unique de la transaction côté régie (idempotence)"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Utilisateur DRAMA (user_id SSV)"
-          },
-          "rewardAmount": {
+          "lockedCount": {
             "type": "number",
-            "example": 1
+            "example": 7,
+            "description": "Épisodes visibles encore verrouillés pour le compte"
           },
-          "customData": {
-            "type": "string",
-            "description": "Données personnalisées (episodeId visé)"
+          "fullPrice": {
+            "type": "number",
+            "example": 70,
+            "description": "Somme des coûts unitaires"
           },
-          "signature": {
-            "type": "string",
-            "description": "Signature de la régie, vérifiée côté serveur"
+          "discountPercent": {
+            "type": "number",
+            "example": 15,
+            "description": "`seriesUnlockDiscountPercent` des paramètres"
           },
-          "timestamp": {
-            "type": "string",
-            "example": "1730112000000"
-          },
-          "keyId": {
-            "type": "string",
-            "description": "Identifiant de la clé de signature"
+          "price": {
+            "type": "number",
+            "example": 60,
+            "description": "Prix remisé, arrondi au supérieur"
           }
         },
         "required": [
-          "provider",
-          "transactionId",
-          "userId",
-          "rewardAmount",
-          "signature",
-          "timestamp"
+          "lockedCount",
+          "fullPrice",
+          "discountPercent",
+          "price"
         ]
       },
-      "AdRewardAckDto": {
+      "UnlockAllResultDto": {
         "type": "object",
         "properties": {
-          "accepted": {
-            "type": "boolean"
+          "unlockedEpisodeIds": {
+            "description": "Épisodes débloqués par cet appel",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
-          "episodeId": {
-            "type": "string",
-            "nullable": true,
-            "format": "uuid",
-            "description": "Épisode débloqué par la pub"
+          "charged": {
+            "$ref": "#/components/schemas/ChargedDto"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletDto"
           }
         },
         "required": [
-          "accepted",
-          "episodeId"
+          "unlockedEpisodeIds",
+          "charged",
+          "wallet"
         ]
       },
       "LedgerReferenceDto": {
@@ -11168,6 +13016,561 @@
           "total",
           "page",
           "pageSize"
+        ]
+      },
+      "AdEligibilityDto": {
+        "type": "object",
+        "properties": {
+          "eligible": {
+            "type": "boolean"
+          },
+          "remainingToday": {
+            "type": "number",
+            "example": 2,
+            "description": "Pubs récompensées restantes aujourd’hui (fuseau du pays)"
+          },
+          "dailyCap": {
+            "type": "number",
+            "example": 3,
+            "description": "Plafond quotidien (`adDailyCap`)"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "CAP_REACHED",
+              "SERIES_NOT_ELIGIBLE",
+              "ALREADY_UNLOCKED",
+              "NO_PROVIDER"
+            ]
+          },
+          "adUnitId": {
+            "type": "string",
+            "nullable": true,
+            "example": "ca-app-pub-3940256099942544/5224354917",
+            "description": "Bloc d’annonce récompensée à charger ; `fake-rewarded` avec la régie simulée"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "fake",
+              "admob"
+            ]
+          }
+        },
+        "required": [
+          "eligible",
+          "remainingToday",
+          "dailyCap",
+          "adUnitId",
+          "provider"
+        ]
+      },
+      "CreateAdSessionDto": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "episodeId"
+        ]
+      },
+      "AdSessionCreatedDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customData": {
+            "type": "string",
+            "example": "0192f3b2-…:7c1f…",
+            "description": "Valeur `custom_data` à passer à la régie (session + nonce)"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Session valable 10 minutes"
+          }
+        },
+        "required": [
+          "sessionId",
+          "customData",
+          "expiresAt"
+        ]
+      },
+      "AdSessionStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "REWARDED",
+              "EXPIRED",
+              "REJECTED"
+            ]
+          },
+          "unlocked": {
+            "type": "boolean",
+            "description": "Épisode débloqué pour le compte (toutes méthodes confondues)"
+          }
+        },
+        "required": [
+          "status",
+          "unlocked"
+        ]
+      },
+      "AdRewardAckDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "description": "Déblocage créé (ou déjà créé pour cette transaction)"
+          },
+          "episodeId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "example": "session_expired",
+            "description": "Motif de refus : unknown_session, user_mismatch, session_expired, session_closed, cap_reached"
+          }
+        },
+        "required": [
+          "accepted",
+          "episodeId"
+        ]
+      },
+      "WelcomeOfferDto": {
+        "type": "object",
+        "properties": {
+          "packSku": {
+            "type": "string",
+            "nullable": true,
+            "example": "coins_300",
+            "description": "Pack concerné ; null = tout pack"
+          },
+          "bonusPercent": {
+            "type": "number",
+            "example": 50
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fin de la fenêtre pour ce compte"
+          }
+        },
+        "required": [
+          "packSku",
+          "bonusPercent",
+          "expiresAt"
+        ]
+      },
+      "LimitedOfferDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "example": "Week-end double bonus"
+          },
+          "packSku": {
+            "type": "string",
+            "example": "coins_700"
+          },
+          "bonusPercent": {
+            "type": "number",
+            "example": 30
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "packSku",
+          "bonusPercent",
+          "endsAt"
+        ]
+      },
+      "OffersDto": {
+        "type": "object",
+        "properties": {
+          "welcome": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WelcomeOfferDto"
+              }
+            ]
+          },
+          "limited": {
+            "description": "Offres limitées actives (informatives ; bonus appliqué au crédit)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LimitedOfferDto"
+            }
+          }
+        },
+        "required": [
+          "welcome",
+          "limited"
+        ]
+      },
+      "RedeemPromoDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "BIENVENUE50"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "example": "6f1d2c3b-4a5e-4f60-8b7c-9d0e1f2a3b4c"
+          }
+        },
+        "required": [
+          "code",
+          "idempotencyKey"
+        ]
+      },
+      "RedeemPromoResultDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number",
+            "example": 50,
+            "description": "Pièces bonus créditées"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletDto"
+          }
+        },
+        "required": [
+          "coins",
+          "wallet"
+        ]
+      },
+      "WelcomeOfferSettingsDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          },
+          "packSku": {
+            "type": "string",
+            "nullable": true,
+            "example": "coins_300",
+            "description": "null = tout pack"
+          },
+          "bonusPercent": {
+            "type": "number",
+            "example": 50
+          },
+          "hours": {
+            "type": "number",
+            "example": 48,
+            "description": "Fenêtre après la création du compte (heures)"
+          }
+        },
+        "required": [
+          "isActive",
+          "packSku",
+          "bonusPercent",
+          "hours"
+        ]
+      },
+      "LimitedOfferAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "example": "Week-end double bonus"
+          },
+          "packSku": {
+            "type": "string",
+            "example": "coins_700"
+          },
+          "bonusPercent": {
+            "type": "number",
+            "example": 30
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "packSku",
+          "bonusPercent",
+          "endsAt",
+          "startsAt",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "CreateLimitedOfferDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Week-end double bonus"
+          },
+          "packSku": {
+            "type": "string",
+            "example": "coins_700"
+          },
+          "bonusPercent": {
+            "type": "number",
+            "example": 30
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "title",
+          "packSku",
+          "bonusPercent",
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "UpdateLimitedOfferDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "packSku": {
+            "type": "string"
+          },
+          "bonusPercent": {
+            "type": "number"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PromoCodeAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "BIENVENUE50"
+          },
+          "coins": {
+            "type": "number",
+            "example": 50
+          },
+          "maxUses": {
+            "type": "number",
+            "nullable": true,
+            "description": "Utilisations totales max ; null = illimité"
+          },
+          "perUserUses": {
+            "type": "number",
+            "example": 1,
+            "description": "Utilisations max par compte"
+          },
+          "usesCount": {
+            "type": "number",
+            "example": 12
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "coins",
+          "maxUses",
+          "perUserUses",
+          "usesCount",
+          "startsAt",
+          "endsAt",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "CreatePromoCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "BIENVENUE50",
+            "description": "Lettres, chiffres, tirets et soulignés ; mis en majuscules"
+          },
+          "coins": {
+            "type": "number",
+            "example": 50
+          },
+          "maxUses": {
+            "type": "number",
+            "nullable": true,
+            "description": "null = illimité"
+          },
+          "perUserUses": {
+            "type": "number",
+            "default": 1
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "code",
+          "coins"
+        ]
+      },
+      "UpdatePromoCodeDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number"
+          },
+          "maxUses": {
+            "type": "number",
+            "nullable": true
+          },
+          "perUserUses": {
+            "type": "number"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PromoRedemptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "coins": {
+            "type": "number",
+            "example": 50
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "coins",
+          "createdAt"
+        ]
+      },
+      "PromoRedemptionsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Antichronologique, 200 dernières",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromoRedemptionDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
         ]
       },
       "GoogleVerifyDto": {
@@ -11334,27 +13737,151 @@
           "message"
         ]
       },
-      "MobileMoneyWebhookDto": {
+      "CreateTopupOrderDto": {
         "type": "object",
         "properties": {
-          "transactionId": {
+          "packSku": {
             "type": "string",
-            "description": "Identifiant de transaction agrégateur (idempotence)"
+            "example": "coins_300"
           },
-          "status": {
+          "country": {
             "type": "string",
-            "example": "ACCEPTED",
-            "description": "Statut selon l’agrégateur"
+            "example": "TG",
+            "description": "Pays ISO 3166-1 alpha-2 : devise et opérateurs"
           },
-          "payload": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "Charge utile complète conservée telle quelle"
+          "phone": {
+            "type": "string",
+            "example": "+22890000000",
+            "description": "Numéro mobile money (E.164)"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "example": "6f1d2c3b-4a5e-4f60-8b7c-9d0e1f2a3b4c"
           }
         },
         "required": [
-          "transactionId",
-          "status"
+          "packSku",
+          "country",
+          "idempotencyKey"
+        ]
+      },
+      "TopupOrderCreatedDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/PriceDto"
+          },
+          "paymentUrl": {
+            "type": "string",
+            "example": "https://checkout.cinetpay.com/payment/…",
+            "description": "Page de paiement de l’agrégateur (ou page simulée `/topup/fake/{orderId}` en dev)"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Commande expirée au-delà (1 h)"
+          }
+        },
+        "required": [
+          "orderId",
+          "amount",
+          "paymentUrl",
+          "expiresAt"
+        ]
+      },
+      "TopupOrderDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PAID",
+              "FAILED",
+              "EXPIRED"
+            ]
+          },
+          "packSku": {
+            "type": "string",
+            "example": "coins_300"
+          },
+          "coins": {
+            "type": "number",
+            "example": 300,
+            "description": "Pièces achetées du pack"
+          },
+          "bonusCoins": {
+            "type": "number",
+            "example": 45,
+            "description": "Pièces bonus créditées (pack + offres), connues après paiement"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/PriceDto"
+          },
+          "paymentUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "creditedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "orderId",
+          "status",
+          "packSku",
+          "coins",
+          "bonusCoins",
+          "amount",
+          "paymentUrl",
+          "creditedAt",
+          "expiresAt",
+          "createdAt"
+        ]
+      },
+      "TopupOrdersDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Antichronologique",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopupOrderDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
         ]
       },
       "WebhookAckDto": {
@@ -11368,30 +13895,185 @@
           "accepted"
         ]
       },
-      "CheckInResultDto": {
+      "ReconciliationAmountDto": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "example": "XOF"
+          },
+          "amountMinor": {
+            "type": "number",
+            "example": 15000
+          }
+        },
+        "required": [
+          "currency",
+          "amountMinor"
+        ]
+      },
+      "ReconciliationMismatchDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "NOT_CREDITED",
+              "AMOUNT_MISMATCH",
+              "LEDGER_WITHOUT_ORDER"
+            ]
+          },
+          "expectedCoins": {
+            "type": "number",
+            "example": 300,
+            "description": "Pièces attendues (commande)"
+          },
+          "creditedCoins": {
+            "type": "number",
+            "example": 0,
+            "description": "Pièces trouvées dans le grand livre"
+          }
+        },
+        "required": [
+          "orderId",
+          "userId",
+          "reason",
+          "expectedCoins",
+          "creditedCoins"
+        ]
+      },
+      "ReconciliationDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-10-30"
+          },
+          "orders": {
+            "type": "number",
+            "example": 12,
+            "description": "Commandes créées ce jour (tous statuts)"
+          },
+          "paid": {
+            "type": "number",
+            "example": 9,
+            "description": "Commandes payées ce jour (webhook reçu)"
+          },
+          "credited": {
+            "type": "number",
+            "example": 9,
+            "description": "Commandes payées dont le grand livre porte la ligne PURCHASE"
+          },
+          "amounts": {
+            "description": "Montants encaissés par devise",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationAmountDto"
+            }
+          },
+          "mismatches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationMismatchDto"
+            }
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "date",
+          "orders",
+          "paid",
+          "credited",
+          "amounts",
+          "mismatches",
+          "generatedAt"
+        ]
+      },
+      "CheckinStatusDto": {
+        "type": "object",
+        "properties": {
+          "scale": {
+            "example": [
+              5,
+              5,
+              10,
+              10,
+              15,
+              20,
+              30
+            ],
+            "description": "Barème sur 7 jours",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "streakDay": {
+            "type": "number",
+            "example": 3,
+            "minimum": 0,
+            "maximum": 7,
+            "description": "Jour du cycle atteint par la série en cours (0 = aucune série en cours)"
+          },
+          "claimedToday": {
+            "type": "boolean",
+            "description": "Check-in déjà effectué aujourd’hui (fuseau du pays du compte)"
+          },
+          "nextClaimAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Prochain check-in possible : maintenant si non réclamé, sinon minuit local"
+          },
+          "resetOnMiss": {
+            "type": "boolean",
+            "description": "Un jour manqué remet le cycle au jour 1"
+          }
+        },
+        "required": [
+          "scale",
+          "streakDay",
+          "claimedToday",
+          "nextClaimAt",
+          "resetOnMiss"
+        ]
+      },
+      "ClaimDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "example": "6f1d2c3b-4a5e-4f60-8b7c-9d0e1f2a3b4c"
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ]
+      },
+      "CheckinClaimResultDto": {
         "type": "object",
         "properties": {
           "day": {
             "type": "number",
             "example": 3,
-            "description": "Jour du cycle (1 à 7)"
+            "description": "Jour du cycle crédité (1 à 7)"
           },
-          "coinsCredited": {
+          "coins": {
             "type": "number",
-            "example": 5
-          },
-          "streak": {
-            "type": "number",
-            "example": 3,
-            "description": "Jours consécutifs"
-          },
-          "alreadyCheckedIn": {
-            "type": "boolean",
-            "description": "Déjà effectué aujourd’hui (aucun crédit)"
-          },
-          "nextCheckInAt": {
-            "type": "string",
-            "format": "date-time"
+            "example": 10,
+            "description": "Pièces bonus créditées"
           },
           "wallet": {
             "$ref": "#/components/schemas/WalletDto"
@@ -11399,10 +14081,7 @@
         },
         "required": [
           "day",
-          "coinsCredited",
-          "streak",
-          "alreadyCheckedIn",
-          "nextCheckInAt",
+          "coins",
           "wallet"
         ]
       },
@@ -11411,47 +14090,73 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "watch_3_episodes"
+            "example": "watch_3_episodes",
+            "description": "Identifiant à passer à `/claim` (= clé)"
+          },
+          "key": {
+            "type": "string",
+            "enum": [
+              "watch_3_episodes",
+              "watch_10_episodes",
+              "enable_notifications",
+              "share_series",
+              "complete_profile",
+              "add_favorite"
+            ]
           },
           "title": {
             "type": "string",
-            "example": "Regarder 3 épisodes"
+            "example": "Regarder 3 épisodes aujourd’hui"
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "example": "Terminez 3 épisodes dans la journée."
           },
           "coins": {
             "type": "number",
-            "example": 10
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "available",
-              "claimable",
-              "claimed"
-            ]
-          },
-          "progress": {
-            "type": "number",
-            "example": 1
+            "example": 5
           },
           "target": {
             "type": "number",
             "example": 3
+          },
+          "progress": {
+            "type": "number",
+            "example": 1,
+            "description": "Progression calculée côté serveur, bornée à `target`"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "CLAIMABLE",
+              "CLAIMED",
+              "LOCKED"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Fin de la période (jour ou semaine civile dans le fuseau du pays) ; null pour une tâche unique"
           }
         },
         "required": [
           "id",
+          "key",
           "title",
+          "description",
           "coins",
-          "status"
+          "target",
+          "progress",
+          "status",
+          "expiresAt"
         ]
       },
       "RewardTasksDto": {
         "type": "object",
         "properties": {
-          "items": {
+          "tasks": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RewardTaskDto"
@@ -11459,28 +14164,99 @@
           }
         },
         "required": [
-          "items"
+          "tasks"
         ]
       },
       "ClaimTaskResultDto": {
         "type": "object",
         "properties": {
-          "taskId": {
-            "type": "string"
-          },
-          "coinsCredited": {
+          "coins": {
             "type": "number",
-            "example": 10
+            "example": 5,
+            "description": "Pièces bonus créditées"
           },
           "wallet": {
             "$ref": "#/components/schemas/WalletDto"
           }
         },
         "required": [
-          "taskId",
-          "coinsCredited",
+          "coins",
           "wallet"
         ]
+      },
+      "AdminRewardTaskDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "watch_3_episodes",
+              "watch_10_episodes",
+              "enable_notifications",
+              "share_series",
+              "complete_profile",
+              "add_favorite"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "example": "Regarder 3 épisodes aujourd’hui",
+            "description": "Libellé français"
+          },
+          "coins": {
+            "type": "number",
+            "example": 5
+          },
+          "target": {
+            "type": "number",
+            "example": 3
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "DAY",
+              "WEEK",
+              "ONCE"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "position": {
+            "type": "number",
+            "example": 1
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "coins",
+          "target",
+          "period",
+          "isActive",
+          "position",
+          "updatedAt"
+        ]
+      },
+      "UpdateRewardTaskDto": {
+        "type": "object",
+        "properties": {
+          "coins": {
+            "type": "number",
+            "example": 5
+          },
+          "target": {
+            "type": "number",
+            "example": 3
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "NotificationPreferencesUpdateDto": {
         "type": "object",
@@ -12009,7 +14785,8 @@
               "login",
               "signup",
               "share",
-              "search"
+              "search",
+              "push_permission_granted"
             ],
             "example": "episode_start"
           },
@@ -12212,6 +14989,10 @@
             "type": "number",
             "example": 10
           },
+          "adUnlockEnabled": {
+            "type": "boolean",
+            "description": "Déblocage par pub récompensée autorisé (M-22, contrat v1.5)"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -12260,6 +15041,7 @@
           "posterHorizontalUrl",
           "freeEpisodeCount",
           "coinCostPerEpisode",
+          "adUnlockEnabled",
           "status",
           "territories",
           "episodeCount",
@@ -12361,6 +15143,11 @@
             "maximum": 10000,
             "description": "Rôles MONETIZATION et ADMIN"
           },
+          "adUnlockEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Déblocage par pub récompensée autorisé sur la série (rôles MONETIZATION et ADMIN)"
+          },
           "territories": {
             "example": [
               "TG",
@@ -12443,6 +15230,11 @@
             "minimum": 0,
             "maximum": 10000,
             "description": "Rôles MONETIZATION et ADMIN"
+          },
+          "adUnlockEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Déblocage par pub récompensée autorisé sur la série (rôles MONETIZATION et ADMIN)"
           },
           "territories": {
             "example": [
@@ -13376,7 +16168,11 @@
               "monetization_settings",
               "coin_pack",
               "vip_plan",
-              "wallet"
+              "wallet",
+              "reward_task",
+              "promo_code",
+              "limited_offer",
+              "topup_order"
             ]
           },
           "targetId": {

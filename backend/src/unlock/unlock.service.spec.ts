@@ -49,7 +49,13 @@ function makeService(opts: {
       Promise.resolve({ isVip: opts.isVip ?? false, unlocked: new Set<string>(), country: null }),
     ),
   };
-  const service = new UnlockService(prisma as never, wallet as never, entitlements as never);
+  const settings = { get: vi.fn(() => Promise.resolve({ seriesUnlockDiscountPercent: 0 })) };
+  const service = new UnlockService(
+    prisma as never,
+    wallet as never,
+    entitlements as never,
+    settings as never,
+  );
   return { service, prisma, tx, wallet };
 }
 

@@ -239,6 +239,35 @@ enum SupportMessageAuthor {
   @@map("support_message_author")
 }
 
+/// Périodicité d'une tâche récompensée (M-41) : par jour, par semaine ou une seule fois.
+enum RewardTaskPeriod {
+  DAY
+  WEEK
+  ONCE
+
+  @@map("reward_task_period")
+}
+
+/// Session de pub récompensée (M-22) : créée par l'app, résolue par le callback SSV de la régie.
+enum AdSessionStatus {
+  PENDING
+  REWARDED
+  EXPIRED
+  REJECTED
+
+  @@map("ad_session_status")
+}
+
+/// Commande de recharge mobile money (M-34, S09-BE-01).
+enum TopupOrderStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+
+  @@map("topup_order_status")
+}
+
 // -----------------------------------------------------------------------------
 // Utilisateurs finaux
 // -----------------------------------------------------------------------------
@@ -272,19 +301,24 @@ model User {
   createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  wallet         Wallet?
-  ledgerEntries  CoinLedgerEntry[]
-  unlocks        Unlock[]
-  purchases      Purchase[]
-  subscriptions  Subscription[]
-  watchProgress  WatchProgress[]
-  favorites      Favorite[]
-  likes          Like[]
-  identities     UserIdentity[]
-  refreshTokens  RefreshToken[]
-  pushDevices    PushDevice[]
-  notifications  Notification[]
-  supportTickets SupportTicket[]
+  wallet           Wallet?
+  ledgerEntries    CoinLedgerEntry[]
+  unlocks          Unlock[]
+  purchases        Purchase[]
+  subscriptions    Subscription[]
+  watchProgress    WatchProgress[]
+  favorites        Favorite[]
+  likes            Like[]
+  identities       UserIdentity[]
+  refreshTokens    RefreshToken[]
+  pushDevices      PushDevice[]
+  notifications    Notification[]
+  supportTickets   SupportTicket[]
+  checkinClaims    CheckinClaim[]
+  rewardTaskClaims RewardTaskClaim[]
+  adSessions       AdSession[]
+  promoRedemptions PromoRedemption[]
+  topupOrders      TopupOrder[]
 
   @@index([deviceId])
   @@index([createdAt])
@@ -328,6 +362,8 @@ model Series {
   freeEpisodeCount    Int                      @default(5) @map("free_episode_count")
   /// Coût en pièces d'un épisode payant (B-06).
   coinCostPerEpisode  Int                      @default(10) @map("coin_cost_per_episode")
+  /// Déblocage par pub récompensée autorisé sur cette série (M-22, contrat v1.5).
+  adUnlockEnabled     Boolean                  @default(true) @map("ad_unlock_enabled")
   status              SeriesStatus             @default(DRAFT)
   /// Territoires autorisés (ISO 3166-1 alpha-2). Vide = monde entier (B-12).
   territories         String[]                 @default([])
@@ -380,6 +416,7 @@ model Episode {
   subtitles     Subtitle[]
   unlocks       Unlock[]
   watchProgress WatchProgress[]
+  adSessions    AdSession[]
 
   @@unique([seriesId, number])
   @@index([publishedAt(sort: Desc)])
@@ -589,6 +626,11 @@ model MonetizationSettings {
   /// Barème du check-in quotidien sur 7 jours (M-40, B-08).
   checkinDays                 Int[]    @default([5, 5, 10, 10, 15, 20, 30]) @map("checkin_days")
   checkinResetOnMiss          Boolean  @default(true) @map("checkin_reset_on_miss")
+  /// Offre de bienvenue (M-24, B-07) : bonus en % sur le premier achat, pendant `hours` après la création du compte.
+  welcomeOfferActive          Boolean  @default(false) @map("welcome_offer_active")
+  welcomeOfferPackSku         String?  @map("welcome_offer_pack_sku") @db.VarChar(120)
+  welcomeOfferBonusPercent    Int      @default(0) @map("welcome_offer_bonus_percent")
+  welcomeOfferHours           Int      @default(48) @map("welcome_offer_hours")
   updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("monetization_settings")
@@ -920,6 +962,169 @@ model SupportMessage {
 
   @@index([ticketId, createdAt])
   @@map("support_messages")
+}
+
+// -----------------------------------------------------------------------------
+// Récompenses : check-in quotidien et tâches (M-40, M-41, S08-BE-04, B-08)
+// -----------------------------------------------------------------------------
+
+/// Un check-in par utilisateur et par jour civil (fuseau du pays) ; `day` = YYYY-MM-DD.
+model CheckinClaim {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  day            String   @db.Char(10)
+  streakDay      Int      @map("streak_day")
+  coins          Int
+  idempotencyKey String?  @map("idempotency_key") @db.VarChar(128)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@map("checkin_claims")
+}
+
+/// Catalogue des tâches (clés fixes du MVP), paramétrable en back-office (B-08).
+model RewardTask {
+  key       String           @id @db.VarChar(40)
+  coins     Int
+  target    Int
+  period    RewardTaskPeriod
+  position  Int              @default(0)
+  isActive  Boolean          @default(true) @map("is_active")
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  claims RewardTaskClaim[]
+
+  @@map("reward_tasks")
+}
+
+/// Récompense d'une tâche réclamée ; `periodKey` = jour, semaine ISO ou `once`.
+model RewardTaskClaim {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  taskKey        String   @map("task_key") @db.VarChar(40)
+  periodKey      String   @map("period_key") @db.VarChar(16)
+  coins          Int
+  idempotencyKey String?  @map("idempotency_key") @db.VarChar(128)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task RewardTask @relation(fields: [taskKey], references: [key], onDelete: Cascade)
+
+  @@unique([userId, taskKey, periodKey])
+  @@map("reward_task_claims")
+}
+
+// -----------------------------------------------------------------------------
+// Pub récompensée (M-22, S08-BE-03)
+// -----------------------------------------------------------------------------
+
+model AdSession {
+  id            String          @id @default(uuid(7)) @db.Uuid
+  userId        String          @map("user_id") @db.Uuid
+  episodeId     String          @map("episode_id") @db.Uuid
+  nonce         String          @db.VarChar(64)
+  status        AdSessionStatus @default(PENDING)
+  transactionId String?         @unique @map("transaction_id") @db.VarChar(200)
+  expiresAt     DateTime        @map("expires_at") @db.Timestamptz(3)
+  rewardedAt    DateTime?       @map("rewarded_at") @db.Timestamptz(3)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, rewardedAt])
+  @@map("ad_sessions")
+}
+
+// -----------------------------------------------------------------------------
+// Offres : codes promo et offres limitées (M-24, B-07)
+// -----------------------------------------------------------------------------
+
+model PromoCode {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  code        String    @unique @db.VarChar(40)
+  coins       Int
+  maxUses     Int?      @map("max_uses")
+  perUserUses Int       @default(1) @map("per_user_uses")
+  usesCount   Int       @default(0) @map("uses_count")
+  startsAt    DateTime? @map("starts_at") @db.Timestamptz(3)
+  endsAt      DateTime? @map("ends_at") @db.Timestamptz(3)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  redemptions PromoRedemption[]
+
+  @@map("promo_codes")
+}
+
+model PromoRedemption {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  promoCodeId    String   @map("promo_code_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  coins          Int
+  idempotencyKey String   @map("idempotency_key") @db.VarChar(128)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  promoCode PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([promoCodeId, userId])
+  @@map("promo_redemptions")
+}
+
+model LimitedOffer {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  title        String   @db.VarChar(120)
+  packSku      String   @map("pack_sku") @db.VarChar(120)
+  bonusPercent Int      @map("bonus_percent")
+  startsAt     DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt       DateTime @map("ends_at") @db.Timestamptz(3)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive, startsAt, endsAt])
+  @@map("limited_offers")
+}
+
+// -----------------------------------------------------------------------------
+// Recharge mobile money (M-34, S09-BE-01/02)
+// -----------------------------------------------------------------------------
+
+model TopupOrder {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  userId            String           @map("user_id") @db.Uuid
+  packSku           String           @map("pack_sku") @db.VarChar(120)
+  coins             Int
+  bonusCoins        Int              @default(0) @map("bonus_coins")
+  currency          String           @db.Char(3)
+  amountMinor       Int              @map("amount_minor")
+  country           String           @db.Char(2)
+  phone             String?          @db.VarChar(32)
+  provider          String           @db.VarChar(16)
+  providerReference String?          @unique @map("provider_reference") @db.VarChar(200)
+  status            TopupOrderStatus @default(PENDING)
+  idempotencyKey    String           @map("idempotency_key") @db.VarChar(128)
+  paymentUrl        String?          @map("payment_url")
+  purchaseId        String?          @map("purchase_id") @db.Uuid
+  rawPayload        Json?            @map("raw_payload")
+  expiresAt         DateTime         @map("expires_at") @db.Timestamptz(3)
+  paidAt            DateTime?        @map("paid_at") @db.Timestamptz(3)
+  creditedAt        DateTime?        @map("credited_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, expiresAt])
+  @@index([status, paidAt])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("topup_orders")
 }
 
 // -----------------------------------------------------------------------------

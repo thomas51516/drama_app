@@ -20,8 +20,12 @@ import { ApiErrorDto } from '../common/dto/api-error.dto.js';
  * atomique et idempotent, déblocage automatique dans `/play` (S07-BE-02/03), boutique et achats Google
  * Play avec RTDN et abonnement VIP (S07-BE-06/07), monétisation, barème de check-in et utilisateurs en
  * back-office (B-06, B-08, B-09), `current` sur les appareils de confiance, défauts de recette DEF-002/003/004/008/009.
+ * v1.5 (sprint 7, contrat v1.5) : check-in quotidien et tâches récompensées avec administration (S08-BE-04, B-08),
+ * pub récompensée avec sessions et callback SSV `admob` | `fake` (S08-BE-03), déblocage de série entière, offre de
+ * bienvenue, offres limitées et codes promo (S10-BE-02/03, B-07), recharge mobile money `fake` | `cinetpay` avec
+ * réconciliation (S09-BE-01/02), classements (M-04), genres localisés (DEF-012), `series.adUnlockEnabled`.
  */
-export const OPENAPI_VERSION = '1.4.0';
+export const OPENAPI_VERSION = '1.5.0';
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
@@ -42,7 +46,9 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         '',
         '**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.',
         '',
-        '**Endpoints planifiés** : les opérations marquées « Planifié S0x » (pub récompensée, check-in, mobile money) répondent `501 NOT_IMPLEMENTED` jusqu’à leur sprint ; leurs schémas de requête et de réponse sont contractuels dès maintenant (mock Android).',
+        '**Récompenses et pub** : `GET/POST /rewards/checkin` (barème sur 7 jours, jour civil du fuseau du pays, `409 CHECKIN_ALREADY_CLAIMED`), `GET /rewards/tasks` + `POST /rewards/tasks/{id}/claim` (progression calculée côté serveur) ; pub récompensée : `GET /ads/eligibility`, `POST /ads/sessions` → `customData` à passer à la régie, callback SSV `GET|POST /ads/reward` (signature ECDSA AdMob ou HMAC `fake`) qui crée le déblocage `method: ad`, `GET /ads/sessions/{id}` pour le sondage.',
+        '',
+        '**Série entière, offres, recharge** : `GET /series/{id}/unlock-all/quote` et `POST /series/{id}/unlock-all` (remise `seriesUnlockDiscountPercent`, une transaction) ; `GET /offers` (bienvenue, offres limitées) et `POST /promo/redeem` ; recharge mobile money `POST /topup/orders` → `paymentUrl`, `GET /topup/orders/{id}`, webhook signé `POST /webhooks/mobile-money/{provider}` (crédit idempotent), réconciliation `GET /admin/topup/reconciliation?date`. `GET /rankings?period` (spectateurs distincts, cache 10 min) et `GET /genres?lang` (libellés localisés).',
         '',
         '**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).',
         '',

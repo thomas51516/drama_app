@@ -77,6 +77,32 @@ export const envSchema = z.object({
   // Validité par défaut des pièces bonus (jours) ; repris par les paramètres de monétisation.
   BONUS_VALIDITY_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
 
+  // Pub récompensée (S08-BE-03, contrat v1.5) : vérificateur SSV `admob` ou `fake` (dev et tests).
+  AD_PROVIDER: z.enum(['fake', 'admob']).default('fake'),
+  AD_SSV_FAKE_SECRET: z.string().min(16).default('dev-only-ad-ssv-fake-secret-0123456789'),
+  ADMOB_REWARDED_UNIT_ID: z.string().min(1).optional(),
+  ADMOB_SSV_KEYS_URL: z.url().default('https://www.gstatic.com/admob/reward/verifier-keys.json'),
+
+  // Recharge mobile money (S09-BE-01/02) : `fake` (page de paiement simulée) ou `cinetpay`.
+  MOBILE_MONEY_PROVIDER: z.enum(['fake', 'cinetpay']).default('fake'),
+  MOBILE_MONEY_FAKE_SECRET: z
+    .string()
+    .min(16)
+    .default('dev-only-mobile-money-fake-secret-0123456789'),
+  CINETPAY_API_KEY: z.string().min(1).optional(),
+  CINETPAY_SITE_ID: z.string().min(1).optional(),
+  CINETPAY_SECRET: z.string().min(1).optional(),
+  CINETPAY_BASE_URL: z.url().default('https://api-checkout.cinetpay.com/v2'),
+  // Base publique de l'API (URL de notification du webhook, page de paiement simulée).
+  TOPUP_PUBLIC_BASE_URL: z.url().default('http://localhost:3000'),
+  // Page du site de recharge où l'agrégateur renvoie l'utilisateur après paiement (optionnelle).
+  TOPUP_RETURN_URL: z.url().optional(),
+
+  // Offre de bienvenue (M-24, B-07) : valeurs initiales de `monetization_settings` à la création de la ligne.
+  WELCOME_OFFER_ACTIVE: bool.default(false),
+  WELCOME_OFFER_BONUS_PERCENT: z.coerce.number().int().min(0).max(500).default(0),
+  WELCOME_OFFER_HOURS: z.coerce.number().int().min(1).max(8760).default(48),
+
   // Upload direct (S02-BE-04)
   UPLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
 
@@ -150,6 +176,31 @@ const envSchemaWithRules = envSchema.superRefine((env, ctx) => {
         path: ['GOOGLE_PLAY_PACKAGE_NAME'],
         message: 'GOOGLE_PLAY_PACKAGE_NAME is required when BILLING_VERIFIER=google',
       });
+    }
+  }
+  if (env.AD_PROVIDER === 'fake' && env.NODE_ENV === 'production') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['AD_PROVIDER'],
+      message: 'AD_PROVIDER=fake is not allowed in production',
+    });
+  }
+  if (env.MOBILE_MONEY_PROVIDER === 'fake' && env.NODE_ENV === 'production') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['MOBILE_MONEY_PROVIDER'],
+      message: 'MOBILE_MONEY_PROVIDER=fake is not allowed in production',
+    });
+  }
+  if (env.MOBILE_MONEY_PROVIDER === 'cinetpay') {
+    for (const key of ['CINETPAY_API_KEY', 'CINETPAY_SITE_ID', 'CINETPAY_SECRET'] as const) {
+      if (!env[key]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} is required when MOBILE_MONEY_PROVIDER=cinetpay`,
+        });
+      }
     }
   }
   if (env.SMS_PROVIDER === 'http' && !env.SMS_HTTP_URL) {
