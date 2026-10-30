@@ -84,6 +84,19 @@ class HomeViewModel
         /** (Re)starts the stale-while-revalidate collection; used by the retry button and pull-to-refresh. */
         fun refresh() = load()
 
+        private var languageTag: String? = null
+
+        /**
+         * Home rows are localised server-side (`Accept-Language`). The view model survives the activity
+         * recreation that follows a language change (S05-A1-03), so the screen reports the locale it renders
+         * with and a change triggers a fresh fetch; the first report only records the tag.
+         */
+        fun onLanguageChanged(tag: String) {
+            val previous = languageTag
+            languageTag = tag
+            if (previous != null && previous != tag) load()
+        }
+
         private fun load() {
             collectJob?.cancel()
             collectJob =

@@ -16,11 +16,14 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -28,7 +31,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -251,9 +254,11 @@ private fun SeriesBody(
     val onPlayEpisode = actions.onPlayEpisode
     val onToggleSynopsis = actions.onToggleSynopsis
     val onRetry = actions.onRetry
+    // Keep the last row of episodes above the system navigation bar (owner feedback, sprint 5).
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyVerticalGrid(
         columns = GridCells.Fixed(EPISODE_COLUMNS),
-        contentPadding = PaddingValues(bottom = DramaSpacing.xl),
+        contentPadding = PaddingValues(bottom = bottomInset + DramaSpacing.xl),
         horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
         modifier = Modifier.fillMaxSize(),
@@ -306,13 +311,18 @@ private fun SeriesBody(
                 Spacer(Modifier.height(DramaSpacing.sm))
             }
         }
-        items(state.episodes, key = { it.id }) { episode ->
+        itemsIndexed(state.episodes, key = { _, episode -> episode.id }) { index, episode ->
             val isCurrent = state.resumeTarget?.episodeId == episode.id && state.resumeTarget.isResume
+            val column = index % EPISODE_COLUMNS
             EpisodeCell(
                 episode = episode,
                 highlighted = isCurrent,
                 onClick = { onPlayEpisode(episode.id) },
-                modifier = Modifier.padding(horizontal = DramaSpacing.xs),
+                modifier =
+                    Modifier.padding(
+                        start = if (column == 0) DramaSpacing.md else DramaSpacing.xs,
+                        end = if (column == EPISODE_COLUMNS - 1) DramaSpacing.md else DramaSpacing.xs,
+                    ),
             )
         }
         if (state.episodes.isEmpty()) {
@@ -693,7 +703,7 @@ private fun AppError?.toMessage(): UiText =
         else -> UiText.Res(R.string.series_error_load)
     }
 
-private const val EPISODE_COLUMNS = 5
+private const val EPISODE_COLUMNS = 4
 private const val HEADER_RATIO = 3f / 4f
 private const val TOP_BAR_TRAVERSAL_INDEX = -1f
 private const val SYNOPSIS_COLLAPSED_LINES = 3

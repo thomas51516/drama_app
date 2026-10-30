@@ -44,11 +44,32 @@ class HomeViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    private var homeLoads = 0
+
     private fun viewModel() =
         HomeViewModel(
-            observeHome = ObserveHomeUseCase { home },
+            observeHome =
+                ObserveHomeUseCase {
+                    homeLoads++
+                    home
+                },
             observeContinueWatching = ObserveContinueWatchingUseCase { local },
         )
+
+    @Test
+    fun `a language change refetches the home, the first report and repeats do not`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+            assertEquals(1, homeLoads)
+            vm.onLanguageChanged("fr-FR")
+            vm.onLanguageChanged("fr-FR")
+            advanceUntilIdle()
+            assertEquals(1, homeLoads)
+            vm.onLanguageChanged("en")
+            advanceUntilIdle()
+            assertEquals(2, homeLoads)
+        }
 
     @Test
     fun `empty rows are dropped and banners are exposed`() {

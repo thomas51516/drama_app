@@ -11,6 +11,7 @@
     </plurals>
 
     <string name="series_resume_episode">Reanudar el episodio %1$d</string>
+    <string name="series_unlock_episode">Desbloquear el episodio %1$d</string>
     <string name="series_like_count_cd">Me gusta, %1$d</string>
 
     <string name="series_synopsis_placeholder">Sinopsis próximamente.</string>

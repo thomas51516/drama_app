@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -74,6 +75,11 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val languageTag =
+        LocalConfiguration.current.locales[0]
+            ?.toLanguageTag()
+            .orEmpty()
+    LaunchedEffect(languageTag) { viewModel.onLanguageChanged(languageTag) }
     HomeContent(
         state = state,
         onOpenSeries = onOpenSeries,

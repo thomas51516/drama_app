@@ -10,6 +10,7 @@ import com.drama.core.common.result.AppResult
 import com.drama.core.common.share.ShareLinkProvider
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.Episode
+import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.ResumeTarget
 import com.drama.domain.model.Series
@@ -52,6 +53,9 @@ data class SeriesUiState(
         get() =
             when {
                 resumeTarget == null -> UiText.Res(CoreR.string.action_watch)
+                // The next episode is locked: say so instead of promising a resume (owner feedback, sprint 5).
+                episodes.firstOrNull { it.id == resumeTarget.episodeId }?.access == EpisodeAccess.LOCKED ->
+                    UiText.of(R.string.series_unlock_episode, resumeTarget.episodeIndex)
                 resumeTarget.isResume -> UiText.of(R.string.series_resume_episode, resumeTarget.episodeIndex)
                 else -> UiText.Res(CoreR.string.action_watch)
             }

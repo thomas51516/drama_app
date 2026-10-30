@@ -10,6 +10,7 @@
     </plurals>
 
     <string name="series_resume_episode">Resume episode %1$d</string>
+    <string name="series_unlock_episode">Unlock episode %1$d</string>
     <string name="series_like_count_cd">Like, %1$d</string>
 
     <string name="series_synopsis_placeholder">Synopsis coming soon.</string>

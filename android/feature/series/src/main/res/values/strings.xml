@@ -15,6 +15,7 @@
 
     <!-- Primary action and like -->
     <string name="series_resume_episode">Reprendre l\'épisode %1$d</string>
+    <string name="series_unlock_episode">Débloquer l\'épisode %1$d</string>
     <string name="series_like_count_cd">J\'aime, %1$d</string>
 
     <!-- Synopsis -->
