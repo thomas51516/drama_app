@@ -1,4 +1,4 @@
-package com.drama.feature.player.engine
+package com.drama.core.player.engine
 
 import android.content.Context
 import android.net.Uri
@@ -16,6 +16,7 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -163,6 +164,12 @@ class ExoPlaybackEngine(
         logger.i(TAG, "playlist set: $count slots, sources resolved lazily via /play, cache-backed data source")
     }
 
+    override fun growPlaylist(count: Int) {
+        if (count <= slotCount) return
+        slotCount = count
+        logger.i(TAG, "playlist grown to $count slots")
+    }
+
     override fun setSource(
         index: Int,
         source: PlaybackSource,
@@ -228,6 +235,19 @@ class ExoPlaybackEngine(
         activePlayerFlow.value = player
         mainHandler.removeCallbacks(positionTicker)
         mainHandler.post(positionTicker)
+    }
+
+    override fun restart(
+        index: Int,
+        startPositionMs: Long,
+    ) {
+        if (index !in mediaItems) return
+        if (index == currentIndex) {
+            // Force a fresh prepare: the outgoing player goes back to the pool, the new one gets the new source.
+            currentIndex = -1
+        }
+        logger.i(TAG, "restart index=$index start_ms=$startPositionMs")
+        play(index, startPositionMs)
     }
 
     override fun stop() {
@@ -431,9 +451,24 @@ class ExoPlaybackEngine(
 
         override fun onPlayerError(error: PlaybackException) {
             if (player !== current) return
-            logger.e(TAG, "player error index=$currentIndex code=${error.errorCodeName}", error)
-            eventsFlow.tryEmit(PlaybackEvent.Error(currentIndex, error.errorCodeName))
+            val httpStatus = error.httpStatus()
+            logger.e(
+                TAG,
+                "player error index=$currentIndex code=${error.errorCodeName} http=${httpStatus ?: "-"}",
+                error,
+            )
+            eventsFlow.tryEmit(PlaybackEvent.Error(currentIndex, error.errorCodeName, httpStatus))
         }
+    }
+
+    /** HTTP status of the failing media request, when the cause chain carries one (manifest or segment load). */
+    private fun PlaybackException.httpStatus(): Int? {
+        var cause: Throwable? = this
+        while (cause != null) {
+            if (cause is HttpDataSource.InvalidResponseCodeException) return cause.responseCode
+            cause = cause.cause
+        }
+        return null
     }
 
     private fun PlaybackSource.toMediaItem(index: Int): MediaItem =

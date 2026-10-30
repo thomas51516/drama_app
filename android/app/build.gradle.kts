@@ -48,6 +48,20 @@ val releaseSigningConfigured =
         releaseKeyAlias != null &&
         releaseKeyPassword != null
 
+// S04-A1-03: App Links host for share links (https://<host>/s/{seriesId}); the owner publishes
+// /.well-known/assetlinks.json on it (see README). Override with -PdramaAppLinksHost=links.example.com.
+val appLinksHost =
+    (project.findProperty("dramaAppLinksHost") as String?)?.trim()?.takeIf { it.isNotEmpty() } ?: "links.drama.example"
+
+// S05-A2-01: OAuth "Web application" client id for Google sign-in (Credential Manager). Empty = the option is
+// shown as "non configuré". Sources, in order: -PdramaGoogleWebClientId, `drama.googleWebClientId` in
+// android/local.properties (gitignored), env DRAMA_GOOGLE_WEB_CLIENT_ID (CI secret).
+val googleWebClientId =
+    (project.findProperty("dramaGoogleWebClientId") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: localProperties.getProperty("drama.googleWebClientId")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: System.getenv("DRAMA_GOOGLE_WEB_CLIENT_ID")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: ""
+
 android {
     namespace = "com.drama.app"
 
@@ -60,6 +74,9 @@ android {
         versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 1
         versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.0"
         buildConfigField("boolean", "FIREBASE_CONFIGURED", "$firebaseConfigured")
+        buildConfigField("String", "APP_LINKS_HOST", "\"$appLinksHost\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        manifestPlaceholders["appLinksHost"] = appLinksHost
     }
 
     signingConfigs {
@@ -117,6 +134,9 @@ dependencies {
     implementation(project(":feature:player"))
     implementation(project(":feature:series"))
     implementation(project(":feature:account"))
+    implementation(project(":feature:feed"))
+    implementation(project(":feature:search"))
+    implementation(project(":feature:mylist"))
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

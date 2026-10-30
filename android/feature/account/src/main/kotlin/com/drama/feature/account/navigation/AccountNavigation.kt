@@ -11,8 +11,9 @@ data object AccountRoute
 
 fun NavController.navigateToAccount() = navigate(AccountRoute)
 
-fun NavGraphBuilder.accountScreen() {
+/** [googleWebClientId] comes from `BuildConfig.GOOGLE_WEB_CLIENT_ID`; empty disables the Google option. */
+fun NavGraphBuilder.accountScreen(googleWebClientId: String) {
     composable<AccountRoute> {
-        AccountScreen()
+        AccountScreen(googleWebClientId = googleWebClientId)
     }
 }

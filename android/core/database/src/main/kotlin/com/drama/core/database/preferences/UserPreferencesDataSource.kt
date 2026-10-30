@@ -19,6 +19,8 @@ data class UserPreferences(
     val maxVideoHeight: Int = 0,
     /** `auto`, `off` or an ISO 639-1 code; null when never chosen (= auto). */
     val subtitleMode: String? = null,
+    /** Recent search queries, most recent first (M-03). */
+    val recentSearches: List<String> = emptyList(),
 )
 
 /** DataStore-backed user preferences (M-13 speed and quality, M-14 subtitles, M-17 data saver). */
@@ -35,6 +37,7 @@ class UserPreferencesDataSource
                     playbackSpeed = prefs[Keys.PLAYBACK_SPEED] ?: 1f,
                     maxVideoHeight = prefs[Keys.MAX_VIDEO_HEIGHT] ?: 0,
                     subtitleMode = prefs[Keys.SUBTITLE_MODE],
+                    recentSearches = prefs[Keys.RECENT_SEARCHES].toSearchList(),
                 )
             }
 
@@ -54,10 +57,24 @@ class UserPreferencesDataSource
             dataStore.edit { it[Keys.SUBTITLE_MODE] = mode }
         }
 
+        /** Stored as one string (a string set would lose the order). */
+        suspend fun setRecentSearches(queries: List<String>) {
+            dataStore.edit { it[Keys.RECENT_SEARCHES] = queries.joinToString(RECENT_SEPARATOR) }
+        }
+
+        private fun String?.toSearchList(): List<String> =
+            this?.split(RECENT_SEPARATOR)?.filter { it.isNotBlank() }.orEmpty()
+
         private object Keys {
             val DATA_SAVER = booleanPreferencesKey("data_saver_enabled")
             val PLAYBACK_SPEED = floatPreferencesKey("playback_speed")
             val MAX_VIDEO_HEIGHT = intPreferencesKey("max_video_height")
             val SUBTITLE_MODE = stringPreferencesKey("subtitle_mode")
+            val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
+        }
+
+        private companion object {
+            /** ASCII unit separator: never typed in a search box. */
+            const val RECENT_SEPARATOR = "\u001F"
         }
     }

@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -61,15 +63,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
+import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.ui.component.ErrorMessage
 import com.drama.core.ui.component.LoadingIndicator
+import com.drama.core.ui.share.shareText
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Episode
 import com.drama.feature.player.EndOfEpisode
 import com.drama.feature.player.PageState
 import com.drama.feature.player.PlayerUiState
 import com.drama.feature.player.PlayerViewModel
-import com.drama.feature.player.engine.PlaybackPosition
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 /** Callbacks of the player surface, grouped so the stateless content keeps a short signature. */
@@ -82,6 +85,8 @@ data class PlayerActions(
     val onNextEpisode: () -> Unit,
     val onReplay: () -> Unit,
     val onBack: () -> Unit,
+    /** Returns the text to share, or null when nothing is loaded (M-16). */
+    val onShare: () -> String?,
     val settings: SettingsActions,
 )
 
@@ -112,6 +117,7 @@ fun PlayerScreen(
                 onNextEpisode = viewModel::onNextEpisode,
                 onReplay = viewModel::onReplay,
                 onBack = onBack,
+                onShare = viewModel::onShare,
                 settings =
                     SettingsActions(
                         onSpeedSelected = viewModel::onSpeedSelected,
@@ -182,9 +188,11 @@ fun PlayerContent(
                 )
             }
         }
+        val context = LocalContext.current
         PlayerTopBar(
             state = state,
             onBack = actions.onBack,
+            onShare = { actions.onShare()?.let { text -> context.shareText(text) } },
             onOpenSheet = { sheet = it },
             modifier =
                 Modifier
@@ -219,6 +227,7 @@ fun PlayerContent(
 private fun PlayerTopBar(
     state: PlayerUiState,
     onBack: () -> Unit,
+    onShare: () -> Unit,
     onOpenSheet: (PlayerSheet) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -250,6 +259,9 @@ private fun PlayerTopBar(
                 active = state.activeSubtitleLanguage != null,
                 onClick = { onOpenSheet(PlayerSheet.SUBTITLES) },
             )
+            IconButton(onClick = onShare) {
+                Icon(Icons.Default.Share, contentDescription = "Partager la série", tint = Color.White)
+            }
             IconButton(onClick = { onOpenSheet(PlayerSheet.SETTINGS) }) {
                 Icon(Icons.Default.Settings, contentDescription = "Paramètres de lecture", tint = Color.White)
             }

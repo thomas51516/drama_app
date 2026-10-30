@@ -1,4 +1,4 @@
-package com.drama.feature.player.engine
+package com.drama.core.player.engine
 
 import com.drama.domain.model.Subtitle
 import com.drama.domain.model.SubtitleMode

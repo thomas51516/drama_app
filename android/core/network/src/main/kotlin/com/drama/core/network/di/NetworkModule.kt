@@ -2,9 +2,11 @@ package com.drama.core.network.di
 
 import com.drama.core.common.logging.Logger
 import com.drama.core.network.BuildConfig
+import com.drama.core.network.api.AccountAuthApi
 import com.drama.core.network.api.AuthApi
 import com.drama.core.network.api.CatalogApi
 import com.drama.core.network.api.PlaybackApi
+import com.drama.core.network.api.UserApi
 import com.drama.core.network.auth.AuthInterceptor
 import com.drama.core.network.auth.TokenAuthenticator
 import com.drama.core.network.locale.LocaleHeadersInterceptor
@@ -27,6 +29,14 @@ import javax.inject.Singleton
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class BareClient
+
+/**
+ * Client with the bearer but without the authenticator: sign-in / linking endpoints (M-50). The guest token
+ * identifies the account to convert; a 401 (`INVALID_CREDENTIALS`) must surface, not rotate the guest tokens.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class LinkClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -87,6 +97,36 @@ object NetworkModule {
             .addInterceptor(authInterceptor)
             .authenticator(tokenAuthenticator)
             .build()
+
+    @Provides
+    @Singleton
+    @LinkClient
+    fun provideLinkOkHttpClient(
+        @BareClient bare: OkHttpClient,
+        authInterceptor: AuthInterceptor,
+    ): OkHttpClient =
+        bare
+            .newBuilder()
+            .addInterceptor(authInterceptor)
+            .build()
+
+    @Provides
+    @Singleton
+    @LinkClient
+    fun provideLinkRetrofit(
+        @LinkClient client: OkHttpClient,
+        json: Json,
+    ): Retrofit = retrofit(client, json)
+
+    @Provides
+    @Singleton
+    fun provideAccountAuthApi(
+        @LinkClient retrofit: Retrofit,
+    ): AccountAuthApi = retrofit.create(AccountAuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideUserApi(retrofit: Retrofit): UserApi = retrofit.create(UserApi::class.java)
 
     @Provides
     @Singleton

@@ -108,6 +108,24 @@ class SessionManager
             }
         }
 
+        /**
+         * Replaces the current session with the tokens of a sign-in answer (M-50/M-51). The previous guest tokens
+         * are revoked server-side when the account was merged; locally they are simply overwritten.
+         */
+        suspend fun adopt(response: AuthResponseDto): StoredSession? =
+            mutex.withLock {
+                val session = response.toStoredSessionOrNull(clock.nowEpochMs()) ?: return@withLock null
+                persistLocked(session)
+                logger.i(
+                    TAG,
+                    "session replaced user=${session.userId} guest=${session.isGuest} linked=${response.linked}",
+                )
+                session
+            }
+
+        /** Refresh token to revoke on logout (`POST /auth/logout`); null when no session exists. */
+        suspend fun currentRefreshToken(): String? = mutex.withLock { loadLocked()?.tokens?.refreshToken }
+
         private suspend fun loadLocked(): StoredSession? {
             if (!loaded) {
                 cached = store.read()
@@ -210,17 +228,25 @@ class SessionManager
             private val REJECTED_REFRESH_CODES = setOf(400, 401, 403)
 
             internal fun AuthResponseDto.toStoredSession(nowEpochMs: Long): StoredSession =
-                StoredSession(
+                checkNotNull(toStoredSessionOrNull(nowEpochMs)) { "auth response without tokens" }
+
+            /** Null when the answer carries no access/refresh token (neither the v1 nor the v1.2 shape). */
+            internal fun AuthResponseDto.toStoredSessionOrNull(nowEpochMs: Long): StoredSession? {
+                val access = accessTokenValue?.takeIf { it.isNotBlank() } ?: return null
+                val refresh = refreshTokenValue?.takeIf { it.isNotBlank() } ?: return null
+                return StoredSession(
                     userId = user.id,
                     isGuest = user.type.equals("GUEST", ignoreCase = true),
                     tokens =
                         AuthTokens(
-                            accessToken = tokens.accessToken,
-                            accessTokenExpiresAtEpochMs = nowEpochMs + tokens.accessTokenExpiresIn * 1_000,
-                            refreshToken = tokens.refreshToken,
-                            refreshTokenExpiresAtEpochMs = parseInstant(tokens.refreshTokenExpiresAt) ?: Long.MAX_VALUE,
+                            accessToken = access,
+                            accessTokenExpiresAtEpochMs = nowEpochMs + accessTokenExpiresInS * 1_000,
+                            refreshToken = refresh,
+                            refreshTokenExpiresAtEpochMs =
+                                refreshTokenExpiresAtIso?.let(::parseInstant) ?: Long.MAX_VALUE,
                         ),
                 )
+            }
 
             private fun parseInstant(iso: String): Long? =
                 try {

@@ -28,8 +28,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.ui.theme.DramaSpacing
-import com.drama.feature.player.engine.PlaybackPosition
 import java.util.Locale
 
 /**

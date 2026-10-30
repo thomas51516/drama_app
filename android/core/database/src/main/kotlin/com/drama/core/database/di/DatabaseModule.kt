@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.drama.core.database.DramaDatabase
 import com.drama.core.database.dao.CatalogDao
+import com.drama.core.database.dao.FavoritesDao
 import com.drama.core.database.dao.WatchHistoryDao
 import com.drama.core.database.dao.WatchProgressDao
 import com.drama.core.database.security.AndroidKeystoreTokenCipher
@@ -50,6 +51,9 @@ object DatabaseModule {
 
     @Provides
     fun provideCatalogDao(database: DramaDatabase): CatalogDao = database.catalogDao()
+
+    @Provides
+    fun provideFavoritesDao(database: DramaDatabase): FavoritesDao = database.favoritesDao()
 
     @Provides
     @Singleton

@@ -1,4 +1,4 @@
-package com.drama.feature.player.engine
+package com.drama.core.player.engine
 
 import androidx.media3.common.Player
 import com.drama.domain.model.PlaybackSource
@@ -31,10 +31,21 @@ sealed interface PlaybackEvent {
         val index: Int,
     ) : PlaybackEvent
 
+    /**
+     * Playback failed. [httpStatus] is the HTTP status of the failing media request when the error came from the
+     * media host (403 = expired or invalid signed URL, S04-A2-01), null for every other cause.
+     */
     data class Error(
         val index: Int,
         val message: String,
-    ) : PlaybackEvent
+        val httpStatus: Int? = null,
+    ) : PlaybackEvent {
+        val isForbidden: Boolean get() = httpStatus == HTTP_FORBIDDEN
+
+        companion object {
+            const val HTTP_FORBIDDEN = 403
+        }
+    }
 }
 
 /** Current position of the visible player, refreshed about four times per second while attached. */
@@ -89,6 +100,9 @@ interface PlaybackEngine {
     /** Declares [count] episode slots and drops any previous sources and players' media. */
     fun setPlaylist(count: Int)
 
+    /** Raises the slot count to [count] (paged feeds) without dropping anything; a smaller value is ignored. */
+    fun growPlaylist(count: Int)
+
     /** Attaches (or replaces, when the URL changed) the stream of slot [index]. */
     fun setSource(
         index: Int,
@@ -101,6 +115,15 @@ interface PlaybackEngine {
     fun play(
         index: Int,
         startPositionMs: Long = 0L,
+    )
+
+    /**
+     * Re-prepares [index] from its currently attached source (after [setSource] replaced an expired signed URL)
+     * and resumes at [startPositionMs]. Unlike [play], it never short-circuits when [index] is already current.
+     */
+    fun restart(
+        index: Int,
+        startPositionMs: Long,
     )
 
     /** Stops the visible player (locked page, screen left) without releasing resources. */

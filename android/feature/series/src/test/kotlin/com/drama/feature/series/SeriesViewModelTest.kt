@@ -4,18 +4,25 @@ import androidx.lifecycle.SavedStateHandle
 import com.drama.core.common.analytics.AnalyticsEvent
 import com.drama.core.common.analytics.AnalyticsTracker
 import com.drama.core.common.result.AppError
+import com.drama.core.common.result.AppResult
+import com.drama.core.common.share.HostShareLinkProvider
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.LikeState
 import com.drama.domain.model.ResumeTarget
 import com.drama.domain.model.Series
 import com.drama.domain.model.WatchHistoryEntry
 import com.drama.domain.model.WatchProgress
+import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.usecase.ObserveSeriesDetailUseCase
 import com.drama.domain.usecase.SeriesDetail
 import com.drama.feature.series.navigation.SeriesRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -51,21 +58,104 @@ class SeriesViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(
-        source: String? = null,
-        deepLink: Boolean = false,
-    ) = SeriesViewModel(
-        savedStateHandle =
-            SavedStateHandle(
-                buildMap {
-                    put(SeriesRoute.ARG_SERIES_ID, "s1")
-                    source?.let { put(SeriesRoute.ARG_SOURCE, it) }
-                    if (deepLink) put(androidx.navigation.NavController.KEY_DEEP_LINK_INTENT, "intent")
-                },
-            ),
-        observeSeriesDetail = ObserveSeriesDetailUseCase { details },
-        analytics = analytics,
-    )
+    /** [source] null = a deep link: the route was parsed from the URL and carries no explicit source. */
+    private fun viewModel(source: String? = SeriesRoute.SOURCE_HOME) =
+        SeriesViewModel(
+            savedStateHandle =
+                SavedStateHandle(
+                    buildMap {
+                        put(SeriesRoute.ARG_SERIES_ID, "s1")
+                        source?.let { put(SeriesRoute.ARG_SOURCE, it) }
+                    },
+                ),
+            observeSeriesDetail = ObserveSeriesDetailUseCase { details },
+            favorites = favorites,
+            shareLinks = HostShareLinkProvider("links.drama.example"),
+            analytics = analytics,
+        )
+
+    private val favorites = FakeFavoritesRepository()
+
+    @Test
+    fun `favorite heart is optimistic and rolls back on failure`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            details.emit(SeriesDetail(series(), episodes, null, isRefreshing = false, error = null))
+            advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.isFavorite)
+
+            viewModel.onToggleFavorite()
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isFavorite)
+            assertEquals("Ajouté à Ma liste", viewModel.uiState.value.notice)
+            assertTrue(events.contains(AnalyticsEvent.Favorite("s1", added = true, source = "home")))
+
+            favorites.failNext = true
+            viewModel.onToggleFavorite()
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isFavorite) // rolled back to "favorite"
+            assertEquals("Impossible de mettre à jour Ma liste", viewModel.uiState.value.notice)
+        }
+
+    @Test
+    fun `like toggles the count optimistically and share tracks the event`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            details.emit(
+                SeriesDetail(
+                    series().copy(likes = 10, liked = false),
+                    episodes,
+                    null,
+                    isRefreshing = false,
+                    error = null,
+                ),
+            )
+            advanceUntilIdle()
+            assertEquals(LikeState(10, liked = false), viewModel.uiState.value.likeState)
+
+            viewModel.onToggleLike()
+            assertEquals(LikeState(11, liked = true), viewModel.uiState.value.likeState)
+            advanceUntilIdle()
+            assertEquals(LikeState(42, liked = true), viewModel.uiState.value.likeState) // server count wins
+
+            val text = viewModel.onShare()
+            assertTrue(text.contains("https://links.drama.example/s/s1"))
+            assertTrue(events.contains(AnalyticsEvent.Share("s1", "series")))
+        }
+
+    private class FakeFavoritesRepository : FavoritesRepository {
+        private val ids = MutableStateFlow<Set<String>>(emptySet())
+        var failNext = false
+
+        override fun observeFavorites(): Flow<List<Series>> = MutableStateFlow(emptyList())
+
+        override fun observeFavoriteIds(): Flow<Set<String>> = ids
+
+        override fun observeIsFavorite(seriesId: String): Flow<Boolean> = ids.map { seriesId in it }
+
+        override suspend fun refreshFavorites(): AppResult<Unit> = AppResult.Success(Unit)
+
+        override suspend fun setFavorite(
+            series: Series,
+            favorite: Boolean,
+        ): AppResult<Unit> {
+            if (failNext) {
+                failNext = false
+                return AppResult.Failure(AppError.Network())
+            }
+            ids.value = if (favorite) ids.value + series.id else ids.value - series.id
+            return AppResult.Success(Unit)
+        }
+
+        override fun observeLikeState(seriesId: String): Flow<LikeState?> = MutableStateFlow(null)
+
+        override suspend fun setLiked(
+            seriesId: String,
+            liked: Boolean,
+        ): AppResult<LikeState> = AppResult.Success(LikeState(42, liked))
+
+        override suspend fun clear() = Unit
+    }
 
     @Test
     fun `never watched - first episode and Regarder`() {
@@ -116,7 +206,7 @@ class SeriesViewModelTest {
     @Test
     fun `tracks series_view with the navigation source and exposes the resume label`() =
         runTest(dispatcher) {
-            val vm = viewModel(source = SeriesRoute.SOURCE_HOME, deepLink = true)
+            val vm = viewModel(source = null)
             assertEquals(AnalyticsEvent.SeriesView("s1", "deeplink"), events.single())
 
             details.emit(
@@ -166,10 +256,10 @@ class SeriesViewModelTest {
         }
 
     @Test
-    fun `source defaults to home without a deep link`() =
+    fun `in-app navigation reports its own source`() =
         runTest(dispatcher) {
-            viewModel()
-            assertEquals(AnalyticsEvent.SeriesView("s1", "home"), events.single())
+            viewModel(source = "search")
+            assertEquals(AnalyticsEvent.SeriesView("s1", "search"), events.single())
         }
 
     @Test

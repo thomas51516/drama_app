@@ -8,16 +8,24 @@ import com.drama.data.fake.FakePlaybackRepository
 import com.drama.data.local.CatalogLocalDataSource
 import com.drama.data.local.RoomCatalogLocalDataSource
 import com.drama.data.repository.DataStorePlayerSettingsRepository
+import com.drama.data.repository.DefaultAccountRepository
 import com.drama.data.repository.DefaultSessionRepository
 import com.drama.data.repository.RemoteCatalogRepository
+import com.drama.data.repository.RemoteFeedRepository
 import com.drama.data.repository.RemotePlaybackRepository
+import com.drama.data.repository.RemoteSearchRepository
+import com.drama.data.repository.RoomFavoritesRepository
 import com.drama.data.repository.RoomWatchHistoryRepository
 import com.drama.data.repository.RoomWatchProgressRepository
 import com.drama.data.session.DataStoreSessionStore
 import com.drama.data.session.InstallationDeviceIdProvider
+import com.drama.domain.repository.AccountRepository
 import com.drama.domain.repository.CatalogRepository
+import com.drama.domain.repository.FavoritesRepository
+import com.drama.domain.repository.FeedRepository
 import com.drama.domain.repository.PlaybackRepository
 import com.drama.domain.repository.PlayerSettingsRepository
+import com.drama.domain.repository.SearchRepository
 import com.drama.domain.repository.SessionRepository
 import com.drama.domain.repository.WatchHistoryRepository
 import com.drama.domain.repository.WatchProgressRepository
@@ -59,6 +67,22 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindCatalogLocalDataSource(impl: RoomCatalogLocalDataSource): CatalogLocalDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindFeedRepository(impl: RemoteFeedRepository): FeedRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchRepository(impl: RemoteSearchRepository): SearchRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFavoritesRepository(impl: RoomFavoritesRepository): FavoritesRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAccountRepository(impl: DefaultAccountRepository): AccountRepository
 
     companion object {
         /** `-PdramaUseFakeCatalog=true` (debug) swaps in the Sprint 1 fake catalogue; the API otherwise. */

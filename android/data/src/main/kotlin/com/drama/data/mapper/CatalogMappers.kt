@@ -4,7 +4,10 @@ import com.drama.core.database.entity.EpisodeEntity
 import com.drama.core.database.entity.SeriesEntity
 import com.drama.core.database.entity.WatchHistoryEntity
 import com.drama.core.database.entity.WatchProgressEntity
+import com.drama.core.network.dto.AuthUserDto
 import com.drama.core.network.dto.EpisodeSummaryDto
+import com.drama.core.network.dto.FeedEpisodeDto
+import com.drama.core.network.dto.FeedItemDto
 import com.drama.core.network.dto.HomeBannerDto
 import com.drama.core.network.dto.HomeRowDto
 import com.drama.core.network.dto.PlaySessionDto
@@ -12,8 +15,10 @@ import com.drama.core.network.dto.PlaySubtitleDto
 import com.drama.core.network.dto.SeriesDetailDto
 import com.drama.core.network.dto.SeriesSummaryDto
 import com.drama.data.media.MediaUrlResolver
+import com.drama.domain.model.AuthProvider
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
+import com.drama.domain.model.FeedItem
 import com.drama.domain.model.HomeBanner
 import com.drama.domain.model.HomeItem
 import com.drama.domain.model.HomeRow
@@ -23,6 +28,7 @@ import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.Series
 import com.drama.domain.model.StreamFormat
 import com.drama.domain.model.Subtitle
+import com.drama.domain.model.UserProfile
 import com.drama.domain.model.WatchHistoryEntry
 import com.drama.domain.model.WatchProgress
 import java.time.Instant
@@ -45,6 +51,7 @@ fun SeriesSummaryDto.toDomain(media: MediaUrlResolver): Series =
         freeEpisodeCount = freeEpisodeCount,
         coinCostPerEpisode = coinCostPerEpisode,
         ageRating = ageRating,
+        likes = likes,
     )
 
 fun SeriesDetailDto.toDomain(media: MediaUrlResolver): Series =
@@ -60,6 +67,8 @@ fun SeriesDetailDto.toDomain(media: MediaUrlResolver): Series =
         freeEpisodeCount = freeEpisodeCount,
         coinCostPerEpisode = coinCostPerEpisode,
         ageRating = ageRating,
+        likes = likes,
+        liked = liked,
     )
 
 fun EpisodeSummaryDto.toDomain(media: MediaUrlResolver): Episode =
@@ -72,6 +81,54 @@ fun EpisodeSummaryDto.toDomain(media: MediaUrlResolver): Episode =
         thumbnailUrl = media.resolve(thumbnailUrl),
         access = access.toEpisodeAccess(),
         coinCost = coinCost,
+    )
+
+/** Feed episode (v1.2 reduced shape allowed): the first, free episode of the series. */
+fun FeedEpisodeDto.toDomain(
+    seriesId: String,
+    media: MediaUrlResolver,
+): Episode =
+    Episode(
+        id = id,
+        seriesId = this.seriesId ?: seriesId,
+        index = number,
+        title = title ?: "Épisode $number",
+        durationMs = durationSeconds.takeIf { it > 0 }?.let { (it * MS_PER_SECOND).toLong() },
+        thumbnailUrl = media.resolve(thumbnailUrl),
+        access = access.toEpisodeAccess(),
+        coinCost = coinCost,
+    )
+
+fun FeedItemDto.toDomain(
+    media: MediaUrlResolver,
+    nowEpochMs: Long,
+): FeedItem {
+    val domainSeries = series.toDomain(media).let { s -> if (likes != null) s.copy(likes = likes) else s }
+    return FeedItem(
+        series = domainSeries,
+        episode = episode.toDomain(series.id, media),
+        previewUrl = media.resolve(previewUrl),
+        previewExpiresAtEpochMs = parseInstantMs(previewExpiresAtIso) ?: (nowEpochMs + DEFAULT_URL_TTL_MS),
+        isFavorite = isFavorite ?: series.isFavorite ?: false,
+        likes = likes ?: series.likes,
+    )
+}
+
+/** `UserDto` (v1.2) / `MeDto` / v1 `AuthUserDto`. */
+fun AuthUserDto.toDomain(): UserProfile =
+    UserProfile(
+        id = id,
+        isGuest = type.equals("GUEST", ignoreCase = true),
+        displayName = displayName?.takeIf { it.isNotBlank() },
+        email = email?.takeIf { it.isNotBlank() },
+        phone = phone?.takeIf { it.isNotBlank() },
+        country = country?.takeIf { it.isNotBlank() }?.uppercase(),
+        language = language?.takeIf { it.isNotBlank() }?.lowercase(),
+        isVip = isVip || vipStatus.equals("active", ignoreCase = true),
+        vipExpiresAtEpochMs = parseInstantMs(vipExpiresAt),
+        providers = providers.mapNotNull(AuthProvider::from),
+        createdAtEpochMs = parseInstantMs(createdAt),
+        deletionScheduledAtEpochMs = parseInstantMs(deletionScheduledAt),
     )
 
 fun String.toEpisodeAccess(): EpisodeAccess =
@@ -167,6 +224,8 @@ fun Series.toEntity(
         ageRating = ageRating,
         detailFetchedAtEpochMs = if (detail) nowEpochMs else previous?.detailFetchedAtEpochMs,
         fetchedAtEpochMs = nowEpochMs,
+        likes = likes ?: previous?.likes,
+        liked = liked ?: previous?.liked ?: false,
     )
 
 fun SeriesEntity.toDomain(): Series =
@@ -182,6 +241,8 @@ fun SeriesEntity.toDomain(): Series =
         freeEpisodeCount = freeEpisodeCount,
         coinCostPerEpisode = coinCostPerEpisode,
         ageRating = ageRating,
+        likes = likes,
+        liked = liked,
     )
 
 fun Episode.toEntity(nowEpochMs: Long): EpisodeEntity =

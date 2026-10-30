@@ -23,7 +23,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -57,6 +61,7 @@ import kotlinx.coroutines.delay
 fun HomeScreen(
     onOpenSeries: (seriesId: String) -> Unit,
     onResumeEpisode: (seriesId: String, episodeId: String) -> Unit,
+    onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -66,6 +71,7 @@ fun HomeScreen(
         onOpenSeries = onOpenSeries,
         onResumeEpisode = onResumeEpisode,
         onRefresh = viewModel::refresh,
+        onOpenSearch = onOpenSearch,
         modifier = modifier,
     )
 }
@@ -78,6 +84,7 @@ fun HomeContent(
     onResumeEpisode: (seriesId: String, episodeId: String) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenSearch: () -> Unit = {},
 ) {
     Column(
         modifier =
@@ -86,7 +93,7 @@ fun HomeContent(
                 .background(MaterialTheme.colorScheme.background)
                 .statusBarsPadding(),
     ) {
-        HomeTopBar()
+        HomeTopBar(onOpenSearch = onOpenSearch)
         when {
             state.isLoading -> HomeSkeleton()
             state.showError -> ErrorState(message = state.error.toMessage(), onRetry = onRefresh)
@@ -145,19 +152,28 @@ fun HomeContent(
 }
 
 @Composable
-private fun HomeTopBar() {
+private fun HomeTopBar(onOpenSearch: () -> Unit) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
+                .padding(
+                    start = DramaSpacing.md,
+                    end = DramaSpacing.xs,
+                    top = DramaSpacing.xs,
+                    bottom = DramaSpacing.xs,
+                ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = "DRAMA",
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black, letterSpacing = 2.sp),
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
         )
+        IconButton(onClick = onOpenSearch) {
+            Icon(Icons.Default.Search, contentDescription = "Rechercher", tint = MaterialTheme.colorScheme.onBackground)
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-package com.drama.feature.player.di
+package com.drama.core.player.di
 
 import android.content.Context
 import androidx.annotation.OptIn
@@ -8,8 +8,8 @@ import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import com.drama.core.common.logging.Logger
-import com.drama.feature.player.engine.ExoPlaybackEngine
-import com.drama.feature.player.engine.PlaybackEngineFactory
+import com.drama.core.player.engine.ExoPlaybackEngine
+import com.drama.core.player.engine.PlaybackEngineFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

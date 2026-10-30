@@ -27,20 +27,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,6 +61,7 @@ import com.drama.core.ui.component.ErrorState
 import com.drama.core.ui.component.OfflineBanner
 import com.drama.core.ui.component.PosterImage
 import com.drama.core.ui.component.SkeletonBox
+import com.drama.core.ui.share.shareText
 import com.drama.core.ui.theme.DramaColors
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.domain.model.Episode
@@ -66,23 +76,45 @@ fun SeriesScreen(
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    SeriesContent(
-        state = state,
-        onBack = onBack,
-        onPlayEpisode = onPlayEpisode,
-        onToggleSynopsis = viewModel::onToggleSynopsis,
-        onRetry = viewModel::retry,
-        modifier = modifier,
-    )
+    val context = LocalContext.current
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(state.notice) {
+        val notice = state.notice ?: return@LaunchedEffect
+        snackbar.showSnackbar(notice)
+        viewModel.onNoticeShown()
+    }
+    Box(modifier = modifier.fillMaxSize()) {
+        SeriesContent(
+            state = state,
+            actions =
+                SeriesActions(
+                    onBack = onBack,
+                    onPlayEpisode = onPlayEpisode,
+                    onToggleSynopsis = viewModel::onToggleSynopsis,
+                    onRetry = viewModel::retry,
+                    onToggleFavorite = viewModel::onToggleFavorite,
+                    onToggleLike = viewModel::onToggleLike,
+                    onShare = { context.shareText(viewModel.onShare()) },
+                ),
+        )
+        SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
+    }
 }
+
+data class SeriesActions(
+    val onBack: () -> Unit,
+    val onPlayEpisode: (episodeId: String) -> Unit,
+    val onToggleSynopsis: () -> Unit,
+    val onRetry: () -> Unit,
+    val onToggleFavorite: () -> Unit,
+    val onToggleLike: () -> Unit,
+    val onShare: () -> Unit,
+)
 
 @Composable
 fun SeriesContent(
     state: SeriesUiState,
-    onBack: () -> Unit,
-    onPlayEpisode: (episodeId: String) -> Unit,
-    onToggleSynopsis: () -> Unit,
-    onRetry: () -> Unit,
+    actions: SeriesActions,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -93,26 +125,49 @@ fun SeriesContent(
     ) {
         when {
             state.isLoading -> SeriesSkeleton()
-            state.showError -> ErrorState(message = state.error.toMessage(), onRetry = onRetry)
-            state.series != null ->
-                SeriesBody(
-                    series = state.series,
-                    state = state,
-                    onPlayEpisode = onPlayEpisode,
-                    onToggleSynopsis = onToggleSynopsis,
-                    onRetry = onRetry,
-                )
+            state.showError -> ErrorState(message = state.error.toMessage(), onRetry = actions.onRetry)
+            state.series != null -> SeriesBody(series = state.series, state = state, actions = actions)
         }
-        IconButton(
-            onClick = onBack,
+        Row(
             modifier =
                 Modifier
                     .statusBarsPadding()
                     .padding(DramaSpacing.xs)
-                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                    .fillMaxWidth(),
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = Color.White)
+            RoundIconButton(onClick = actions.onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = Color.White)
+            }
+            Spacer(Modifier.weight(1f))
+            if (state.series != null) {
+                RoundIconButton(onClick = actions.onShare) {
+                    Icon(Icons.Default.Share, contentDescription = "Partager", tint = Color.White)
+                }
+                RoundIconButton(onClick = actions.onToggleFavorite) {
+                    Icon(
+                        imageVector = if (state.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (state.isFavorite) "Retirer de Ma liste" else "Ajouter à Ma liste",
+                        tint = if (state.isFavorite) MaterialTheme.colorScheme.primary else Color.White,
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun RoundIconButton(
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier =
+            Modifier
+                .padding(horizontal = DramaSpacing.xxs)
+                .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+    ) {
+        content()
     }
 }
 
@@ -120,10 +175,11 @@ fun SeriesContent(
 private fun SeriesBody(
     series: Series,
     state: SeriesUiState,
-    onPlayEpisode: (episodeId: String) -> Unit,
-    onToggleSynopsis: () -> Unit,
-    onRetry: () -> Unit,
+    actions: SeriesActions,
 ) {
+    val onPlayEpisode = actions.onPlayEpisode
+    val onToggleSynopsis = actions.onToggleSynopsis
+    val onRetry = actions.onRetry
     LazyVerticalGrid(
         columns = GridCells.Fixed(EPISODE_COLUMNS),
         contentPadding = PaddingValues(bottom = DramaSpacing.xl),
@@ -141,12 +197,16 @@ private fun SeriesBody(
             Column(modifier = Modifier.padding(horizontal = DramaSpacing.md)) {
                 MetaRow(series)
                 Spacer(Modifier.height(DramaSpacing.md))
-                DramaPrimaryButton(
-                    text = state.primaryActionLabel,
-                    onClick = { state.resumeTarget?.let { onPlayEpisode(it.episodeId) } },
-                    enabled = state.resumeTarget != null,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    DramaPrimaryButton(
+                        text = state.primaryActionLabel,
+                        onClick = { state.resumeTarget?.let { onPlayEpisode(it.episodeId) } },
+                        enabled = state.resumeTarget != null,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(DramaSpacing.sm))
+                    LikeButton(state = state.likeState, onClick = actions.onToggleLike)
+                }
                 if (state.isRefreshing) {
                     LinearProgressIndicator(
                         modifier =
@@ -248,6 +308,39 @@ private fun MetaRow(series: Series) {
             text = series.genres.joinToString(" · ") { it.replaceFirstChar(Char::titlecase) },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** "J'aime" toggle with its count (M-16). */
+@Composable
+private fun LikeButton(
+    state: com.drama.domain.model.LikeState?,
+    onClick: () -> Unit,
+) {
+    val liked = state?.liked == true
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        modifier =
+            Modifier
+                .clip(shape)
+                .background(if (liked) DramaColors.CrimsonSoft else MaterialTheme.colorScheme.surfaceContainerHigh)
+                .then(if (liked) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
+                .clickable(onClick = onClick)
+                .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm + DramaSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(DramaSpacing.xs),
+    ) {
+        Icon(
+            Icons.Default.ThumbUp,
+            contentDescription = if (liked) "Je n'aime plus" else "J'aime",
+            tint = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = state?.likes?.toString() ?: "J'aime",
+            style = MaterialTheme.typography.labelLarge,
+            color = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
         )
     }
 }

@@ -13,4 +13,8 @@ data class Series(
     val freeEpisodeCount: Int,
     val coinCostPerEpisode: Int,
     val ageRating: String,
+    /** "J'aime" count when the server sends it (contract v1.2), null otherwise. */
+    val likes: Int? = null,
+    /** Whether the viewer liked the series; null when unknown. */
+    val liked: Boolean? = null,
 )

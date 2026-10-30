@@ -19,12 +19,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- drama://series/{seriesId} (M-16 share links). The HTTPS App Links host is added once known. -->
+            <!-- drama://series/{seriesId}: custom-scheme fallback of the share links (M-16). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="drama" android:host="series" />
+            </intent-filter>
+            <!-- https://${appLinksHost}/s/{seriesId}: verified App Link (S04-A1-03). The host comes from the Gradle
+                 property dramaAppLinksHost and must publish /.well-known/assetlinks.json (see android/README.md). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="${appLinksHost}" />
+                <data android:pathPrefix="/s/" />
             </intent-filter>
         </activity>
     </application>

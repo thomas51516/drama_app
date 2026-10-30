@@ -53,6 +53,36 @@ sealed class AnalyticsEvent(
                 coinCost?.let { put("coin_cost", it) }
             },
         )
+
+    /** Share sheet opened for a series (M-16). [source] = `series` | `player` | `feed`. */
+    data class Share(
+        val seriesId: String,
+        val source: String,
+    ) : AnalyticsEvent("share", mapOf("series_id" to seriesId, "source" to source))
+
+    /** Existing identity signed in (M-51). [provider] = `google` | `phone` | `email`. */
+    data class Login(
+        val provider: String,
+        val linked: Boolean,
+    ) : AnalyticsEvent("login", mapOf("provider" to provider, "linked" to linked))
+
+    /** New identity created (M-51). [provider] = `google` | `phone` | `email`. */
+    data class Signup(
+        val provider: String,
+        val linked: Boolean,
+    ) : AnalyticsEvent("signup", mapOf("provider" to provider, "linked" to linked))
+
+    data class Search(
+        val query: String,
+        val resultCount: Int,
+    ) : AnalyticsEvent("search", mapOf("query" to query, "result_count" to resultCount))
+
+    /** "Ma liste" heart toggled (M-16). */
+    data class Favorite(
+        val seriesId: String,
+        val added: Boolean,
+        val source: String,
+    ) : AnalyticsEvent("favorite", mapOf("series_id" to seriesId, "added" to added, "source" to source))
 }
 
 /** Implemented by Firebase Analytics when configured, by a Logcat tracker otherwise (S02-A1-04). */

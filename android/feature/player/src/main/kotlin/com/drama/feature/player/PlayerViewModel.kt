@@ -10,11 +10,18 @@ import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.common.share.ShareLinkProvider
 import com.drama.core.common.time.Clock
+import com.drama.core.player.engine.AvailableTracks
+import com.drama.core.player.engine.PlaybackEngine
+import com.drama.core.player.engine.PlaybackEngineFactory
+import com.drama.core.player.engine.PlaybackEvent
+import com.drama.core.player.engine.TrackSelectionMapper
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeNavigation
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.PlayerSettings
+import com.drama.domain.model.SignedUrlPolicy
 import com.drama.domain.model.SubtitleMode
 import com.drama.domain.model.VideoQuality
 import com.drama.domain.model.WatchProgress
@@ -23,11 +30,6 @@ import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.PlaybackStart
 import com.drama.domain.usecase.ReportProgressUseCase
 import com.drama.domain.usecase.StartPlaybackUseCase
-import com.drama.feature.player.engine.AvailableTracks
-import com.drama.feature.player.engine.PlaybackEngine
-import com.drama.feature.player.engine.PlaybackEngineFactory
-import com.drama.feature.player.engine.PlaybackEvent
-import com.drama.feature.player.engine.TrackSelectionMapper
 import com.drama.feature.player.navigation.PlayerRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -51,6 +53,10 @@ import javax.inject.Inject
  * - Settings (S03-A2-01/02): speed, quality cap and subtitle mode come from [PlayerSettingsRepository]; every
  *   change is persisted first and applied to the engine from the flow, so it survives episode changes and
  *   app restarts. The subtitle language is resolved per episode (device language in `Auto` mode).
+ * - Signed URLs (S04-A2-01): `/play` answers expire (`expiresAt`). The current page is always re-requested when
+ *   it becomes current; a neighbour is re-requested when its URL is within [SignedUrlPolicy.REFRESH_MARGIN_MS]
+ *   of expiry; a timer re-requests the playing episode just before expiry so the attached source is fresh; and
+ *   an HTTP 403 from the media host triggers one transparent re-resolve + restart at the same position.
  */
 @HiltViewModel
 class PlayerViewModel
@@ -65,6 +71,7 @@ class PlayerViewModel
         private val logger: Logger,
         private val playerSettings: PlayerSettingsRepository,
         private val deviceLocale: DeviceLocaleProvider,
+        private val shareLinks: ShareLinkProvider,
         engineFactory: PlaybackEngineFactory,
     ) : ViewModel() {
         private val seriesId: String = checkNotNull(savedStateHandle[PlayerRoute.ARG_SERIES_ID])
@@ -88,6 +95,8 @@ class PlayerViewModel
         private var startedEpisodeId: String? = null
         private var settingsApplied = false
         private var subtitlesApplied = false
+        private var expiryRefreshJob: Job? = null
+        private val forbiddenRetries = mutableMapOf<Int, Int>()
 
         init {
             viewModelScope.launch { engine.events.collect(::onEvent) }
@@ -238,6 +247,13 @@ class PlayerViewModel
                 ?.let { trackStart(it, resumed = false) }
         }
 
+        /** Share sheet text for the current series (M-16); the UI opens the system chooser. */
+        fun onShare(): String? {
+            val episode = uiStateFlow.value.currentEpisode ?: return null
+            analytics.track(AnalyticsEvent.Share(episode.seriesId, SHARE_SOURCE))
+            return shareLinks.seriesLink(episode.seriesId).shareText(null)
+        }
+
         fun onBackground() {
             wasPlayingBeforeBackground = uiStateFlow.value.isPlaying
             flushProgress(completed = false)
@@ -288,14 +304,19 @@ class PlayerViewModel
             resolve(index, episode, playWhenReady = true)
         }
 
+        /** [force] skips the "still fresh" shortcut: used by the expiry timer, which must always re-request. */
         private fun resolve(
             index: Int,
             episode: Episode,
             playWhenReady: Boolean,
+            force: Boolean = false,
         ) {
             resolving[index]?.cancel()
-            if (!playWhenReady) {
-                val fresh = sessions[episode.id]?.takeIf { !it.isExpired(clock.nowEpochMs()) }
+            if (!playWhenReady && !force) {
+                val fresh =
+                    sessions[episode.id]?.takeIf {
+                        !SignedUrlPolicy.needsRefresh(it.expiresAtEpochMs, clock.nowEpochMs())
+                    }
                 if (uiStateFlow.value.pageState(index) is PageState.Locked ||
                     (fresh != null && engine.hasSource(index))
                 ) {
@@ -323,11 +344,59 @@ class PlayerViewModel
             sessions[episode.id] = start.session
             engine.setSource(index, start.session.source)
             uiStateFlow.update { it.copy(pages = it.pages + (index to PageState.Ready), errorMessage = null) }
+            if (uiStateFlow.value.currentIndex == index) scheduleExpiryRefresh(index, episode, start.session)
             if (!playWhenReady || uiStateFlow.value.currentIndex != index) return
             // The subtitle choice depends on what this episode offers: resolve it before the player starts.
             applySubtitles()
             engine.play(index, start.startPositionMs)
             trackStart(episode, resumed = start.isResume)
+        }
+
+        /** Re-asks `/play` [SignedUrlPolicy.REFRESH_MARGIN_MS] before the current URL expires (S04-A2-01). */
+        private fun scheduleExpiryRefresh(
+            index: Int,
+            episode: Episode,
+            session: PlaySession,
+        ) {
+            expiryRefreshJob?.cancel()
+            if (!SignedUrlPolicy.hasExpiry(session.expiresAtEpochMs)) return
+            val delayMs = SignedUrlPolicy.refreshDelayMs(session.expiresAtEpochMs, clock.nowEpochMs())
+            expiryRefreshJob =
+                viewModelScope.launch {
+                    delay(delayMs)
+                    if (uiStateFlow.value.currentIndex != index) return@launch
+                    logger.i(TAG, "signed URL about to expire index=$index: re-requesting /play")
+                    resolve(index, episode, playWhenReady = false, force = true)
+                }
+        }
+
+        /** One transparent retry after an HTTP 403 from the media host: fresh `/play`, restart at the same position. */
+        private fun onPlaybackError(event: PlaybackEvent.Error) {
+            val index = event.index
+            val episode = uiStateFlow.value.episodes.getOrNull(index)
+            val retries = forbiddenRetries[index] ?: 0
+            if (episode != null && SignedUrlPolicy.shouldRetryAfterHttpError(event.httpStatus, retries)) {
+                forbiddenRetries[index] = retries + 1
+                val position = engine.currentPositionMs().takeIf { it > 0 } ?: uiStateFlow.value.position.positionMs
+                logger.w(TAG, "media host answered 403 index=$index: re-resolving once, resume at ${position}ms")
+                resolving[index]?.cancel()
+                resolving[index] =
+                    viewModelScope.launch {
+                        when (val result = startPlayback(episode.id)) {
+                            is AppResult.Success -> {
+                                sessions[episode.id] = result.value.session
+                                engine.setSource(index, result.value.session.source)
+                                if (uiStateFlow.value.currentIndex == index) {
+                                    scheduleExpiryRefresh(index, episode, result.value.session)
+                                    engine.restart(index, position)
+                                }
+                            }
+                            is AppResult.Failure -> onResolveFailed(index, episode, result.error, playWhenReady = true)
+                        }
+                    }
+                return
+            }
+            uiStateFlow.update { it.copy(errorMessage = "Erreur de lecture : ${event.message}") }
         }
 
         private fun onResolveFailed(
@@ -436,7 +505,8 @@ class PlayerViewModel
 
         private fun onEvent(event: PlaybackEvent) {
             when (event) {
-                is PlaybackEvent.FirstFrameRendered ->
+                is PlaybackEvent.FirstFrameRendered -> {
+                    forbiddenRetries.remove(event.index)
                     uiStateFlow.update {
                         it.copy(
                             startupMetrics =
@@ -444,12 +514,12 @@ class PlayerViewModel
                                     StartupMetric(event.index, event.startupMs, event.readyMs, event.wasPreloaded),
                         )
                     }
+                }
                 is PlaybackEvent.PreloadCompleted ->
                     uiStateFlow.update { it.copy(preloadedIndices = it.preloadedIndices + event.index) }
                 is PlaybackEvent.IsPlayingChanged -> onIsPlayingChanged(event.isPlaying)
                 is PlaybackEvent.Ended -> onEnded(event.index)
-                is PlaybackEvent.Error ->
-                    uiStateFlow.update { it.copy(errorMessage = "Erreur de lecture : ${event.message}") }
+                is PlaybackEvent.Error -> onPlaybackError(event)
             }
         }
 
@@ -472,5 +542,6 @@ class PlayerViewModel
             const val SEEK_STEP_MS = 10_000L
             const val PROGRESS_INTERVAL_MS = 5_000L
             const val NEXT_COUNTDOWN_S = 3
+            const val SHARE_SOURCE = "player"
         }
     }

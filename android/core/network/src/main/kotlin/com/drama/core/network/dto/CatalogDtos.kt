@@ -15,6 +15,9 @@ data class SeriesSummaryDto(
     val coinCostPerEpisode: Int = 0,
     val ageRating: String = "ALL",
     val publishedAt: String? = null,
+    /** Contract v1.2: present when a bearer is sent. */
+    val isFavorite: Boolean? = null,
+    val likes: Int? = null,
 )
 
 @Serializable
@@ -34,6 +37,9 @@ data class SeriesDetailDto(
     val tags: List<String> = emptyList(),
     val originalLanguage: String? = null,
     val status: String? = null,
+    val isFavorite: Boolean? = null,
+    val likes: Int? = null,
+    val liked: Boolean? = null,
 )
 
 @Serializable
@@ -101,13 +107,42 @@ data class PaginatedSeriesDto(
     val page: Int = 1,
     val pageSize: Int = 0,
     val total: Int = 0,
+    /** `GET /search` only (v1.2). */
+    val suggestions: List<String> = emptyList(),
 )
 
 @Serializable
+data class SuggestResponseDto(
+    val suggestions: List<String> = emptyList(),
+)
+
+/**
+ * `GET /feed` item. v1.2: [previewUrl] is signed like `/play` and expires at [expiresAt] (also accepted as
+ * `previewExpiresAt`); [episode] may be the reduced `{id, number, title}` shape, hence the lenient defaults.
+ */
+@Serializable
 data class FeedItemDto(
     val series: SeriesSummaryDto,
-    val episode: EpisodeSummaryDto,
+    val episode: FeedEpisodeDto,
     val previewUrl: String? = null,
+    val expiresAt: String? = null,
+    val previewExpiresAt: String? = null,
+    val isFavorite: Boolean? = null,
+    val likes: Int? = null,
+) {
+    val previewExpiresAtIso: String? get() = expiresAt ?: previewExpiresAt
+}
+
+@Serializable
+data class FeedEpisodeDto(
+    val id: String,
+    val number: Int = 1,
+    val title: String? = null,
+    val seriesId: String? = null,
+    val durationSeconds: Double = 0.0,
+    val thumbnailUrl: String? = null,
+    val access: String = "free",
+    val coinCost: Int = 0,
 )
 
 @Serializable

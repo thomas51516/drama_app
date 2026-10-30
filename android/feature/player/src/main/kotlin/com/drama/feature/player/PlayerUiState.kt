@@ -1,11 +1,11 @@
 package com.drama.feature.player
 
+import com.drama.core.player.engine.PlaybackPosition
+import com.drama.core.player.engine.TrackSelectionMapper
 import com.drama.domain.model.Episode
 import com.drama.domain.model.PlayerSettings
 import com.drama.domain.model.Subtitle
 import com.drama.domain.model.VideoQuality
-import com.drama.feature.player.engine.PlaybackPosition
-import com.drama.feature.player.engine.TrackSelectionMapper
 
 data class StartupMetric(
     val index: Int,

@@ -10,7 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Replays every exported schema (core/database/schemas) and checks the auto-migrations (1 -> 2 -> 3) keep the
+ * Replays every exported schema (core/database/schemas) and checks the auto-migrations (1 -> 2 -> 3 -> 4) keep the
  * Sprint 1 progress rows. Run on a device: `./gradlew :core:database:connectedDebugAndroidTest`.
  */
 @RunWith(AndroidJUnit4::class)
@@ -60,6 +60,32 @@ class MigrationTest {
             assertEquals("MANUAL", cursor.getString(1))
         }
         db.query("SELECT COUNT(*) FROM home_banners").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
+        db.close()
+    }
+
+    @Test
+    fun migrate3To4_addsFavoritesAndLikes() {
+        helper.createDatabase(TEST_DB, 3).apply {
+            execSQL(
+                "INSERT INTO series (id, slug, title, synopsis, posterVerticalUrl, posterHorizontalUrl, genres, " +
+                    "episodeCount, freeEpisodeCount, coinCostPerEpisode, ageRating, detailFetchedAtEpochMs, " +
+                    "fetchedAtEpochMs) " +
+                    "VALUES ('s1', 'slug', 'Titre', '', NULL, NULL, 'drame', 3, 2, 10, 'ALL', NULL, 1700000000000)",
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 4, true)
+        db.query("SELECT id, likes, liked FROM series").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("s1", cursor.getString(0))
+            assertTrue(cursor.isNull(1))
+            assertEquals(0, cursor.getInt(2))
+        }
+        db.query("SELECT COUNT(*) FROM favorites").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals(0, cursor.getInt(0))
         }

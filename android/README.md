@@ -63,16 +63,20 @@ chaque push, et le job `bundle` (AAB release, signature, Firebase App Distributi
 | Module | Type | Rôle |
 | --- | --- | --- |
 | `:app` | application | `@HiltAndroidApp`, activité unique, `NavHost` + barre de navigation (Accueil, Pour vous, Ma liste, Profil), thème M3, edge-to-edge, liaisons Hilt des abstractions `core:common` (`AndroidDeviceLocale` pour `Accept-Language` / `X-Country`). |
-| `:core:common` | Kotlin/JVM pur | `AppResult`/`AppError`, `DispatcherProvider`, façade `Logger`. |
+| `:core:common` | Kotlin/JVM pur | `AppResult`/`AppError`, `DispatcherProvider`, façade `Logger`, `AnalyticsEvent`, `ShareLinkProvider` (liens de partage), `AuthConfig` (identifiant Google). |
 | `:core:ui` | bibliothèque Compose | `DramaTheme` (Material 3, thème sombre provisoire), jetons (`DramaColors`, `DramaSpacing`, `DramaSizes`), composants partagés (`PosterCard`, `PosterImage` Coil, `SkeletonBox`, `OfflineBanner`, `ErrorState`). |
-| `:core:network` | bibliothèque | Retrofit (`AuthApi`, `CatalogApi`, `PlaybackApi`) + OkHttp + kotlinx.serialization, DTO de l'OpenAPI v1 (+ addendum v1.1 : `subtitles`, bannières et types de rangées), `ApiErrorMapper`, `SessionManager`, `AuthInterceptor`, `TokenAuthenticator`, `RetryInterceptor`, `LocaleHeadersInterceptor`. |
-| `:core:database` | bibliothèque | Room v3 (`watch_progress`, `watch_history`, cache catalogue, `home_banners`), DataStore `user_preferences` (vitesse, qualité, sous-titres) et `session` (jetons chiffrés par le Keystore). |
-| `:domain` | Kotlin/JVM pur | Modèles `Series`, `Episode`, `PlaySession`, `HomeContent` (`HomeBanner`, `HomeRowType`), `PlayerSettings`, `ResumeTarget`, `WatchProgress`, `SessionState`, interfaces de dépôts et cas d'usage. |
-| `:data` | bibliothèque | `RemoteCatalogRepository` (API + cache Room, stale-while-revalidate), `RemotePlaybackRepository`, `DefaultSessionRepository`, dépôts Room, `FakeCatalogRepository` (tests et bascule debug). |
+| `:core:network` | bibliothèque | Retrofit (`AuthApi`, `AccountAuthApi`, `UserApi`, `CatalogApi`, `PlaybackApi`) + OkHttp + kotlinx.serialization, DTO de l'OpenAPI v1.2 (contrat `docs/api/public-contract-v1.2.md`), `ApiErrorMapper`, `SessionManager` (+ `adopt` pour le rattachement), `AuthInterceptor`, `TokenAuthenticator`, `RetryInterceptor`, `LocaleHeadersInterceptor`, client `@LinkClient` (porteur sans authenticator pour `/auth/*`). |
+| `:core:database` | bibliothèque | Room v4 (`watch_progress`, `watch_history`, cache catalogue, `home_banners`, `favorites`, `series.likes/liked`), DataStore `user_preferences` (vitesse, qualité, sous-titres, recherches récentes) et `session` (jetons chiffrés par le Keystore). |
+| `:core:player` | bibliothèque | Moteur Media3 partagé par le lecteur et le flux : `PlaybackEngine` / `ExoPlaybackEngine` (pool de lecteurs, préchargement, cache), `TrackSelectionMapper`. Seul module qui touche ExoPlayer. |
+| `:domain` | Kotlin/JVM pur | Modèles `Series`, `Episode`, `PlaySession`, `FeedItem`, `SearchResult`, `UserProfile`, `LikeState`, `SignedUrlPolicy` (marge de 30 s, un seul réessai sur 403), `HomeContent`, `PlayerSettings`, `ResumeTarget`, `WatchProgress`, `SessionState`, interfaces de dépôts (`FeedRepository`, `SearchRepository`, `FavoritesRepository`, `AccountRepository`, ...) et cas d'usage. |
+| `:data` | bibliothèque | `RemoteCatalogRepository` (API + cache Room, stale-while-revalidate), `RemotePlaybackRepository`, `RemoteFeedRepository`, `RemoteSearchRepository`, `RoomFavoritesRepository` (optimiste avec retour arrière), `DefaultAccountRepository` (connexion, rattachement, profil), `DefaultSessionRepository`, dépôts Room, `FakeCatalogRepository` (tests et bascule debug). |
 | `:feature:home` | feature | Accueil M-01 : carrousel de bannières, rangées configurées (Tendances, Nouveautés, genres, manuelles), « Continuer à regarder », pull-to-refresh, squelette, bandeau hors-ligne. |
 | `:feature:player` | feature | Lecteur vertical plein écran, résolution `POST /episodes/{id}/play` par page, progression toutes les 5 s, contrôles (M-13 : vitesse, qualité), sous-titres (M-14), page « verrouillé », mesure de démarrage. |
-| `:feature:series` | feature | Fiche série M-10 : affiche, synopsis dépliable, genres, âge, grille des épisodes (gratuit / débloqué / verrouillé), « Regarder » / « Reprendre l'épisode N », lien profond `drama://series/{id}`. |
-| `:feature:account` | feature | Coquille « Mon compte » (route + écran vide). |
+| `:feature:series` | feature | Fiche série M-10 : affiche, synopsis dépliable, genres, âge, grille des épisodes (gratuit / débloqué / verrouillé), « Regarder » / « Reprendre l'épisode N », cœur « Ma liste », « J'aime » avec compteur, partage, liens profonds `drama://series/{id}` et `https://<hôte>/s/{id}`. |
+| `:feature:feed` | feature | Flux « Pour vous » M-02 : `VerticalPager` plein écran sur `GET /feed`, extraits signés en lecture automatique (muet, un appui pour le son), cœur, « Regarder la série », pagination par curseur. |
+| `:feature:search` | feature | Recherche M-03 : suggestions (`GET /search/suggest`, anti-rebond 300 ms), résultats (`GET /search`), puces de genre, recherches récentes (10 max, effaçables). |
+| `:feature:mylist` | feature | Ma liste M-16 : `GET /me/favorites`, pull-to-refresh, retrait d'une série. |
+| `:feature:account` | feature | Profil M-50/M-51/M-52 : connexion Google (Credential Manager), téléphone + OTP, e-mail ; rattachement du compte invité ; carte de profil, modification du nom et de la langue, déconnexion, suppression. |
 | `build-logic/` | plugins de convention | `drama.android.application|library|compose|feature`, `drama.hilt`, `drama.jvm.library`. |
 
 Sens des dépendances : `app → feature:* → core:ui / core:common / domain` ; `app → data → domain / core:*`.
@@ -133,7 +137,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ### Room (S02-A1-03)
 
-Schéma v2 (export dans `core/database/schemas/`, migration automatique 1 → 2) :
+Schéma v4 (export dans `core/database/schemas/`, migrations automatiques 1 → 2 → 3 → 4 ; la v4 ajoute `favorites`
+et `series.likes` / `series.liked`) :
 `watch_progress` (+ `completed`), `watch_history` (dernier épisode vu par série), cache catalogue (`series`,
 `episodes`, `home_rows`, `home_row_items`, `cache_meta`). Politique **stale-while-revalidate** : cache servi
 immédiatement s'il existe, rafraîchi en arrière-plan quand il a plus de 5 min (accueil) ou 10 min (série,
@@ -304,6 +309,88 @@ Le build debug autorise le HTTP en clair (`app/src/debug/res/xml/network_securit
 release ne l'autorise pas. Le lecteur remplit l'écran (`ContentScale.Crop`) : un écran 20:9 rogne
 légèrement les bords d'un contenu 9:16, un contenu 16:9 serait fortement rogné, ce qui est voulu.
 
+## Sprint 4 : flux, lecture signée, partage, recherche, Ma liste et compte
+
+### Flux « Pour vous » (S04-A1-01, M-02)
+
+`FeedViewModel` pagine `GET /feed` par curseur (page suivante demandée dès qu'il reste moins de deux éléments après
+la page courante) et lit chaque `previewUrl` signée dans le moteur partagé `:core:player` (même pool, même cache et
+même préchargement que le lecteur : la page courante et ses voisines ont une source attachée). Les extraits démarrent
+muets, un appui active le son pour la session, la lecture s'arrête quand l'onglet est caché ou l'application en
+arrière-plan. `series_view{source=feed}` est émis à chaque page stabilisée, `favorite{source=feed}` sur le cœur.
+
+### Lecture par URL signée (S04-A2-01)
+
+`SignedUrlPolicy` (`:domain`) porte la règle : une URL (`expiresAt` de `/play`, `previewExpiresAt` du flux) est
+re-demandée 30 s avant son expiration (minuteur sur la page courante, vérification avant d'attacher une voisine) et
+une seule fois après un HTTP 403 du serveur de médias, avec reprise à la même position ; un second 403 fait remonter
+l'erreur. Le lecteur et le flux appliquent la même politique (`PlayerViewModel`, `FeedViewModel`).
+
+### Partage et App Links (S04-A1-03, M-16)
+
+Le bouton « Partager » (fiche série, lecteur) ouvre la feuille de partage système avec
+`https://<APP_LINKS_HOST>/s/{seriesId}` ; le schéma `drama://series/{seriesId}` reste déclaré en repli. L'hôte vient de
+la propriété Gradle `-PdramaAppLinksHost=` (défaut `links.drama.example`, variable `APP_LINKS_HOST` en CI) et alimente
+`BuildConfig.APP_LINKS_HOST` et l'`intent-filter` `android:autoVerify="true"` du manifeste. Événement `share{source}`.
+
+Pour que les liens ouvrent l'application sans boîte de dialogue, publier sur l'hôte le fichier
+`https://<hôte>/.well-known/assetlinks.json` (type `application/json`, HTTPS, sans redirection) :
+
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.drama.app",
+    "sha256_cert_fingerprints": ["<EMPREINTE_SHA256_DE_LA_CLÉ_DE_SIGNATURE>"]
+  }
+}]
+```
+
+Empreinte SHA-256 de la clé (une entrée par clé : debug, release, et la clé Play App Signing lue dans la Play Console) :
+
+```bash
+# clé debug
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA256
+# clé release (variables DRAMA_KEYSTORE_*)
+keytool -list -v -keystore "$DRAMA_KEYSTORE_PATH" -alias "$DRAMA_KEY_ALIAS" | grep SHA256
+```
+
+Vérifier sur l'appareil : `adb shell pm verify-app-links --re-verify com.drama.app` puis
+`adb shell pm get-app-links com.drama.app` (état `verified`), et
+`adb shell am start -a android.intent.action.VIEW -d "https://<hôte>/s/<seriesId>"`.
+
+### Recherche (S05-A1-01, M-03) et Ma liste (S05-A1-02, M-16)
+
+La loupe de l'accueil ouvre `SearchScreen` : la saisie est anti-rebondie (300 ms) vers `GET /search/suggest`,
+la validation (ou une suggestion, une recherche récente, une puce de genre) appelle `GET /search?q&genre` ; les
+recherches récentes (10 max, dédoublonnées, effaçables une à une ou toutes) sont dans le DataStore `user_preferences`.
+« Ma liste » lit `GET /me/favorites` dans Room (`favorites`), avec pull-to-refresh et retrait ; cœur sur la fiche
+série et dans le flux, « J'aime » sur la fiche (`POST`/`DELETE /series/{id}/like`). Les deux bascules sont optimistes
+avec retour arrière en cas d'échec (`RoomFavoritesRepository`).
+
+### Connexion et rattachement (S05-A2-01, S05-A2-02, M-50/M-51)
+
+L'onglet Profil montre à un invité trois options :
+
+- **Google** : Credential Manager + `GetGoogleIdOption` avec l'identifiant OAuth « Web application »
+  (`BuildConfig.GOOGLE_WEB_CLIENT_ID`), lu dans l'ordre depuis `-PdramaGoogleWebClientId=`, `drama.googleWebClientId`
+  dans `android/local.properties` (ignoré par git) ou la variable `DRAMA_GOOGLE_WEB_CLIENT_ID` (secret CI
+  `GOOGLE_WEB_CLIENT_ID`). Vide → bouton désactivé « non configuré ». Le backend vérifie l'`idToken`
+  (`GOOGLE_CLIENT_IDS`) ; un client OAuth « Android » portant le nom de paquet et la SHA-1 de la clé est aussi requis
+  côté Google Cloud pour que la boîte de dialogue propose les comptes.
+- **Téléphone** : sélecteur d'indicatif (Afrique de l'Ouest d'abord), `POST /auth/otp/request`, code à 6 chiffres
+  vérifié automatiquement, « Renvoyer le code » après `resendAfter` secondes. En dev (`SMS_PROVIDER=console`) le code
+  est dans les logs de l'API et dans Redis (`otp:<requestId>`).
+- **E-mail** : création ou connexion, mot de passe de 8 caractères minimum.
+
+Chaque appel part avec le porteur invité (client `@LinkClient`, sans rotation de jeton sur 401) ; la réponse
+`AuthSession` remplace la session en place (`SessionManager.adopt`, jetons toujours chiffrés) : historique,
+progression et favoris locaux sont conservés, et `linked=true` affiche « Compte rattaché, votre historique est
+conservé ». Un compte connecté voit sa carte de profil, peut modifier nom et langue (`PATCH /me`), se déconnecter
+(`POST /auth/logout` puis nouvelle session invitée) ou supprimer son compte (`DELETE /me`, confirmation, suppression
+différée de 30 jours). Événements `login{provider, linked}` / `signup{provider, linked}`.
+
 ## Release : signature, R8 et distribution interne (S03-OPS-01)
 
 ### Signature
@@ -358,6 +445,12 @@ sans compte de service : AAB signé, pas de distribution. Avec les deux : envoi 
   bannières et types de rangées ; `MediaUrlResolverTest`), `:feature:home` (`HomeViewModelTest` : rangées, fusion
   « Continuer à regarder », états), `:feature:series` (`SeriesViewModelTest` : cible de reprise, `series_view`,
   états), `:feature:player` (`PlayerViewModelTest` : /play, verrouillé, seek, ±10 s, muet, fin d'épisode,
-  progression 5 s, persistance vitesse / qualité / sous-titres, survie au changement d'épisode ;
-  `TrackSelectionMapperTest`).
+  progression 5 s, persistance vitesse / qualité / sous-titres, survie au changement d'épisode, URL signée
+  re-demandée 30 s avant expiration, un seul réessai sur 403), `:core:player` (`TrackSelectionMapperTest`),
+  `:domain` (`SignedUrlPolicyTest`), `:feature:feed` (`FeedViewModelTest` : lecture auto muette, pagination par
+  curseur, extrait expiré, rafraîchissement 30 s avant expiration, 403, onglet caché, cœur optimiste),
+  `:feature:search` (`SearchViewModelTest` : anti-rebond, suggestions, genres, récents plafonnés à 10),
+  `:data` (`RoomFavoritesRepositoryTest` : bascules optimistes et retours arrière sur MockWebServer ;
+  `DefaultAccountRepositoryTest` : connexion, rattachement, déconnexion), `:feature:account`
+  (`AccountViewModelTest` : OTP, minuteur de renvoi, e-mail, message de rattachement, déconnexion).
 - Android Lint : `./gradlew lintDebug` (bloquant sur les erreurs).

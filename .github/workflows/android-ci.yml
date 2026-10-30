@@ -106,6 +106,10 @@ jobs:
       DRAMA_KEY_PASSWORD: ${{ secrets.DRAMA_KEY_PASSWORD }}
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       FIREBASE_SA: ${{ secrets.FIREBASE_APP_DISTRIBUTION_SA }}
+      # S05-A2-01 / S04-A1-03: Google sign-in client id (OAuth "Web application") and App Links host baked into
+      # BuildConfig. Without them the Google option shows "non configuré" and the default host is used.
+      DRAMA_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+      DRAMA_APP_LINKS_HOST: ${{ vars.APP_LINKS_HOST }}
 
     steps:
       - name: Checkout
@@ -153,6 +157,7 @@ jobs:
           ./gradlew :app:bundleRelease --no-daemon
           -PdramaVersionName=${{ steps.config.outputs.version_name }}
           -PdramaVersionCode=${{ steps.config.outputs.version_code }}
+          -PdramaAppLinksHost=${DRAMA_APP_LINKS_HOST:-links.drama.example}
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4

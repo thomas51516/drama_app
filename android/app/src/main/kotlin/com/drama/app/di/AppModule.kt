@@ -7,10 +7,13 @@ import com.drama.app.analytics.LogcatAnalyticsTracker
 import com.drama.app.locale.AndroidDeviceLocale
 import com.drama.app.logging.AndroidLogger
 import com.drama.core.common.analytics.AnalyticsTracker
+import com.drama.core.common.auth.AuthConfig
 import com.drama.core.common.coroutines.DefaultDispatcherProvider
 import com.drama.core.common.coroutines.DispatcherProvider
 import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
+import com.drama.core.common.share.HostShareLinkProvider
+import com.drama.core.common.share.ShareLinkProvider
 import com.drama.core.common.time.Clock
 import com.drama.core.common.time.SystemClock
 import dagger.Module
@@ -39,6 +42,15 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDeviceLocale(impl: AndroidDeviceLocale): DeviceLocaleProvider = impl
+
+    /** Share links (M-16) on the App Links host; the `drama://` scheme stays as fallback. */
+    @Provides
+    @Singleton
+    fun provideShareLinkProvider(): ShareLinkProvider = HostShareLinkProvider(BuildConfig.APP_LINKS_HOST)
+
+    @Provides
+    @Singleton
+    fun provideAuthConfig(): AuthConfig = AuthConfig(googleWebClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID)
 
     /** Firebase when google-services.json was present at build time and the SDK initialised; Logcat otherwise. */
     @Provides

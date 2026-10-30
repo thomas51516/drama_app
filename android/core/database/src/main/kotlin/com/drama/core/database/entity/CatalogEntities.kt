@@ -23,6 +23,21 @@ data class SeriesEntity(
     /** Null until `GET /series/{id}` has been fetched (synopsis is then reliable). */
     val detailFetchedAtEpochMs: Long?,
     val fetchedAtEpochMs: Long,
+    /** "J'aime" count (v4, contract v1.2); null when the server never sent it. */
+    val likes: Int? = null,
+    /** Whether this viewer liked the series (v4); flipped optimistically by the toggle. */
+    @ColumnInfo(defaultValue = "0") val liked: Boolean = false,
+)
+
+/** "Ma liste" membership (v4, M-16). The series itself lives in `series`; [position] keeps the server order. */
+@Entity(
+    tableName = "favorites",
+    indices = [Index(value = ["position"])],
+)
+data class FavoriteEntity(
+    @PrimaryKey val seriesId: String,
+    val position: Int,
+    val addedAtEpochMs: Long,
 )
 
 @Entity(

@@ -32,6 +32,14 @@ interface CatalogDao {
     @Query("SELECT * FROM series")
     fun observeAllSeries(): Flow<List<SeriesEntity>>
 
+    /** "J'aime" state (M-16); [likes] null leaves the count unchanged. */
+    @Query("UPDATE series SET liked = :liked, likes = COALESCE(:likes, likes) WHERE id = :seriesId")
+    suspend fun updateLike(
+        seriesId: String,
+        liked: Boolean,
+        likes: Int?,
+    )
+
     // --- episodes ---
 
     @Upsert

@@ -8,7 +8,13 @@ import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
+import com.drama.core.common.share.HostShareLinkProvider
 import com.drama.core.common.time.Clock
+import com.drama.core.player.engine.AvailableTracks
+import com.drama.core.player.engine.PlaybackEngine
+import com.drama.core.player.engine.PlaybackEngineFactory
+import com.drama.core.player.engine.PlaybackEvent
+import com.drama.core.player.engine.PlaybackPosition
 import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.PlaySession
@@ -24,11 +30,6 @@ import com.drama.domain.usecase.GetSeriesEpisodesUseCase
 import com.drama.domain.usecase.PlaybackStart
 import com.drama.domain.usecase.ReportProgressUseCase
 import com.drama.domain.usecase.StartPlaybackUseCase
-import com.drama.feature.player.engine.AvailableTracks
-import com.drama.feature.player.engine.PlaybackEngine
-import com.drama.feature.player.engine.PlaybackEngineFactory
-import com.drama.feature.player.engine.PlaybackEvent
-import com.drama.feature.player.engine.PlaybackPosition
 import com.drama.feature.player.navigation.PlayerRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,6 +81,7 @@ class PlayerViewModelTest {
             AppResult.Success(Unit)
         }
     private var resumePositions = mutableMapOf<String, Long>()
+    private val expiresAtByEpisode = mutableMapOf<String, Long>()
     private val subtitlesByEpisode = mutableMapOf<String, List<Subtitle>>()
     private val settingsRepository = FakePlayerSettingsRepository()
     private var deviceLanguage = "fr"
@@ -106,7 +108,8 @@ class PlayerViewModelTest {
                                         StreamFormat.HLS,
                                         subtitles = subtitles,
                                     ),
-                                expiresAtEpochMs = Long.MAX_VALUE,
+                                // Consumed once: the re-requested URL never expires, so no further timer runs.
+                                expiresAtEpochMs = expiresAtByEpisode.remove(episodeId) ?: Long.MAX_VALUE,
                                 resumePositionMs = resume,
                                 durationMs = 30_000,
                                 nextEpisodeId = episodes.getOrNull(episode.index)?.id,
@@ -145,6 +148,7 @@ class PlayerViewModelTest {
             logger = NoOpLogger,
             playerSettings = settingsRepository,
             deviceLocale = FixedDeviceLocale(deviceLanguage, "FR"),
+            shareLinks = HostShareLinkProvider("links.drama.example"),
             engineFactory = PlaybackEngineFactory { engine },
         )
 
@@ -165,6 +169,66 @@ class PlayerViewModelTest {
             assertEquals(PageState.Ready, state.pageState(0))
             assertEquals(PageState.Ready, state.pageState(1))
             assertEquals(AnalyticsEvent.EpisodeStart("s1", "ep1", 1, resumed = false), analytics.events.single())
+        }
+
+    @Test
+    fun `http 403 from the media host re-resolves once and restarts at the same position`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            engine.setPosition(7_000, 30_000)
+            advanceUntilIdle()
+            assertEquals(listOf("ep1", "ep2"), playCalls)
+
+            engine.emit(PlaybackEvent.Error(0, "ERROR_CODE_IO_BAD_HTTP_STATUS", httpStatus = 403))
+            advanceUntilIdle()
+            assertEquals(listOf("ep1", "ep2", "ep1"), playCalls)
+            assertEquals(listOf(0 to 7_000L), engine.restarted)
+            assertNull(viewModel.uiState.value.errorMessage)
+
+            // A second 403 on the same page is not retried: the error surfaces.
+            engine.emit(PlaybackEvent.Error(0, "ERROR_CODE_IO_BAD_HTTP_STATUS", httpStatus = 403))
+            advanceUntilIdle()
+            assertEquals(3, playCalls.size)
+            assertEquals(1, engine.restarted.size)
+            assertTrue(
+                viewModel.uiState.value.errorMessage!!
+                    .contains("ERROR_CODE_IO_BAD_HTTP_STATUS"),
+            )
+        }
+
+    @Test
+    fun `other playback errors surface without any re-resolve`() =
+        runTest(dispatcher) {
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            engine.emit(PlaybackEvent.Error(0, "ERROR_CODE_IO_NETWORK_CONNECTION_FAILED", httpStatus = null))
+            advanceUntilIdle()
+            assertEquals(2, playCalls.size)
+            assertTrue(engine.restarted.isEmpty())
+            assertTrue(
+                viewModel.uiState.value.errorMessage!!
+                    .contains("ERROR_CODE_IO_NETWORK_CONNECTION_FAILED"),
+            )
+        }
+
+    @Test
+    fun `signed url is re-requested thirty seconds before it expires`() =
+        runTest(dispatcher) {
+            expiresAtByEpisode["ep1"] = 100_000L // clock is fixed at 0: refresh due at 70 s
+            createViewModel()
+            runCurrent() // not advanceUntilIdle: that would run the 70 s timer right away
+            assertEquals(listOf("ep1", "ep2"), playCalls)
+
+            advanceTimeBy(69_000)
+            runCurrent()
+            assertEquals(2, playCalls.size)
+            advanceTimeBy(1_001)
+            runCurrent()
+            assertEquals(listOf("ep1", "ep2", "ep1"), playCalls)
+            // The attached source is refreshed without restarting playback.
+            assertTrue(engine.restarted.isEmpty())
+            assertEquals(1, engine.played.size)
         }
 
     @Test
@@ -561,6 +625,19 @@ class PlayerViewModelTest {
         override fun setPlaylist(count: Int) {
             playlistSize = count
             sources.clear()
+        }
+
+        override fun growPlaylist(count: Int) {
+            if (count > playlistSize) playlistSize = count
+        }
+
+        val restarted = mutableListOf<Pair<Int, Long>>()
+
+        override fun restart(
+            index: Int,
+            startPositionMs: Long,
+        ) {
+            restarted += index to startPositionMs
         }
 
         override fun setSource(
