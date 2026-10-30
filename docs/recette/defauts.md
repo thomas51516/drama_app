@@ -6,7 +6,7 @@ parcours). Statut : ouvert / corrigé (commit) / fermé (revérifié).
 
 | ID | Gravité | Lot présumé | Titre | Statut |
 | --- | --- | --- | --- | --- |
-| DEF-001 | majeur | BE (`catalog.where.ts`, `admin-series.service.ts`) + WEB B-02 | Épisode READY invisible dans l'app après publication de la série tant que `publishedAt` n'est pas saisi | ouvert |
+| DEF-001 | majeur | BE (`catalog.where.ts`, `admin-series.service.ts`) + WEB B-02 | Épisode READY invisible dans l'app après publication de la série tant que `publishedAt` n'est pas saisi | corrigé (35f0339) |
 | DEF-002 | mineur | BE S05-BE-06 (M-03) | `GET /search` refuse une recherche par genre seul (`q` obligatoire) | ouvert |
 | DEF-003 | mineur | BE S04-BE-02 (`PUT /progress`) | Progression acceptée sur un épisode verrouillé | ouvert |
 | DEF-004 | mineur | BE S04-BE-02 (`POST /play`) | Restriction de territoire non appliquée à la lecture | ouvert |
@@ -20,6 +20,8 @@ parcours). Statut : ouvert / corrigé (commit) / fermé (revérifié).
 ---
 
 ## DEF-001 — Épisode READY invisible dans l'app après publication de la série
+
+> **Corrigé le 30 octobre 2026** (commit 35f0339) : un épisode prêt reçoit sa date de publication à la fin du transcodage, et la publication d'une série date ses épisodes prêts sans date ; les épisodes programmés gardent leur date.
 
 - **Gravité** : majeur. **Lot présumé** : backend (`src/catalog/catalog.where.ts` : `visibleEpisodeWhere` =
   `publishedAt <= now AND transcodeStatus = READY` ; `POST /admin/series/{id}/publish` fixe `publishedAt` de la
