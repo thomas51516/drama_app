@@ -37,7 +37,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Lock
@@ -64,7 +63,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -712,70 +710,49 @@ private fun EpisodeCell(
             coinLabel,
             if (highlighted) stringResource(R.string.series_episode_current) else null,
         ).joinToString(", ")
-    Column(
+    // Compact tile (owner feedback, 31/10): only the number, plus a lock glyph when locked.
+    // Free/unlocked/coin-cost/current-episode detail stays in the TalkBack description below.
+    Row(
         modifier =
             modifier
-                .aspectRatio(1f)
+                .aspectRatio(EPISODE_CELL_RATIO)
                 .clip(shape)
                 .background(container)
                 .then(if (highlighted) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
                 .clickable(onClick = onClick, role = Role.Button)
                 .semantics { contentDescription = description }
-                .padding(DramaSpacing.xs),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+                .padding(horizontal = DramaSpacing.xxs),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = episode.index.toString(),
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
         )
-        Spacer(Modifier.height(DramaSpacing.xxs))
-        when (episode.access) {
-            EpisodeAccess.FREE ->
-                StatusLabel(text = statusLabel, color = DramaColors.Success)
-            EpisodeAccess.UNLOCKED ->
-                StatusLabel(
-                    text = statusLabel,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    icon = Icons.Default.Check,
-                )
-            EpisodeAccess.LOCKED ->
-                StatusLabel(
-                    text = if (episode.coinCost > 0) episode.coinCost.toString() else statusLabel,
-                    color = MaterialTheme.colorScheme.secondary,
-                    icon = Icons.Default.Lock,
-                )
-        }
-        if (highlighted) {
+        if (episode.access == EpisodeAccess.LOCKED) {
+            Spacer(Modifier.width(2.dp))
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(11.dp),
+            )
+        } else if (highlighted) {
+            Spacer(Modifier.width(2.dp))
             Icon(
                 Icons.Default.PlayArrow,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(12.dp),
             )
         }
     }
 }
 
-@Composable
-private fun StatusLabel(
-    text: String,
-    color: Color,
-    icon: ImageVector? = null,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        if (icon != null) Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(11.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
+/** Width:height of the compact episode tile — flatter than square now it holds one line only. */
+private const val EPISODE_CELL_RATIO = 1.8f
 
 @Composable
 private fun SeriesSkeleton() {
