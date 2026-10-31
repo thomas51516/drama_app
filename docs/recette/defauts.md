@@ -1,6 +1,7 @@
 # Liste des défauts — recette DRAMA
 
-Mise à jour : 31 octobre 2026, campagne n° 3 (`campagne-2026-10-31.md`) ; créée lors de la campagne n° 1. Gravités : **bloquant** (empêche un parcours P1, pas de
+Mise à jour : 31 octobre 2026, campagne n° 3b téléphone (`campagne-2026-10-31-phone.md`) ; créée lors de la
+campagne n° 1. Gravités : **bloquant** (empêche un parcours P1, pas de
 contournement), **majeur** (fonction P1 incorrecte ou contournement pénible), **mineur** (écart sans impact sur le
 parcours). Statut : ouvert / corrigé (commit) / fermé (revérifié).
 
@@ -16,8 +17,10 @@ parcours). Statut : ouvert / corrigé (commit) / fermé (revérifié).
 | DEF-008 | mineur | BE S04-BE-03 / S04-BE-01 | Paramètres non validés : `cursor` du flux et `X-Country` acceptés quelle que soit leur valeur | **fermé** (revérifié le 31/10, campagne 3 : `GET /feed?cursor=garbage` → 400 `VALIDATION_ERROR` ; `GET /home` avec `X-Country: ZZZZ` → 400 `VALIDATION_ERROR`) |
 | DEF-009 | mineur | BE S05-BE-05 | Code d'erreur incohérent sur un identifiant de favori mal formé (`BAD_REQUEST` au lieu de `VALIDATION_ERROR`) | **fermé** (revérifié le 31/10, campagne 3 : `PUT /me/favorites/abc` → 400 `VALIDATION_ERROR`) |
 | DEF-010 | information | BE / docs | `docs/api/openapi.v1.json` (1.2.0, 66 routes) en retard sur l'API en cours (1.3.0, 89 routes) | **fermé** (fichier committé en 1.3.0 / 89 routes = `/docs-json` servi le 30/10 12:00) |
-| DEF-011 | mineur | A1 S06-A1-02 (`DefaultPushRepository`) | Jeton push enregistré deux fois au démarrage (`PUT /me/devices/push` ×2 en 12 ms) | corrigé selon `docs/sprints/sprint-07.md` (commit 051ab7a) — **NT en campagne 3** : l'émulateur `Medium_Phone_API_36.1` a échoué au démarrage par manque de mémoire de la machine (voir `campagne-2026-10-31.md` §2) ; à retester sur un poste non chargé ou le téléphone du client |
-| DEF-012 | mineur | A2 S05-A2-03 / S05-BE-06 | Puces de genre de l'écran de recherche en français (« Drame », « Comédie », « Famille ») sur une interface en anglais ou en espagnol | corrigé selon `docs/sprints/sprint-07.md` (commit 051ab7a) — **NT en campagne 3**, même raison que DEF-011 (émulateur indisponible) |
+| DEF-011 | mineur | A1 S06-A1-02 (`DefaultPushRepository`) | Jeton push enregistré deux fois au démarrage (`PUT /me/devices/push` ×2 en 12 ms) | **fermé** (revérifié le 31/10, campagne 3b téléphone : 3 relances sans doublon au Logcat, une seule ligne en base `push_devices`, mutex de dédoublonnage confirmé par le code) |
+| DEF-012 | mineur | A2 S05-A2-03 / S05-BE-06 | Puces de genre de l'écran de recherche en français (« Drame », « Comédie », « Famille ») sur une interface en anglais ou en espagnol | **fermé** (revérifié le 31/10, campagne 3b téléphone : puces Recherche « Romance, Drama, Comedy, Action » en anglais ; voir DEF-013/DEF-014 pour deux lacunes i18n apparentées trouvées pendant ce retest) |
+| DEF-013 | mineur | A1 (Accueil / `RemoteGenresRepository`) | Après un changement de langue en session, l'Accueil garde les libellés de genre dans l'ancienne langue jusqu'à ce qu'un autre écran rafraîchisse le cache | **ouvert** (trouvé le 31/10, campagne 3b téléphone) |
+| DEF-014 | mineur | A2 (`FeedScreen.kt`, flux « Pour vous ») | Le flux « Pour vous » n'utilise jamais le dictionnaire de traduction des genres (capitalisation brute de la valeur serveur) | **ouvert** (trouvé le 31/10, campagne 3b téléphone) |
 
 ---
 
@@ -155,35 +158,116 @@ parcours). Statut : ouvert / corrigé (commit) / fermé (revérifié).
 
 ## DEF-011 — Jeton push enregistré deux fois au démarrage
 
-> **Corrigé selon `docs/sprints/sprint-07.md` (commit 051ab7a)** : "DEF-011, DEF-012 : Jeton push envoyé deux
-> fois, genres non traduits — Corrigés". **Non retestable en campagne 3** : l'émulateur `Medium_Phone_API_36.1`
-> démarré pour cette campagne a échoué (voir `campagne-2026-10-31.md` §2, machine en limite de mémoire — le
-> service `systemd-oomd` a lui-même déclenché son propre délai d'attente pendant le démarrage de l'émulateur) ;
-> aucun appareil Android n'a pu être exploité pour ce retest. Statut provisoire : **corrigé, à revérifier** sur un
-> poste non chargé ou le téléphone du client dès que possible.
+> **Fermé le 31 octobre 2026** (campagne 3b téléphone) : 3 cycles force-stop/relance sur le téléphone réel du
+> client sans la moindre ligne `push token registered` en double au Logcat, une seule ligne en base
+> `push_devices` pour l'utilisateur testé, et revue du code confirmant que `AppStartup` et
+> `DramaMessagingService.onNewToken` passent tous deux par un `Mutex` unique avec comparaison `(token, userId)`
+> avant d'émettre le `PUT`.
 
 - **Gravité** : mineur (deux écritures idempotentes, pas d'effet visible). **Lot** : Android A1 S06-A1-02
   (`DefaultPushRepository`, synchronisation du jeton par couple (jeton, utilisateur) ; `android/README.md` annonce
   « une seule fois par couple »).
 - **Étapes** : installation fraîche (`pm clear`), lancer l'app, `adb logcat -s Http AppStartup`.
 - **Attendu** : un seul `PUT /me/devices/push` pour l'invité créé.
-- **Constaté** (E36, 30/10 12:12:18) : `PUT /me/devices/push` → 204 à 12:12:18.579 puis à nouveau à 12:12:18.591
-  (deux appels à 12 ms d'intervalle), `push token in sync` entre les deux : course entre le démarrage de session et
-  `onNewToken`, ou double collecte du flux utilisateur.
-- **Preuve** : rapport campagne 2 §4 RC-320 (Logcat). Campagne 3 : NT, voir ci-dessus.
+- **Constaté le 30/10 (campagne 2, E36)** : `PUT /me/devices/push` → 204 à 12:12:18.579 puis à nouveau à
+  12:12:18.591 (deux appels à 12 ms d'intervalle), `push token in sync` entre les deux : course entre le démarrage
+  de session et `onNewToken`, ou double collecte du flux utilisateur.
+- **Constaté le 31/10 (campagne 3, NT)** : émulateur indisponible (machine en limite de mémoire), aucun retest
+  possible.
+- **Constaté le 31/10 (campagne 3b, téléphone réel)** : 3 relances (`am force-stop` + relance), une seule ligne
+  `AppStartup: push token in sync for user=...` par démarrage, aucune ligne `Push: push token registered` en
+  double (le couple token/utilisateur était déjà en cache, donc aucun appel réseau nécessaire — comportement
+  attendu du correctif). En base : `select count(*), min(created_at), max(updated_at) from push_devices where
+  user_id = '01a18905-...'` → **1 ligne**, `created_at`/`updated_at` distants de 59 ms. Le code de
+  `DefaultPushRepository.register()` confirme le `Mutex` partagé entre les deux appelants.
+- **Limite du retest** : le jeton FCM de l'appareil étant stable depuis plusieurs jours, le scénario exact de la
+  course (deux appelants simultanés au tout premier lancement) n'a pas pu être rejoué à l'identique sans une
+  installation fraîche, hors de question sur le compte réel du client (tentative de suppression ciblée du fichier
+  de préférences locales bloquée par le classificateur de sécurité de l'environnement comme action irréversible ;
+  non contournée).
+- **Preuve** : rapport campagne 2 §4 RC-320 (Logcat) ; `campagne-2026-10-31-phone.md` §2 ;
+  `evidence/campagne3-phone/`.
 
 ## DEF-012 — Puces de genre non traduites sur l'écran de recherche
 
-> **Corrigé selon `docs/sprints/sprint-07.md` (commit 051ab7a)**, même remarque que DEF-011 : **non retestable en
-> campagne 3** (émulateur indisponible, machine en limite de mémoire). Statut provisoire : **corrigé, à
-> revérifier** dès qu'un appareil Android est disponible.
+> **Fermé le 31 octobre 2026** (campagne 3b téléphone) : puces de l'écran Recherche « Romance, Drama, Comedy,
+> Action » en anglais après passage de l'interface en English ; badge genre de la fiche série également traduit
+> (« Drama · Thriller »). Deux lacunes i18n apparentées, hors périmètre du repro original, ont été trouvées
+> pendant ce retest et sont suivies séparément : DEF-013 (Accueil, fraîcheur du cache) et DEF-014 (flux « Pour
+> vous », jamais traduit).
 
 - **Gravité** : mineur (cosmétique, M-03 / i18n). **Lot** : Android A2 S05-A2-03 (origine des libellés à
   confirmer : liste locale ou clés de genre du serveur).
 - **Étapes** : appareil en `en-US` (ou langue de l'app Español), loupe de l'accueil.
 - **Attendu** : puces de genre dans la langue de l'interface (« Drama », « Comedy », « Family » ; le serveur sait
   traduire les rangées de genre : « Drama » dans `GET /home` en `en`).
-- **Constaté** : puces « Romance », « Drame », « Comédie », « Thriller », « Famille » alors que le reste de l'écran
-  est en anglais (« Title, genre, keyword… », « Recent searches »). Idem en espagnol.
-- **Preuve** : `evidence/jalon1/e36-02-search-suggest.png`, `e36-06-search-history.png`. Campagne 3 : NT, voir
-  ci-dessus.
+- **Constaté le 30/10 (jalon 1)** : puces « Romance », « Drame », « Comédie », « Thriller », « Famille » alors que
+  le reste de l'écran est en anglais (« Title, genre, keyword… », « Recent searches »). Idem en espagnol.
+- **Constaté le 31/10 (campagne 3, NT)** : émulateur indisponible.
+- **Constaté le 31/10 (campagne 3b, téléphone réel)** : langue de l'app basculée Français → English dans
+  Profil → Paramètres ; écran Recherche → puces « Romance, Drama, Comedy, Action » en anglais ; fiche série « La
+  Nounou » → « Drama · Thriller » en anglais ; Classements → puces et libellés également en anglais.
+- **Preuve** : `evidence/jalon1/e36-02-search-suggest.png`, `e36-06-search-history.png` (avant) ;
+  `evidence/campagne3-phone/phone-07-search-en.png`, `phone-08-series-la-nounou-en.png`,
+  `phone-16-rankings.png` (après).
+
+## DEF-013 — Accueil : libellés de genre obsolètes après un changement de langue en session
+
+> **Ouvert le 31 octobre 2026** (campagne 3b téléphone), trouvé en creusant au-delà du périmètre strict de
+> DEF-012.
+
+- **Gravité** : mineur (cosmétique, se corrige tout seul en naviguant, aucune perte de données). **Lot présumé** :
+  Android A1 (`feature/home/HomeViewModel.kt`, `data/.../RemoteGenresRepository.kt`).
+- **Étapes** : 1. Ouvrir l'Accueil (langue Français, comme au démarrage de l'app). 2. Aller dans
+  Profil → Paramètres → Langue, choisir English (l'app recrée l'activité et bascule l'interface immédiatement).
+  3. Revenir sur l'Accueil sans passer par un autre écran qui interroge le catalogue de genres.
+- **Attendu** : les libellés de genre des cartes (« X ep. · <genre> ») passent en anglais comme le reste de
+  l'interface.
+- **Constaté** : la ligne « 2 ep. · **Drame** » reste en français sous « La Nounou » dans la rangée « Trending »
+  alors que le titre de la rangée, les boutons et tout le reste de l'écran sont déjà en anglais
+  (`phone-06-home-en.png`). Après une simple visite de l'écran Recherche (qui déclenche son propre appel
+  `GET /genres?lang=en`), en revenant sur l'Accueil sans action supplémentaire, le libellé se corrige tout seul en
+  « 2 ep. · **Drama** » (`phone-09-home-en-after-search.png`).
+- **Cause probable** : `RemoteGenresRepository` (`data/src/main/kotlin/com/drama/data/repository/
+  RemoteGenresRepository.kt`) met en cache les libellés de genre par langue dans un unique `MutableStateFlow`
+  partagé par tous les écrans (singleton) ; rien ne déclenche un nouveau `GET /genres?lang=<nouvelle langue>`
+  au moment du changement de langue — seul l'`init` d'un nouveau `ViewModel` (donc la première visite d'un écran
+  après le changement) le fait. Un écran déjà en mémoire au moment du changement (comme `HomeViewModel`, dont le
+  flux `genres.labels.collect` reste actif) continue donc d'afficher les libellés de l'ancienne langue jusqu'à ce
+  qu'un *autre* écran déclenche la mise à jour du flux partagé.
+- **Suggestion de correctif** : appeler `genres.refresh(force = true)` au moment du changement de langue
+  (`AppLocaleController.setAppLanguage` / `SettingsViewModel.onLanguageSelected`), plutôt que de compter sur la
+  prochaine navigation.
+- **Confirmation supplémentaire (sens inverse)** : en remettant l'app en français en toute fin de campagne (sans
+  revisiter entre-temps un écran qui rafraîchit le cache), la capture finale de l'Accueil montre « 2 ép. ·
+  **Drama** » (resté en anglais) alors que toute l'interface (« Accueil », « Tendances », « Continuer à
+  regarder », « Profil ») est déjà repassée en français (`phone-24-final-home-fr.png`). Confirme le même mécanisme
+  dans les deux sens ; purement cosmétique et temporaire — se corrige dès la prochaine navigation ou au prochain
+  démarrage à froid (le téléphone a été laissé dans cet état transitoire sans conséquence, l'app étant
+  fonctionnellement en français partout ailleurs).
+- **Preuve** : `evidence/campagne3-phone/phone-06-home-en.png` (avant), `phone-09-home-en-after-search.png`
+  (après), `phone-24-final-home-fr.png` (confirmation en sens inverse).
+
+## DEF-014 — Flux « Pour vous » : genres jamais traduits
+
+> **Ouvert le 31 octobre 2026** (campagne 3b téléphone), trouvé en creusant au-delà du périmètre strict de
+> DEF-012.
+
+- **Gravité** : mineur (cosmétique). **Lot présumé** : Android A2 (`feature/feed/src/main/kotlin/com/drama/
+  feature/feed/FeedScreen.kt`).
+- **Étapes** : 1. Passer l'app en English (ou Español/Português). 2. Ouvrir l'onglet « Pour vous » (flux vertical
+  plein écran, M-02).
+- **Attendu** : le sous-titre de la carte (genre(s) + nombre d'épisodes) dans la langue de l'interface, comme
+  l'Accueil, la Recherche et la fiche série.
+- **Constaté** : carte « La Nounou » → « **Drame** · Thriller · 2 ep. » en français alors que l'interface entière
+  (titre d'écran « For you », boutons « Add », « Like », « Watch the series ») est en anglais, et alors que
+  l'Accueil et la Recherche affichaient déjà correctement « Drama » au même moment de la session
+  (`phone-20-foryou.png`).
+- **Cause confirmée par le code** : `FeedScreen.kt:369` construit le sous-titre directement à partir de
+  `item.series.genres.take(2).joinToString(" · ") { it.replaceFirstChar(Char::titlecase) }` — une simple mise en
+  majuscule de la valeur brute, sans jamais consulter `GenresRepository`/`GenreLabels` comme le font
+  `HomeViewModel`, l'écran Recherche et la fiche série. Contrairement à DEF-013, ce n'est pas un problème de
+  fraîcheur de cache : l'écran ne traduira jamais le genre, quel que soit le moment où on l'ouvre.
+- **Suggestion de correctif** : injecter `GenresRepository` dans le ViewModel du flux et utiliser
+  `genreLabels.label(key)` comme les autres écrans, au lieu de capitaliser la valeur brute.
+- **Preuve** : `evidence/campagne3-phone/phone-20-foryou.png`.
