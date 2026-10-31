@@ -9,6 +9,10 @@
     <!-- Top bar -->
     <string name="player_share_series">Partager la série</string>
     <string name="player_settings_title">Paramètres de lecture</string>
+    <string name="player_episodes_button">Liste des épisodes</string>
+    <string name="player_episodes_title">Épisodes</string>
+    <string name="player_episode_locked">Verrouillé</string>
+    <string name="player_episode_current">Épisode en cours</string>
     <string name="player_speed_chip_description">Vitesse de lecture : %1$s</string>
     <string name="player_quality_chip_description">Qualité : %1$s</string>
     <string name="player_subtitles_chip_description">Sous-titres : %1$s</string>

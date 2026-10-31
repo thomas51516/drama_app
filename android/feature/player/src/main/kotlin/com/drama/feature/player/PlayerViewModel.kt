@@ -255,6 +255,14 @@ class PlayerViewModel
             startAt(index)
         }
 
+        /** Episode picker sheet: jump to any episode without leaving the player. */
+        fun onJumpToEpisode(index: Int) {
+            val state = uiStateFlow.value
+            if (index !in state.episodes.indices || index == state.currentIndex) return
+            logger.i(TAG, "jump to episode index=$index (was ${state.currentIndex})")
+            startAt(index)
+        }
+
         fun onTap() {
             if (uiStateFlow.value.endOfEpisode != null || uiStateFlow.value.paywall != null) return
             if (uiStateFlow.value.isPlaying) flushProgress(completed = false)

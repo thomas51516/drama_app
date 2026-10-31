@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
@@ -110,6 +111,8 @@ data class PlayerActions(
     val onSeek: (Long) -> Unit,
     val onToggleMute: () -> Unit,
     val onNextEpisode: () -> Unit,
+    /** Episode picker sheet: jump to another episode without leaving the player. */
+    val onJumpToEpisode: (Int) -> Unit,
     val onReplay: () -> Unit,
     val onBack: () -> Unit,
     /** Returns the text to share, or null when nothing is loaded (M-16). */
@@ -179,6 +182,7 @@ fun PlayerScreen(
                 onSeek = viewModel::onSeekTo,
                 onToggleMute = viewModel::onToggleMute,
                 onNextEpisode = viewModel::onNextEpisode,
+                onJumpToEpisode = viewModel::onJumpToEpisode,
                 onReplay = viewModel::onReplay,
                 onBack = onBack,
                 onShare = viewModel::onShare,
@@ -295,6 +299,10 @@ fun PlayerContent(
                 sheet = open,
                 state = state,
                 actions = actions.settings,
+                onJumpToEpisode = {
+                    actions.onJumpToEpisode(it)
+                    sheet = null
+                },
                 onNavigate = { sheet = it },
                 onDismiss = { sheet = null },
             )
@@ -378,6 +386,13 @@ private fun PlayerTopBar(
                 active = state.activeSubtitleLanguage != null,
                 onClick = { onOpenSheet(PlayerSheet.SUBTITLES) },
             )
+            IconButton(onClick = { onOpenSheet(PlayerSheet.EPISODES) }) {
+                Icon(
+                    Icons.AutoMirrored.Filled.List,
+                    contentDescription = stringResource(R.string.player_episodes_button),
+                    tint = Color.White,
+                )
+            }
             IconButton(onClick = onShare) {
                 Icon(
                     Icons.Default.Share,

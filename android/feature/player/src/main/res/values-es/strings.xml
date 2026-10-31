@@ -7,6 +7,10 @@
 
     <string name="player_share_series">Compartir la serie</string>
     <string name="player_settings_title">Ajustes de reproducción</string>
+    <string name="player_episodes_button">Lista de episodios</string>
+    <string name="player_episodes_title">Episodios</string>
+    <string name="player_episode_locked">Bloqueado</string>
+    <string name="player_episode_current">Episodio actual</string>
     <string name="player_speed_chip_description">Velocidad de reproducción: %1$s</string>
     <string name="player_quality_chip_description">Calidad: %1$s</string>
     <string name="player_subtitles_chip_description">Subtítulos: %1$s</string>

@@ -7,6 +7,10 @@
 
     <string name="player_share_series">Share the series</string>
     <string name="player_settings_title">Playback settings</string>
+    <string name="player_episodes_button">Episode list</string>
+    <string name="player_episodes_title">Episodes</string>
+    <string name="player_episode_locked">Locked</string>
+    <string name="player_episode_current">Current episode</string>
     <string name="player_speed_chip_description">Playback speed: %1$s</string>
     <string name="player_quality_chip_description">Quality: %1$s</string>
     <string name="player_subtitles_chip_description">Subtitles: %1$s</string>

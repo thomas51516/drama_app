@@ -1,19 +1,31 @@
 package com.drama.feature.player.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,20 +35,27 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.drama.core.player.engine.TrackSelectionMapper
+import com.drama.core.ui.theme.DramaColors
 import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
+import com.drama.domain.model.Episode
+import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.PlayerSettings
 import com.drama.domain.model.Subtitle
 import com.drama.domain.model.SubtitleMode
 import com.drama.domain.model.VideoQuality
 import com.drama.feature.player.PlayerUiState
 import com.drama.feature.player.R
+import com.drama.core.ui.R as CoreR
 
 /** Which bottom sheet is open over the player. */
 enum class PlayerSheet {
@@ -44,6 +63,7 @@ enum class PlayerSheet {
     SPEED,
     QUALITY,
     SUBTITLES,
+    EPISODES,
 }
 
 data class SettingsActions(
@@ -73,6 +93,7 @@ fun PlayerSettingsSheet(
     sheet: PlayerSheet,
     state: PlayerUiState,
     actions: SettingsActions,
+    onJumpToEpisode: (Int) -> Unit,
     onNavigate: (PlayerSheet) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -124,6 +145,12 @@ fun PlayerSettingsSheet(
                             actions.onSubtitleSelected(it)
                             onDismiss()
                         },
+                    )
+                PlayerSheet.EPISODES ->
+                    EpisodesGrid(
+                        episodes = state.episodes,
+                        currentIndex = state.currentIndex,
+                        onSelect = onJumpToEpisode,
                     )
             }
         }
@@ -272,3 +299,92 @@ private fun OptionRow(
         }
     }
 }
+
+/** Episode picker: every episode of the series, so playback can jump ahead or back without leaving the player. */
+@Composable
+private fun EpisodesGrid(
+    episodes: List<Episode>,
+    currentIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
+    SheetTitle(stringResource(R.string.player_episodes_title))
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(EPISODES_GRID_COLUMNS),
+        contentPadding = PaddingValues(horizontal = DramaSpacing.lg, vertical = DramaSpacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(DramaSpacing.sm),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = EPISODES_GRID_MAX_HEIGHT),
+    ) {
+        itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
+            EpisodeTile(
+                episode = episode,
+                current = index == currentIndex,
+                onClick = { onSelect(index) },
+            )
+        }
+    }
+}
+
+/**
+ * Compact tile matching the series grid (owner feedback, 31/10): only the number, plus a lock glyph when locked.
+ * Status detail (locked / current episode) stays in the TalkBack description.
+ */
+@Composable
+private fun EpisodeTile(
+    episode: Episode,
+    current: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val container = if (current) DramaColors.EmeraldSoft else MaterialTheme.colorScheme.surfaceContainerHigh
+    val description =
+        listOfNotNull(
+            stringResource(CoreR.string.episode_number, episode.index),
+            stringResource(R.string.player_episode_locked).takeIf { episode.access == EpisodeAccess.LOCKED },
+            stringResource(R.string.player_episode_current).takeIf { current },
+        ).joinToString(", ")
+    Row(
+        modifier =
+            Modifier
+                .aspectRatio(EPISODE_TILE_RATIO)
+                .clip(shape)
+                .background(container)
+                .then(if (current) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
+                .clickable(onClick = onClick, role = Role.Button)
+                .semantics { contentDescription = description }
+                .padding(horizontal = DramaSpacing.xxs),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = episode.index.toString(),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+        if (episode.access == EpisodeAccess.LOCKED) {
+            Spacer(Modifier.width(2.dp))
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(11.dp),
+            )
+        } else if (current) {
+            Spacer(Modifier.width(2.dp))
+            Icon(
+                Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(12.dp),
+            )
+        }
+    }
+}
+
+private const val EPISODES_GRID_COLUMNS = 5
+private val EPISODES_GRID_MAX_HEIGHT = 360.dp
+private const val EPISODE_TILE_RATIO = 1.8f
