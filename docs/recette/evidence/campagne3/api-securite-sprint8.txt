@@ -1,0 +1,29 @@
+Campagne 3 (2026-10-31) — spot-check des correctifs de sécurité/performance du sprint 8 (docs/ops/securite.md,
+docs/ops/charge.md)
+
+=== Limitation de débit sur les 5 routes corrigées (docs/ops/securite.md §1) ===
+Rafales depuis la même IP (::1, loopback), jusqu'à obtenir un 429 :
+- POST /promo/redeem        -> 429 au 5e appel de la rafale {"code":"RATE_LIMITED","details":{"rule":"promo_redeem","limit":10,...}}
+- POST /episodes/{id}/unlock -> 429 au 28e appel {"code":"RATE_LIMITED","details":{"rule":"episode_unlock","limit":30,...}}
+- POST /series/{id}/unlock-all -> 429 au 29e appel {"code":"RATE_LIMITED","details":{"rule":"series_unlock_all","limit":30,...}}
+- POST /ads/sessions        -> 429 au 20e appel {"code":"RATE_LIMITED","details":{"rule":"ads_sessions","limit":20,...}}
+- POST /topup/orders        -> 429 au 21e appel {"code":"RATE_LIMITED","details":{"rule":"topup_orders","limit":20,...}}
+=> OK, les 5 routes signalées par l'audit répondent bien 429 RATE_LIMITED avec la règle et la limite documentées.
+   Clés Redis observées : rl:promo_redeem:ip:::1, rl:episode_unlock:ip:::1, rl:series_unlock_all:ip:::1,
+   rl:ads_sessions:ip:::1, rl:topup_orders:ip:::1. Nettoyage : clé rl:topup_orders:ip:::1 supprimée manuellement
+   après le test pour ne pas bloquer le reste de la campagne (recharge site) ; les autres ont expiré naturellement.
+
+=== En-tête HSTS ===
+$ curl -s -D - -o /dev/null http://localhost:3000/health | grep -i "strict-transport\|x-frame\|x-content-type"
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+=> OK, conforme à docs/ops/securite.md §5.
+
+=== /health après le changement de pool de connexions (docs/ops/charge.md) ===
+$ curl -s http://localhost:3000/health
+{"status":"ok","timestamp":"...","uptimeSeconds":2129,"checks":{"database":{"status":"up","latencyMs":0.8},
+  "redis":{"status":"up","latencyMs":0.4}}}
+$ curl -s -w "\nHTTP %{http_code}\n" http://localhost:3000/health/live
+{"status":"ok",...} HTTP 200
+=> OK, API saine, latences DB/Redis normales.

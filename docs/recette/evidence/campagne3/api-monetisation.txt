@@ -1,0 +1,70 @@
+Campagne 3 (2026-10-31) — nouveaux cas P1 sprints 6/7 (monétisation, récompenses, pub, classements)
+API backend http://localhost:3000. Comptes QA jetables : invité QA-campagne3-defects-0001 (T1), QA-campagne3-mon-0002
+(T2), QA-campagne3-mon-0003 (T3).
+
+=== Portefeuille / boutique / déblocage (RC-4xx, voir cahier) ===
+GET /wallet (T1, avant achat)      -> 200 {"purchased":0,"bonus":0,"total":0,"autoUnlock":false,...}
+GET /shop (T1)                     -> 200, 4 packs de pièces (coins_100..1500), 3 formules VIP, devise USD
+POST /episodes/{ep3}/unlock (T1, solde 0) -> 402 INSUFFICIENT_COINS {"cost":10,"balance":0}
+POST /billing/google/verify (fake:coins_100:<nonce>, type=inapp) -> 200 {"status":"credited","wallet":{"purchased":100,...}}
+Replay même purchaseToken        -> 200 {"status":"already_processed", wallet inchangé} (idempotent)
+POST /episodes/{ep3}/unlock (T1, solde 100) -> 200 {"method":"coins","charged":{"purchased":10},"wallet":{"purchased":90,...}}
+POST /episodes/{ep3}/play (T1, après déblocage) -> 200 access=unlocked, manifestUrl présent
+Replay même idempotencyKey d'unlock -> 200, charged.purchased=0 (pas de second débit)
+PATCH /me {"autoUnlock":true} (T1) -> 200 ; GET /wallet reflète autoUnlock=true
+=> Tous OK.
+
+=== Check-in quotidien (M-40) ===
+GET /rewards/checkin (T1)  -> 200 {"scale":[5,5,10,10,15,20,30],"streakDay":0,"claimedToday":false,...}
+POST /rewards/checkin {idempotencyKey} -> 200 {"day":1,"coins":5,"wallet":{"bonus":5,...}}
+POST /rewards/checkin (même jour, nouvelle clé) -> 409 CHECKIN_ALREADY_CLAIMED {"nextClaimAt":"2026-11-01T00:00:00Z"}
+=> OK.
+
+=== Tâches de récompense (M-41) ===
+GET /rewards/tasks (T1) -> 6 tâches AVAILABLE (watch_3_episodes, watch_10_episodes, enable_notifications,
+  share_series, complete_profile, add_favorite), progress=0
+PUT /me/favorites/{series} (T1) -> 204
+GET /rewards/tasks -> add_favorite: progress=1, status=CLAIMABLE
+POST /rewards/tasks/add_favorite/claim {idempotencyKey} -> 200 {"coins":5,"wallet":{"bonus":10,...}}
+Repeat claim -> 409 TASK_NOT_CLAIMABLE {"reason":"already_claimed","periodKey":"once"}
+=> OK, chemin progression -> réclamation entièrement vérifié sur une tâche atteignable sans vidéo.
+
+=== Pub récompensée (M-22) ===
+GET /ads/eligibility?episodeId=<ep3 verrouillé pour T2> -> 200 {"eligible":true,"remainingToday":3,"dailyCap":3,
+  "adUnitId":"fake-rewarded","provider":"fake"}
+POST /ads/sessions {episodeId} -> 201 {"sessionId":...,"customData":"<sessionId>:<nonce>","expiresAt":...}
+Callback SSV simulé (POST /ads/reward?ad_network=...&custom_data=<sessionId>:<nonce>&...&signature=HMAC-SHA256(
+  AD_SSV_FAKE_SECRET, contenu)) -> 200 {"accepted":true,"episodeId":"<ep3>"}
+POST /episodes/{ep3}/play (T2) -> 200 access=unlocked (débloqué sans débit)
+GET /wallet (T2) -> purchased=0, bonus=0 (aucun débit, conforme à la règle "la pub ne débite jamais de pièces")
+GET /ads/sessions/{id} -> {"status":"REWARDED","unlocked":true}
+=> OK, chaîne complète éligibilité -> session -> SSV simulé -> déblocage vérifiée.
+
+=== Déblocage de série entière (M-23) ===
+GET /series/{id}/unlock-all/quote (T3) -> 200 {"lockedCount":1,"fullPrice":10,"discountPercent":0,"price":10}
+POST /series/{id}/unlock-all (T3, solde 0) -> 402 INSUFFICIENT_COINS {"cost":10,"balance":0}
+Crédit de 100 pièces (fake billing) puis
+POST /series/{id}/unlock-all (T3, solde 100) -> 200 {"unlockedEpisodeIds":["<ep3>"],"charged":{"purchased":10},
+  "wallet":{"purchased":90,...}}
+GET /series/{id}/unlocks (T3) -> {"unlockedEpisodeIds":["<ep3>"]}
+=> OK.
+
+=== Codes promo (M-24) ===
+Code QA-CAMP3-PROMO créé via le compte ADMIN de recette (POST /admin/promo-codes, coins:15, maxUses:5,
+  perUserUses:1) ; supprimé/désactivé en fin de campagne (cf. journal de nettoyage).
+POST /promo/redeem {"code":"QA-CAMP3-PROMO","idempotencyKey":...} (T3) -> 200 {"coins":15,"wallet":{"bonus":15,...}}
+Repeat (même compte) -> 409 PROMO_ALREADY_USED
+Code inconnu "QA-DOES-NOT-EXIST" -> 404 PROMO_INVALID
+=> OK (valide, doublon, invalide tous couverts).
+
+=== Classements (M-04) ===
+GET /rankings (T3) -> 200 {"period":"week","items":[{"rank":1,"series":{"title":"Le Secret du Lagon",...},
+  "viewers":13},{"rank":2,"series":{"title":"La Nounou",...},"viewers":1}]}
+=> OK, classement rendu, "La Nounou" présente en lecture seule (non modifiée par la recette).
+
+=== Intégrité du grand livre (invariant GET /wallet = somme de GET /wallet/transactions) ===
+T1 : GET /wallet -> total=100 ; somme des montants de /wallet/transactions (4 lignes : +100 achat, -10 déblocage,
+  +5 check-in, +5 tâche) = 100. Égal.
+T3 : GET /wallet -> total=105 ; somme de /wallet/transactions (3 lignes : +100 achat, -10 déblocage série, +15
+  promo) = 105. Égal.
+=> OK, invariant respecté sur les deux comptes testés.

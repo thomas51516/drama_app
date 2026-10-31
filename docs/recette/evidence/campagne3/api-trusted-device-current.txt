@@ -1,0 +1,19 @@
+Campagne 3 (2026-10-31) — RC-218 / RC-276 : appareil de confiance back-office, drapeau `current`
+
+Compte ADMIN de recette créé pour cette campagne : qa-admin-campagne3@drama.local (rôle ADMIN), inséré directement
+en base avec un mot de passe connu (argon2id), jamais le compte admin@drama.local. Enrôlement TOTP fait au premier
+login comme un compte normal (code calculé avec backend/scripts/totp-code.mjs).
+
+POST /admin/auth/login {email, password} -> 200 totp_setup_required {secret, otpauthUri, challengeToken}
+POST /admin/auth/totp/verify {challengeToken, code, rememberDevice:true} -> 200 {accessToken, deviceToken,
+  deviceTokenExpiresAt:"2026-11-30T..."}  (30 jours)
+
+Reconnexion avec le deviceToken (pas de code TOTP) :
+POST /admin/auth/login {email, password, deviceToken} -> 200 {"status":"ok","accessToken":...}  (TOTP court-circuité,
+  conforme au contrat v1.3 "si valide pour ce compte et TOTP enrôlé")
+
+GET /admin/auth/devices (avec le jeton de la session ouverte par deviceToken) ->
+[{"id":"01a18f57-...","label":"Navigateur","current":true,"createdAt":"...","lastUsedAt":"...","expiresAt":"2026-11-30T..."}]
+
+=> OK : l'appareil qui a ouvert la session courante (login par deviceToken) est bien signalé current:true. RC-218
+   et RC-276 passent.

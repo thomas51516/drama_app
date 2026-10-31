@@ -1,0 +1,51 @@
+Campagne 3 (2026-10-31) — fumée du site de recharge mobile money (web/apps/recharge, S09-WEB-01/02)
+
+Serveur de dev démarré pour la campagne sur un port libre : `cd web && npm run dev:recharge` -> Nuxt sur
+http://localhost:3200/ (le back-office :3100 n'a pas été touché). Arrêté en fin de campagne (voir journal de
+nettoyage).
+
+Garde d'authentification SSR : GET /history sans session -> 302 Found, Location: /login?redirect=/history. OK,
+conforme (`middleware/auth.global.ts`, seules /pay, /history, /account, /mock-payment exigent une session).
+
+Compte public jetable créé (mêmes routes publiques que le site) :
+POST /auth/email/register {email:"qa-recharge-campagne3@qa.drama.local", password:"QaRecharge!2026",
+  deviceId:"QA-recharge-campagne3-dev"} -> 201, type=REGISTERED.
+
+Parcours recharge (mêmes appels que `stores/recharge-session.ts` / page `/packs` puis `/pay/[orderId]`) :
+GET /wallet -> purchased=0, bonus=0, total=0
+POST /topup/orders {"packSku":"coins_300","country":"TG","phone":"+22890000001","idempotencyKey":"QA-recharge-order-001"}
+  -> 201 {"orderId":"01a18f6c-2844-...","amount":{"currency":"XOF","amountMinor":1700},
+  "paymentUrl":"http://localhost:3000/topup/fake/01a18f6c-2844-...","expiresAt":"..."}
+GET  http://localhost:3000/topup/fake/{orderId} -> 200, page HTML simulée (boutons "Payer"/"Échouer")
+POST http://localhost:3000/topup/fake/{orderId} outcome=paid -> 303 (redirige vers la même page, webhook signé
+  envoyé côté serveur par la page simulée elle-même)
+GET /wallet (après paiement) -> {"purchased":300,"bonus":30,"total":330,"bonusExpiring":[{"amount":30,...}]}
+GET /topup/orders/{orderId} -> {"status":"PAID","coins":300,"bonusCoins":30,"creditedAt":"2026-10-31T00:46:49Z"}
+GET /wallet/transactions -> 2 lignes (+300 PURCHASE, +30 BONUS "Coin pack bonus"), somme = 330 = GET /wallet.total
+=> OK : commande -> page de paiement simulée -> webhook -> crédit du portefeuille vérifié de bout en bout ;
+   intégrité du grand livre respectée.
+
+Tailles de page (mode développement Nuxt, PAS représentatif de la cible < 300 Ko gzip JS+CSS en production —
+le dev server sert du JS non minifié, les source maps et le client HMR) :
+  GET /       -> 613 454 octets (brut, non gzip, dev)
+  GET /login  -> 611 299 octets (brut, non gzip, dev)
+  GET /packs  -> 610 843 octets (brut, non gzip, dev)
+  GET /history (redirection, non authentifié) -> 110 octets
+Aucune mesure de production (`npm run build:recharge` puis gzip JS+CSS servis) n'a été relancée pendant cette
+campagne (budget de temps/mémoire de la machine priorisé sur l'émulateur Android) ni trouvée déjà committée
+dans `docs/sprints/sprint-07.md` (le README renvoie au "compte rendu de sprint pour le détail par page", non
+présent). **Écart constaté, pas un défaut avéré** : impossible de confirmer ou d'infirmer le respect du budget
+300 Ko gzip sans le chiffre de build de production — à mesurer avant la prochaine campagne (`cd web &&
+NUXT_BUILD_DIR=/tmp/drama-recharge-check npm run build:recharge` puis `gzip -9 -c <fichier>.js | wc -c` par
+page, ou `npx nuxi analyze`).
+
+Historique et échec de paiement (RC-284, RC-285) :
+GET /topup/orders -> 200 {"items":[{"orderId":"...","status":"PAID","packSku":"coins_300","coins":300,
+  "bonusCoins":30,"amount":{"currency":"XOF","amountMinor":1700},"creditedAt":"...",...}],"total":1,...}
+Seconde commande (coins_100) puis POST /topup/fake/{orderId2} outcome=failed -> 303 ; GET /topup/orders/{orderId2}
+  -> {"status":"FAILED","coins":100,"bonusCoins":0,"creditedAt":null,...} ; GET /wallet inchangé (330, le pack
+  raté n'a rien crédité). OK.
+
+Nettoyage : compte qa-recharge-campagne3@qa.drama.local supprimé via `DELETE /me` en fin de campagne (voir
+journal) ; commande de recharge conservée dans l'historique du compte supprimé (règle produit : le grand livre et
+les achats ne sont jamais effacés par l'anonymisation, `AccountDeletionService`). Serveur Nuxt :3200 arrêté.

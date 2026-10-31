@@ -1,0 +1,45 @@
+Campagne 3 (2026-10-31) — retest des défauts DEF-002, DEF-003, DEF-004, DEF-008, DEF-009
+API backend http://localhost:3000, invité QA (device QA-campagne3-defects-0001)
+
+=== DEF-002: GET /search?genre=romance ===
+$ curl -s -w "\nHTTP %{http_code}\n" "http://localhost:3000/search?genre=romance"
+{"items":[{"id":"01a183cf-998e-7356-8838-d406a3bf396d","slug":"le-secret-du-lagon","title":"Le Secret du Lagon", ...}],"total":1,"page":1,"pageSize":20,"suggestions":[]}
+HTTP 200
+=> OK : recherche par genre seul fonctionne sans q. Fermé.
+
+=== DEF-003: PUT /progress sur l'épisode 3 verrouillé (invité sans déblocage) ===
+$ curl -s -w "\nHTTP %{http_code}\n" -X PUT http://localhost:3000/progress -H "Authorization: Bearer <token>" \
+  -d '{"episodeId":"01a183cf-999e-7364-94eb-9f36f21bc0fc","positionSeconds":5}'
+{"statusCode":403,"code":"EPISODE_LOCKED","message":"This episode must be unlocked first","details":{"episodeId":"01a183cf-999e-7364-94eb-9f36f21bc0fc"},"path":"/progress", ...}
+HTTP 403
+=> OK : la progression est refusée sur un épisode verrouillé (403 EPISODE_LOCKED au lieu de 200). Fermé.
+
+=== DEF-004: restriction de territoire à POST /play ===
+Série QA-Territoire Campagne3 créée pour le test (territories:["AQ"], 1 épisode READY), publiée, puis archivée
+en fin de test (nettoyage).
+$ curl -s -w "\nHTTP %{http_code}\n" "http://localhost:3000/series/<id>" -H "X-Country: TG"
+{"statusCode":404,"code":"SERIES_NOT_FOUND", ...}  HTTP 404
+$ curl -s -w "\nHTTP %{http_code}\n" "http://localhost:3000/series/<id>" -H "X-Country: AQ"
+{"id":"<id>", "title":"QA-Territoire Campagne3", ...}  HTTP 200
+$ curl -s -w "\nHTTP %{http_code}\n" -X POST "http://localhost:3000/episodes/<epId>/play" -H "Authorization: Bearer <token>" -H "X-Country: TG"
+{"statusCode":404,"code":"EPISODE_NOT_FOUND", ...}  HTTP 404
+$ curl -s -w "\nHTTP %{http_code}\n" -X POST "http://localhost:3000/episodes/<epId>/play" -H "Authorization: Bearer <token>" -H "X-Country: AQ"
+{"episodeId":"<epId>", ..., "manifestUrl":"http://192.168.1.145:9000/...", ...}  HTTP 200
+=> OK : /play applique désormais le même filtre de territoire que le catalogue (404 hors zone, 200 dans la zone).
+   Fermé.
+
+=== DEF-008: paramètres non validés (cursor, X-Country) ===
+$ curl -s -w "\nHTTP %{http_code}\n" "http://localhost:3000/feed?cursor=garbage" -H "Authorization: Bearer <token>"
+{"statusCode":400,"code":"VALIDATION_ERROR","details":{"errors":["cursor is not a valid feed cursor"]}, ...}
+HTTP 400
+$ curl -s -w "\nHTTP %{http_code}\n" "http://localhost:3000/home" -H "X-Country: ZZZZ"
+{"statusCode":400,"code":"VALIDATION_ERROR","details":{"errors":["X-Country must be an ISO 3166-1 alpha-2 country code"]}, ...}
+HTTP 400
+=> OK : un curseur illisible et un code pays hors ISO 3166-1 alpha-2 sont désormais rejetés explicitement (400
+   VALIDATION_ERROR) au lieu d'être silencieusement ignorés. Fermé.
+
+=== DEF-009: code d'erreur sur un favori mal formé ===
+$ curl -s -w "\nHTTP %{http_code}\n" -X PUT http://localhost:3000/me/favorites/abc -H "Authorization: Bearer <token>"
+{"statusCode":400,"code":"VALIDATION_ERROR","details":{"errors":["id must be a UUID"]}, ...}
+HTTP 400
+=> OK : code VALIDATION_ERROR cohérent avec les autres erreurs de validation (au lieu de BAD_REQUEST). Fermé.

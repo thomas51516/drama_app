@@ -1,16 +1,20 @@
-# Cahier de recette — lot « regarder » et compte (S05-QA-01, S06-QA-01)
+# Cahier de recette — lot « regarder » et compte (S05-QA-01, S06-QA-01, S07-QA-01)
 
-Version 1.1 — 30 octobre 2026 — QA DRAMA. Couvre les fonctions **P1** livrées aux sprints 1 à 5 : application
-Android (M-01, M-02, M-03, M-10 à M-16, M-50 à M-54), back-office (B-01, B-02, B-03, B-03bis, B-05, B-10, B-13 ;
-B-04 et B-11 v0 en information), API et règles métier du §8.4 observables.
-Référence : `docs/Cahier des charges — Application de micro-séries verticales (Android).md` (§4, §5, §7, §8.4, §15.3).
+Version 1.2 — 31 octobre 2026 — QA DRAMA. Couvre les fonctions **P1** livrées aux sprints 1 à 7 : application
+Android (M-01, M-02, M-03, M-10 à M-18, M-20 à M-24, M-34, M-40, M-41, M-50 à M-54), back-office (B-01, B-02, B-03,
+B-03bis, B-05, B-06, B-07, B-08, B-10, B-13 ; B-04, B-09 et B-11 v0 en information), API et règles métier du §8.4
+observables (dont la monétisation v1.4/v1.5), site de recharge mobile money (`web/apps/recharge`).
+Référence : `docs/Cahier des charges — Application de micro-séries verticales (Android).md` (§4, §5, §7, §8.4, §11, §12, §15.3).
 
-Historique : v1.0 (30/10, sprints 1 à 4) ; **v1.1** (30/10, campagne du jalon 1) ajoute les cas du sprint 5 :
+Historique : v1.0 (30/10, sprints 1 à 4) ; v1.1 (30/10, campagne du jalon 1) ajoute les cas du sprint 5 :
 réglages langue et notifications (§4.14), centre d'aide (§4.15), notifications (§4.16), accessibilité et taille de
-police (§4.17), API aide / notifications / push / événements (§5.5), pages back-office campagnes et centre d'aide (§6.8).
+police (§4.17), API aide / notifications / push / événements (§5.5), pages back-office campagnes et centre d'aide
+(§6.8) ; **v1.2** (31/10, campagne 3) ajoute les cas des sprints 6 et 7 : portefeuille, boutique, déblocage,
+récompenses, pub récompensée, classements, économie de données, protection d'écran (§4.18), API monétisation /
+récompenses / pub / offres / codes promo / classements (§5.6), site de recharge mobile money (§6.9).
 
-Les fonctions P1 non encore livrées (paywall M-20 à M-22, boutique M-30 à M-33, check-in M-40, B-06, B-08, B-09,
-B-11 complet) ne figurent pas dans ce cahier ; elles seront ajoutées aux sprints 7 à 10.
+Les fonctions P1 non encore livrées (DRM réel, certificate pinning / Play Integrity, bêta fermée, charge réelle à
+5 000 utilisateurs, vrai test d'intrusion — voir `docs/ops/`) ne figurent pas dans ce cahier.
 
 ## 1. Conventions
 
@@ -255,6 +259,25 @@ Réseaux à couvrir : Wi-Fi, 4G réelle (critère M-12), 3G simulée (émulateur
 | RC-333 | Cibles tactiles | `uiautomator dump` | Boutons, puces, interrupteurs | Rectangles ≥ 48 dp (≥ 126 px à 420 dpi, ≥ 96 px à 320 dpi) | P2 |
 | RC-334 | Interrupteurs et radios | TalkBack | Écran Paramètres | Une seule cible par ligne, état annoncé (« activé / désactivé », « sélectionné ») | P2 |
 
+### 4.18 M-20 à M-24, M-40, M-41, M-04, M-17, M-18, M-34 — Paywall, portefeuille, boutique, récompenses, pub, classements, économie de données, protection d'écran (S07-A1/A2, S08-A1, S10-A1/A2 ; ajouté campagne 3)
+
+| ID | Cas | Prérequis | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- | --- |
+| RC-340 | Portefeuille | Compte ou invité | Onglet Profil → Portefeuille | Solde (pièces achetées + bonus), historique des transactions ; `GET /wallet`, `GET /wallet/transactions` | P1 |
+| RC-341 | Boutique et achat simulé | `BILLING_VERIFIER=fake` en debug | 1. Onglet Boutique. 2. Acheter un pack | Packs et formules VIP affichés (prix dans la devise du pays) ; achat Google Play simulé en debug → `POST /billing/google/verify` 200, portefeuille crédité, reçu non rejouable (idempotent) | P1 |
+| RC-342 | Déblocage d'épisode par pièces | Solde insuffisant puis suffisant | 1. Épisode verrouillé → « Débloquer ». 2. Solde < coût. 3. Recharger. 4. Réessayer | Message « Solde insuffisant » (402 `INSUFFICIENT_COINS` avec coût/solde) ; après recharge, déblocage réussi, solde débité, lecture immédiate | P1 |
+| RC-343 | Déblocage automatique | Interrupteur « Débloquer automatiquement l'épisode suivant » | 1. Activer. 2. Terminer un épisode gratuit, enchaîner sur un épisode payant | `PATCH /me {autoUnlock:true}` ; épisode suivant débité et lu sans dialogue de confirmation | P1 |
+| RC-344 | Check-in quotidien | Écran récompenses | 1. Réclamer le jour. 2. Réclamer à nouveau le même jour | Pièces créditées, jauge des 7 jours mise à jour ; second appui désactivé / message « déjà réclamé » (409 `CHECKIN_ALREADY_CLAIMED`) | P1 |
+| RC-345 | Tâches de récompense | Au moins une tâche atteignable sans vidéo (ex. ajouter un favori) | 1. Réaliser l'action. 2. Observer la tâche. 3. Réclamer | Progression mise à jour (0→1), statut « à réclamer », bouton Réclamer actif ; pièces créditées, tâche non réclamable deux fois | P1 |
+| RC-346 | Pub récompensée | Épisode verrouillé, régie simulée (`AD_PROVIDER=fake`) | 1. « Débloquer avec une pub ». 2. Regarder la pub simulée jusqu'au bout | Éligibilité vérifiée (plafond quotidien non atteint) ; épisode débloqué sans débit de pièces à la confirmation serveur (SSV), plafond quotidien décrémenté | P1 |
+| RC-347 | Déblocage de série entière | Au moins un épisode verrouillé restant | 1. « Débloquer toute la série » → devis. 2. Confirmer | Devis `{lockedCount, fullPrice, discountPercent, price}` affiché avant confirmation ; solde insuffisant → 402 ; confirmation → tous les épisodes verrouillés débloqués en un débit, idempotent | P1 |
+| RC-348 | Code promo | Code actif créé en back-office | 1. Saisir un code valide. 2. Réessayer le même code. 3. Saisir un code inconnu | Pièces bonus créditées (expirantes) ; code déjà utilisé → message explicite (409) ; code inconnu → message « code invalide » (404) | P1 |
+| RC-349 | Classements | Au moins 2 séries avec des vues | Onglet/écran Classements | Palmarès hebdomadaire des séries les plus vues, affiche + rang + nombre de spectateurs ; `GET /rankings` | P1 |
+| RC-350 | Économie de données | Réglages → Économie de données | 1. Activer. 2. `am force-stop`, relancer | Qualité vidéo plafonnée (ex. 540p) en 4G/limité ; préférence persistée après redémarrage (DataStore local, pas d'appel serveur) | P1 |
+| RC-351 | Protection d'écran (FLAG_SECURE) | Épisode payant débloqué, en lecture | 1. Tenter une capture d'écran (`adb shell screencap` ou bouton physique) | Capture noire / refusée (« Impossible de prendre une capture d'écran en raison des restrictions de l'app ») ; comportement identique en partage d'écran / enregistrement | P1 |
+| RC-352 | Jeton push envoyé une seule fois (régression DEF-011) | Installation fraîche (`pm clear`) | 1. Lancer l'app. 2. `adb logcat -s Http AppStartup` | Un seul `PUT /me/devices/push` pour l'invité créé (pas deux appels à quelques ms d'intervalle) | P2 |
+| RC-353 | Puces de genre traduites (régression DEF-012) | Appareil en `en-US` ou Español | Loupe de l'accueil | Puces de genre dans la langue de l'interface (« Drama », « Comedy », pas « Drame », « Comédie ») | P2 |
+
 ## 5. API et règles métier (§8.2, §8.4, §12 sécurité)
 
 Exécution par `curl` contre `http://localhost:3000` ; l'utilisateur de test est un invité créé par `POST /auth/guest`.
@@ -328,6 +351,25 @@ Exécution par `curl` contre `http://localhost:3000` ; l'utilisateur de test est
 | RC-207 | FAQ publique | `GET /help/faq?lang=fr|en|es|pt` ; `lang=de` ; sans `lang` | 200 par langue avec titres de catégories traduits ; repli fr pour une langue inconnue (ou 400 explicite) ; 200 avec repli | P1 |
 | RC-208 | Contact | `POST /help/contact {}` ; catégorie inconnue ; corps valide ; sans jeton | 400 (sujet ≥ 3, message ≥ 10, catégorie dans la liste) ; 201 `{ticketId}` ; 401 | P1 |
 | RC-209 | Mes demandes et boîte support | `GET /help/tickets` ; `GET /admin/support/tickets` en EDITOR | 200 liste de l'utilisateur avec `status=OPEN` ; 403 `FORBIDDEN_ROLE` (SUPPORT, ADMIN requis) | P1 |
+
+### 5.6 Monétisation, récompenses, pub, offres, codes promo, classements (contrat v1.4/v1.5 ; ajouté campagne 3)
+
+| ID | Cas | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- |
+| RC-400 | Portefeuille et boutique | `GET /wallet` ; `GET /shop` | `{purchased, bonus, total, autoUnlock, bonusExpiring[]}` ; `/shop` liste les packs de pièces et formules VIP dans la devise résolue par `X-Country` | P1 |
+| RC-401 | Achat simulé et idempotence | `POST /billing/google/verify {purchaseToken:"fake:<sku>:<nonce>", productId, type:"inapp", idempotencyKey}` ×2 | 1er appel : 200 `{status:"credited", wallet}` ; 2e appel (même `purchaseToken`) : 200 `{status:"already_processed"}`, portefeuille inchangé | P1 |
+| RC-402 | Déblocage par pièces : insuffisant puis réussi | `POST /episodes/{id}/unlock` solde 0, puis après crédit | 402 `INSUFFICIENT_COINS {cost, balance}` ; après crédit, 200 `{method:"coins", charged, wallet}`, `/play` renvoie `access:"unlocked"` ; replay de la même `idempotencyKey` → pas de second débit | P1 |
+| RC-403 | Déblocage automatique | `PATCH /me {autoUnlock:true}` puis `GET /wallet` | 200 ; `GET /wallet.autoUnlock === true` | P1 |
+| RC-404 | Check-in quotidien | `GET /rewards/checkin` ; `POST /rewards/checkin {idempotencyKey}` ×2 le même jour | `GET` : barème et état du jour ; 1er `POST` : 200 pièces créditées (bonus expirant) ; 2e `POST` (jour inchangé) : 409 `CHECKIN_ALREADY_CLAIMED {nextClaimAt}` | P1 |
+| RC-405 | Tâches de récompense | `GET /rewards/tasks` ; déclencher une action (ex. `PUT /me/favorites/{id}`) ; `POST /rewards/tasks/{key}/claim` ×2 | Progression de la tâche concernée passe à `target` et `status:"CLAIMABLE"` ; 1ère réclamation : 200 pièces créditées ; 2e réclamation : 409 `TASK_NOT_CLAIMABLE {reason:"already_claimed"}` | P1 |
+| RC-406 | Pub récompensée : chaîne complète | `GET /ads/eligibility?episodeId=` ; `POST /ads/sessions {episodeId}` ; callback SSV simulé signé (`GET`/`POST /ads/reward?...&signature=HMAC-SHA256(AD_SSV_FAKE_SECRET, contenu)`) ; `POST /episodes/{id}/play` | Éligibilité `{eligible, remainingToday, dailyCap}` ; session `{sessionId, customData, expiresAt}` ; callback → `{accepted:true, episodeId}` ; épisode ensuite lisible sans débit de pièces (`GET /wallet` inchangé) ; `GET /ads/sessions/{id}` → `{status:"REWARDED", unlocked:true}` | P1 |
+| RC-407 | Déblocage de série entière | `GET /series/{id}/unlock-all/quote` ; `POST /series/{id}/unlock-all {idempotencyKey}` solde 0 puis après crédit ; `GET /series/{id}/unlocks` | Devis `{lockedCount, fullPrice, discountPercent, price}` ; 402 si solde insuffisant ; 200 après crédit `{unlockedEpisodeIds, charged, wallet}` ; `/unlocks` reflète tous les épisodes débloqués | P1 |
+| RC-408 | Codes promo | Code créé en back-office ; `POST /promo/redeem {code, idempotencyKey}` valide, puis répété, puis code inconnu | Valide : 200 `{coins, wallet}` (bonus expirant) ; répété (même compte) : 409 `PROMO_ALREADY_USED` ; inconnu : 404 `PROMO_INVALID` | P1 |
+| RC-409 | Classements | `GET /rankings` | 200 `{period, items:[{rank, series, viewers}]}`, triés par nombre de spectateurs décroissant | P1 |
+| RC-410 | Intégrité du grand livre | Après une série d'achats/déblocages/récompenses sur un même compte : `GET /wallet` et `GET /wallet/transactions` | `wallet.total` = somme des `amount` de toutes les lignes de `/wallet/transactions` (invariant du projet, jamais de mise à jour directe du solde) | P1 |
+| RC-411 | Limitation de débit des routes sensibles (sprint 8) | Rafale sur `POST /episodes/{id}/unlock` (30/IP/15 min), `POST /series/{id}/unlock-all` (30), `POST /ads/sessions` (20), `POST /promo/redeem` (10), `POST /topup/orders` (20), depuis la même IP | Chaque route répond 429 `RATE_LIMITED {rule, limit, retryAfterSeconds}` une fois la limite atteinte ; les autres routes/IP non affectées | P1 |
+| RC-412 | En-têtes de sécurité et santé après le correctif de charge (sprint 8) | `curl -I /health` ; `GET /health`, `GET /health/live` | `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN` ; `/health` et `/health/live` 200, `database`/`redis` `up` | P2 |
+| RC-413 | Appareil de confiance back-office : drapeau `current` | `POST /admin/auth/totp/verify {rememberDevice:true}` → `deviceToken` ; relogin avec ce `deviceToken` ; `GET /admin/auth/devices` | Relogin avec `deviceToken` valide → `status:"ok"` sans étape TOTP ; dans `/admin/auth/devices`, l'appareil qui a ouvert la session courante porte `current:true` | P1 |
 
 ## 6. Back-office web
 
@@ -421,6 +463,22 @@ Les cas réservés au rôle ADMIN (comptes, audit) sont exécutés avec un compt
 | RC-275 | Boîte de réception du support | `/help-center` onglet Support avec un compte SUPPORT ou ADMIN | Demandes `OPEN` listées, réponse → statut `ANSWERED` et notification `support_reply` côté utilisateur ; EDITOR : onglet absent | P1 |
 | RC-276 | Appareils de confiance | `/account` après une connexion avec « Se souvenir » | Appareil listé (date, expiration), révocable ; l'appareil courant signalé (`current`, à livrer) | P2 |
 
+### 6.9 Site de recharge mobile money (S09-WEB-01/02, contrat v1.5 ; ajouté campagne 3)
+
+Navigateur ou appels directs sur `http://localhost:3200` (port de dev par défaut de `apps/recharge`, à ne jamais
+confondre avec le back-office `:3100`). Compte public jetable créé par les routes `/auth/*` du contrat public
+(même compte que l'application mobile), jamais le JWT admin.
+
+| ID | Cas | Étapes | Résultat attendu | Prio |
+| --- | --- | --- | --- | --- |
+| RC-280 | Garde d'authentification SSR | `GET /history`, `/pay/{id}`, `/account` sans session | 302 vers `/login?redirect=<page>` ; `/`, `/login`, `/packs`, `/legal/*` accessibles sans session | P1 |
+| RC-281 | Connexion / inscription au même compte | Page `/login`, onglet e-mail : « Créer un compte » puis « J'ai déjà un compte » | Mêmes routes publiques que l'app (`/auth/email/register`, `/auth/email/login`) ; session ouverte, cookies `drama_user_token`/`drama_user_refresh` | P1 |
+| RC-282 | Commande d'un pack | Page `/packs`, choisir un pack, `/pay/{orderId}` | `POST /topup/orders {packSku, country, phone, idempotencyKey}` → 201 `{orderId, amount, paymentUrl, expiresAt}` ; redirection vers la page de paiement (`paymentUrl`) | P1 |
+| RC-283 | Paiement simulé et crédit | Page simulée `GET /topup/fake/{orderId}`, bouton « Payer » | `POST /topup/fake/{orderId} outcome=paid` (webhook signé envoyé côté serveur par la page simulée) → commande `status:"PAID"`, `GET /wallet` crédité (pack + bonus), `GET /topup/orders/{id}.creditedAt` renseigné | P1 |
+| RC-284 | Échec de paiement | Page simulée, bouton « Échouer » | `POST /topup/fake/{orderId} outcome=failed` → commande `status:"FAILED"`, portefeuille inchangé | P2 |
+| RC-285 | Historique | Page `/history`, connecté | `GET /topup/orders` ; commandes triées antichronologiquement avec leur statut | P1 |
+| RC-286 | Budget de page (§11, < 300 Ko gzip JS+CSS) | Build de production (`npm run build:recharge`), mesurer le JS+CSS gzip servi par page | Chaque page (`/`, `/login`, `/packs`, `/pay/{id}`, `/history`) < 300 Ko gzip de JS+CSS ; **ne pas mesurer en mode `nuxt dev`** (bundle non minifié, source maps, client HMR : taille brute largement supérieure et non représentative) | P2 |
+
 ## 7. Critères d'acceptation §15.3 — liste de contrôle
 
 | # | Critère | Comment on le vérifie | État au 30/10/2026 |
@@ -434,4 +492,6 @@ Les cas réservés au rôle ADMIN (comptes, audit) sont exécutés avec un compt
 
 Critères techniques §7 suivis à chaque campagne : démarrage à froid < 2,5 s sur 2 Go (RC-130), première image < 1,5 s en 4G (RC-051), APK/AAB < 30 Mo (RC-131), sessions sans plantage ≥ 99,5 % (RC-132), 60 i/s (RC-133), accessibilité (RC-330 à 334).
 
-Rapports : `campagne-2026-10-30.md` (n° 1), `campagne-2026-10-30-jalon1.md` (n° 2), `rapport-jalon-1.md` (synthèse client du jalon 1).
+Rapports : `campagne-2026-10-30.md` (n° 1), `campagne-2026-10-30-jalon1.md` (n° 2), `rapport-jalon-1.md` (synthèse
+client du jalon 1), `campagne-2026-10-31.md` (n° 3 : défauts corrigés, monétisation, sécurité/perf sprint 8,
+site de recharge).
