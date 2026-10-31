@@ -40,7 +40,17 @@ Créer `android/local.properties` (ignoré par git) :
 
 ```properties
 sdk.dir=/home/<vous>/Android/Sdk
+# Optionnel, uniquement pour tester le flux Google (sprint 4) :
+# drama.googleWebClientId=<id client OAuth Web>
+# Optionnel, uniquement pour tester le flux de pub récompensée simulée (sprint 7) : sans cette ligne,
+# le bouton « Regarder une pub » du paywall reste bloqué sur « confirmation en attente » en boucle,
+# car BuildConfig.AD_SSV_FAKE_SECRET est vide et la signature envoyée au serveur est invalide.
+# drama.adSsvFakeSecret=dev-only-ad-ssv-fake-secret-0123456789
 ```
+
+Ces deux clés sont perdues après tout clonage ou changement de poste : à chaque nouvelle machine de
+développement, vérifier qu'elles sont présentes avant de reconstruire, sinon ces deux parcours échouent
+silencieusement sans message d'erreur clair pour la personne qui teste.
 
 ## Commandes
 
