@@ -13,11 +13,18 @@ import kotlinx.coroutines.flow.Flow
  * `get*` one-shots return a fresh cache hit or the network answer, falling back to a stale cache on error.
  */
 interface CatalogRepository {
-    fun observeHome(): Flow<Resource<HomeContent>>
+    /** [force] bypasses the TTL and always re-fetches (pull-to-refresh, retry), never a normal subscription. */
+    fun observeHome(force: Boolean = false): Flow<Resource<HomeContent>>
 
-    fun observeSeries(seriesId: String): Flow<Resource<Series>>
+    fun observeSeries(
+        seriesId: String,
+        force: Boolean = false,
+    ): Flow<Resource<Series>>
 
-    fun observeEpisodes(seriesId: String): Flow<Resource<List<Episode>>>
+    fun observeEpisodes(
+        seriesId: String,
+        force: Boolean = false,
+    ): Flow<Resource<List<Episode>>>
 
     suspend fun getSeries(seriesId: String): AppResult<Series>
 

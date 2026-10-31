@@ -23,7 +23,12 @@ data class SeriesDetail(
 }
 
 fun interface ObserveSeriesDetailUseCase {
-    operator fun invoke(seriesId: String): Flow<SeriesDetail>
+    // Kotlin forbids a default value on a fun-interface's abstract method; callers (SeriesViewModel.load)
+    // always pass it explicitly, so this costs nothing in practice.
+    operator fun invoke(
+        seriesId: String,
+        force: Boolean,
+    ): Flow<SeriesDetail>
 }
 
 class DefaultObserveSeriesDetailUseCase(
@@ -31,10 +36,13 @@ class DefaultObserveSeriesDetailUseCase(
     private val history: WatchHistoryRepository,
     private val progress: WatchProgressRepository,
 ) : ObserveSeriesDetailUseCase {
-    override fun invoke(seriesId: String): Flow<SeriesDetail> =
+    override fun invoke(
+        seriesId: String,
+        force: Boolean,
+    ): Flow<SeriesDetail> =
         combine(
-            catalog.observeSeries(seriesId),
-            catalog.observeEpisodes(seriesId),
+            catalog.observeSeries(seriesId, force),
+            catalog.observeEpisodes(seriesId, force),
             history.observeForSeries(seriesId),
             progress.observeForSeries(seriesId),
         ) { series, episodes, lastWatched, progressList ->

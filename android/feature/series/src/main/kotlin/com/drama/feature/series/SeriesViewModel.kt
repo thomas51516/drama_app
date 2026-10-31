@@ -208,7 +208,12 @@ class SeriesViewModel
             }
         }
 
-        fun retry() = load()
+        /**
+         * Also used by pull-to-refresh (SeriesScreen). force = true: a plain reload would be a no-op
+         * while the 10-minute series cache is still fresh, silently ignoring the explicit refresh
+         * (same bug as HomeViewModel.refresh, found 2026-10-31 — a published series not showing up).
+         */
+        fun retry() = load(force = true)
 
         fun onToggleSynopsis() = uiStateFlow.update { it.copy(synopsisExpanded = !it.synopsisExpanded) }
 
@@ -272,11 +277,11 @@ class SeriesViewModel
             viewModelScope.launch { push.markPermissionPromptShown() }
         }
 
-        private fun load() {
+        private fun load(force: Boolean = false) {
             collectJob?.cancel()
             collectJob =
                 viewModelScope.launch {
-                    observeSeriesDetail(seriesId).collect { detail ->
+                    observeSeriesDetail(seriesId, force).collect { detail ->
                         uiStateFlow.update { state ->
                             state.copy(
                                 isLoading = !detail.hasContent && detail.error == null,

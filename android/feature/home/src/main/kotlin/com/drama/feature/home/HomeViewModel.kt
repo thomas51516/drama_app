@@ -100,9 +100,13 @@ class HomeViewModel
             load()
         }
 
-        /** (Re)starts the stale-while-revalidate collection; used by the retry button and pull-to-refresh. */
+        /**
+         * (Re)starts the stale-while-revalidate collection, bypassing the TTL so the retry button and
+         * pull-to-refresh actually hit the network (found 2026-10-31: a plain `load()` here was a no-op
+         * while the 5-minute cache was still fresh, so a just-published series stayed invisible).
+         */
         fun refresh() {
-            load()
+            load(force = true)
             viewModelScope.launch { genres.refresh(force = true) }
         }
 
@@ -130,19 +134,22 @@ class HomeViewModel
             val previous = languageTag
             languageTag = tag
             if (previous != null && previous != tag) {
-                load()
+                // force = true: a plain load() would silently keep serving the home rows cached in the
+                // previous language while the TTL is still fresh (same class of bug as the refresh() fix
+                // above — the comment above promised "a change triggers a fresh fetch" but didn't).
+                load(force = true)
                 // DEF-013 : sans cela, les libellés de genre restaient dans l'ancienne langue tant
                 // qu'un autre écran ne rafraîchissait pas le cache partagé de GenresRepository.
                 viewModelScope.launch { genres.refresh() }
             }
         }
 
-        private fun load() {
+        private fun load(force: Boolean = false) {
             loadTopOfDay()
             collectJob?.cancel()
             collectJob =
                 viewModelScope.launch {
-                    observeHome().collect { resource ->
+                    observeHome(force).collect { resource ->
                         resource.data?.let { serverContent = it }
                         uiStateFlow.update { state ->
                             when (resource) {

@@ -30,7 +30,7 @@ import javax.inject.Inject
 class FakeCatalogRepository
     @Inject
     constructor() : CatalogRepository {
-        override fun observeHome(): Flow<Resource<HomeContent>> =
+        override fun observeHome(force: Boolean): Flow<Resource<HomeContent>> =
             flow {
                 emit(Resource.Loading())
                 delay(SIMULATED_LATENCY_MS)
@@ -53,7 +53,10 @@ class FakeCatalogRepository
                 )
             }
 
-        override fun observeSeries(seriesId: String): Flow<Resource<Series>> =
+        override fun observeSeries(
+            seriesId: String,
+            force: Boolean,
+        ): Flow<Resource<Series>> =
             flow {
                 when (val result = getSeries(seriesId)) {
                     is AppResult.Success -> emit(Resource.Success(result.value))
@@ -61,7 +64,10 @@ class FakeCatalogRepository
                 }
             }
 
-        override fun observeEpisodes(seriesId: String): Flow<Resource<List<Episode>>> =
+        override fun observeEpisodes(
+            seriesId: String,
+            force: Boolean,
+        ): Flow<Resource<List<Episode>>> =
             flow {
                 when (val result = getEpisodes(seriesId)) {
                     is AppResult.Success -> emit(Resource.Success(result.value))

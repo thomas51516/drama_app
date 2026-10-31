@@ -15,6 +15,11 @@ import kotlinx.coroutines.flow.map
  *    continues with the cache observation (which now carries the refreshed value) as [Resource.Success];
  * 3. a failed refresh ends the flow with [Resource.Error] carrying the stale value, so the screen stays
  *    usable offline and can offer a retry.
+ *
+ * [force] skips the freshness check entirely (always refreshes): without it, a user-triggered pull-to-refresh
+ * that merely restarts this flow has no effect while the cache is still within [ttlMs] — the previous
+ * behaviour, which silently ignored an explicit refresh request for up to the whole TTL window (found
+ * 2026-10-31: a newly published series stayed invisible on Home through repeated pull-to-refresh).
  */
 fun <T : Any> staleWhileRevalidate(
     nowEpochMs: () -> Long,
@@ -23,10 +28,11 @@ fun <T : Any> staleWhileRevalidate(
     readCache: suspend () -> T?,
     observeCache: () -> Flow<T?>,
     refresh: suspend () -> AppResult<Unit>,
+    force: Boolean = false,
 ): Flow<Resource<T>> =
     flow {
         val cached = readCache()
-        val isFresh = cached != null && isFresh(fetchedAt(), nowEpochMs(), ttlMs)
+        val isFresh = !force && cached != null && isFresh(fetchedAt(), nowEpochMs(), ttlMs)
         if (isFresh) {
             emitAll(observeCache().filterNotNull().map { Resource.Success(it, fromCache = true) })
             return@flow

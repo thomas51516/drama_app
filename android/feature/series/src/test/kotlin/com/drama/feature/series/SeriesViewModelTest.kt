@@ -81,7 +81,7 @@ class SeriesViewModelTest {
                         source?.let { put(SeriesRoute.ARG_SOURCE, it) }
                     },
                 ),
-            observeSeriesDetail = ObserveSeriesDetailUseCase { details },
+            observeSeriesDetail = ObserveSeriesDetailUseCase { _, _ -> details },
             favorites = favorites,
             shareLinks = HostShareLinkProvider("links.drama.example"),
             analytics = analytics,

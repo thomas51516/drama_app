@@ -51,7 +51,7 @@ class RemoteCatalogRepository(
         logger: Logger,
     ) : this(api, local, errorMapper, media, clock, logger, HOME_TTL_MS, SERIES_TTL_MS)
 
-    override fun observeHome(): Flow<Resource<HomeContent>> =
+    override fun observeHome(force: Boolean): Flow<Resource<HomeContent>> =
         staleWhileRevalidate(
             nowEpochMs = clock::nowEpochMs,
             ttlMs = homeTtlMs,
@@ -59,9 +59,13 @@ class RemoteCatalogRepository(
             readCache = { local.getHome() },
             observeCache = { local.observeHome() },
             refresh = ::refreshHome,
+            force = force,
         )
 
-    override fun observeSeries(seriesId: String): Flow<Resource<Series>> =
+    override fun observeSeries(
+        seriesId: String,
+        force: Boolean,
+    ): Flow<Resource<Series>> =
         staleWhileRevalidate(
             nowEpochMs = clock::nowEpochMs,
             ttlMs = seriesTtlMs,
@@ -69,9 +73,13 @@ class RemoteCatalogRepository(
             readCache = { local.getSeries(seriesId) },
             observeCache = { local.observeSeries(seriesId) },
             refresh = { refreshSeries(seriesId).map { } },
+            force = force,
         )
 
-    override fun observeEpisodes(seriesId: String): Flow<Resource<List<Episode>>> =
+    override fun observeEpisodes(
+        seriesId: String,
+        force: Boolean,
+    ): Flow<Resource<List<Episode>>> =
         staleWhileRevalidate(
             nowEpochMs = clock::nowEpochMs,
             ttlMs = seriesTtlMs,
@@ -79,6 +87,7 @@ class RemoteCatalogRepository(
             readCache = { local.getEpisodes(seriesId) },
             observeCache = { local.observeEpisodes(seriesId) },
             refresh = { refreshEpisodes(seriesId).map { } },
+            force = force,
         )
 
     override suspend fun getSeries(seriesId: String): AppResult<Series> {
