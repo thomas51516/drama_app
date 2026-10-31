@@ -1,11 +1,17 @@
 # Déploiement en production — runbook (S10-OPS)
 
-Cahier des charges §12. **Ce document et les gabarits qu'il décrit (`infra/docker-compose.prod.yml`,
-`infra/traefik/`, `infra/.env.prod.example`) n'ont jamais tourné contre un vrai hébergeur, un vrai
-domaine ni un vrai certificat — il n'existe aucun des trois pendant ce sprint.** Ce qui a réellement
-été vérifié : la syntaxe du compose (`docker compose config`), et l'image `backend/Dockerfile`
-construite et démarrée avec succès en local contre les PostgreSQL/Redis de développement (voir
-§6). Le premier déploiement réel doit revérifier chaque point du §7 avant d'y faire confiance.
+Cahier des charges §12. **Premier déploiement réel effectué le 2026-10-31** sur un VPS OVH partagé
+avec un autre site (voir §9) : `https://dramanye.odootogo.com` répond (API + PostgreSQL + Redis +
+MinIO auto-hébergés, voir §9 pour le gabarit utilisé), certificat Let's Encrypt réel obtenu via le
+nginx système déjà présent sur l'hôte (pas Traefik — §9), parcours fonctionnel minimal vérifié
+(invité → accueil avec contenu réel). **Ce n'est pas encore un vrai lancement commercial** :
+`BILLING_VERIFIER`/`AD_PROVIDER`/`MOBILE_MONEY_PROVIDER` restent `fake` (aucun compte CinetPay/
+Google Play/AdMob réel pour l'instant), ce qui impose `NODE_ENV=development` (seul moyen que
+`env.schema.ts` autorise ces `fake`) — à revoir dès que ces comptes existent (§9, dernière section).
+
+`infra/docker-compose.prod.yml` (Traefik + services managés externes) reste un gabarit non testé
+contre un hébergeur dédié : syntaxiquement validé et l'image testée en local (§6), mais jamais
+utilisé en vrai — voir §9 pour la variante auto-hébergée qui, elle, a tourné.
 
 ## 1. Portée
 
@@ -193,3 +199,47 @@ de secrets choisi :
   ou équivalent selon l'outil retenu).
 - Rotation : un secret compromis ou simplement ancien se change dans le coffre puis se redéploie
   (`docker compose … up -d api` relit `infra/.env.prod` à chaque démarrage, pas de cache).
+
+## 9. Déploiement réel du 2026-10-31 (VPS partagé, auto-hébergé)
+
+L'hôte disponible (`vps-7e2894cc.vps.ovh.ca`, Ubuntu 26.04, 4 vCPU/7.6 Go) héberge déjà un autre
+site client (ERP Odoo) via un nginx système + certbot sur les ports 80/443 — ce n'est pas un hôte
+dédié. Conséquences sur le gabarit :
+
+- **`infra/docker-compose.prod.selfhosted.yml`** (nouveau fichier, variante auto-hébergée de
+  `docker-compose.prod.yml`) remplace Traefik : PostgreSQL, Redis et MinIO tournent dans cette pile,
+  publiés uniquement sur `127.0.0.1` (jamais `0.0.0.0`) ; c'est le nginx système existant qui fait la
+  terminaison TLS et le reverse proxy, exactement comme pour l'autre site de l'hôte. Deux vhosts
+  ajoutés sans toucher à la config existante : `dramanye-api.conf` (→ `127.0.0.1:3001`) et
+  `dramanye-media.conf` (→ `127.0.0.1:9000`, MinIO), chacun avec son certificat Let's Encrypt
+  (`certbot --nginx -d <domaine>`).
+- **MinIO reste le stockage** (aucun budget S3/CDN réel pour l'instant) : `S3_ENDPOINT` et
+  `CDN_BASE_URL` pointent tous les deux sur `https://media.dramanye.odootogo.com` (nginx devant
+  MinIO), jamais sur le nom de service Docker interne — `presignPut`/`presignGet` signent des URLs
+  avec l'hôte de `S3_ENDPOINT`, qui doit donc être joignable par le navigateur de l'uploadeur.
+  `extra_hosts` épingle ce domaine sur l'IP publique de l'hôte dans le conteneur `api`, pour ne pas
+  dépendre du hairpin NAT du VPS.
+- **Deux bugs trouvés et corrigés dans `backend/Dockerfile` à cette occasion** (jamais détectés avant
+  faute d'avoir réellement construit puis *utilisé* l'image contre une vraie base) :
+  1. Pas de `ffmpeg`/`ffprobe` dans l'image runtime → `TRANSCODE_PROVIDER=local` (aucun prestataire
+     de transcodage géré pour l'instant) aurait échoué au premier épisode envoyé. Ajout de
+     `RUN apk add --no-cache ffmpeg` dans l'étape `runtime`.
+  2. `prisma db seed` (exécuté via `tsx`, pas le code compilé) importe le client généré depuis
+     `src/generated/prisma/`, jamais copié dans l'image runtime (seul `dist/` l'était) → échec
+     `ERR_MODULE_NOT_FOUND` au premier `prisma db seed`. Ajout de
+     `COPY --from=build /app/src/generated ./src/generated`.
+- **`BILLING_VERIFIER=fake` / `AD_PROVIDER=fake` / `MOBILE_MONEY_PROVIDER=fake`** (aucun compte réel
+  CinetPay/Google Play/AdMob) → `NODE_ENV=development` (seule valeur que `env.schema.ts` autorise
+  avec ces `fake`), `SENTRY_ENVIRONMENT=staging` pour que ça reste visible que ce n'est pas un vrai
+  lancement. `PUSH_PROVIDER=log` et `SMS_PROVIDER=console` pour la même raison (pas de compte
+  Firebase/SMS réel). **À revoir dès qu'un de ces comptes existe** : changer la seule variable
+  concernée dans `infra/.env.prod` sur l'hôte et redéployer (§4) — rien d'autre à changer.
+- Vérifié en conditions réelles (pas seulement en local) : certificat Let's Encrypt obtenu pour les
+  deux domaines, en-tête HSTS présent, `/metrics` renvoie 404 publiquement, ports PostgreSQL/Redis/
+  API/MinIO fermés depuis l'extérieur (seuls 80/443 ouverts), parcours invité → accueil fonctionnel
+  avec le contenu du seed, fichier déposé dans le bucket effectivement servi en HTTPS public.
+- **Pas encore fait** : contenu réel (les épisodes déjà ingérés en local, ex. « La Nounou », ne sont
+  pas sur cet hôte — seul le contenu du seed y est) ; back-office et site de recharge (hors périmètre
+  de ce runbook, §1) ; sauvegardes `postgres-backups` copiées hors de cet hôte (tournent déjà en
+  local au volume, voir l'avertissement dans `docker-compose.prod.selfhosted.yml`) ; supervision
+  (§7.9) ; test d'intrusion (§7.8).

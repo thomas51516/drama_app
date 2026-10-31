@@ -1,0 +1,180 @@
+# DRAMA — gabarit de déploiement production AUTO-HÉBERGÉ (alternative documentée dans
+# docs/ops/deploiement.md §2/§3 : utilisé quand aucun PostgreSQL/Redis managé n'est budgété).
+#
+# Différences avec docker-compose.prod.yml :
+#   * PostgreSQL, Redis et MinIO tournent dans CETTE pile (pas de service managé externe) — ce choix
+#     assume la responsabilité de la disponibilité et des sauvegardes normalement portée par un
+#     fournisseur managé (docs/ops/deploiement.md §2).
+#   * Pas de Traefik : cet hôte sert déjà d'autres sites avec un nginx système + certbot sur les
+#     ports 80/443. L'API et MinIO ne publient leur port QUE sur 127.0.0.1 ; c'est le nginx système
+#     (hors de cette pile, voir le vhost dans docs/ops/) qui fait la terminaison TLS et reverse-proxy
+#     vers ces ports locaux, exactement comme pour les autres sites déjà sur l'hôte.
+#   * MinIO reste un choix temporaire (le gabarit docker-compose.prod.yml documente bien que MinIO
+#     est impropre à la production à grande échelle — pas de réplication) : à remplacer par un vrai
+#     S3 + CDN dès que ce budget existe, sans changer le reste de la pile (StorageService ne connaît
+#     que S3_ENDPOINT/CDN_BASE_URL).
+#
+# Démarrage :
+#   docker compose -f infra/docker-compose.prod.selfhosted.yml --env-file infra/.env.prod up -d --build
+
+name: drama-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: drama-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-drama}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-drama}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - drama-prod
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-drama} -d ${POSTGRES_DB:-drama}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Sauvegarde quotidienne (pg_dump -Fc, infra/scripts/backup.sh) dans le volume postgres-backups.
+  # À COPIER PÉRIODIQUEMENT HORS DE CET HÔTE (docs/ops/reprise.md §6) : un volume Docker local ne
+  # protège pas d'une panne disque ou d'une suppression de l'hôte — ex. un `cron` qui envoie
+  # `postgres-backups` vers un stockage objet séparé.
+  postgres-backup:
+    image: postgres:16-alpine
+    container_name: drama-postgres-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-drama}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-drama}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - postgres-backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/drama-backup.sh:ro
+    networks:
+      - drama-prod
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          if sh /usr/local/bin/drama-backup.sh "$$BACKUP_DIR"; then
+            sleep "$$BACKUP_INTERVAL_SECONDS"
+          else
+            echo "[backup] échec $$(date -u +%FT%TZ), nouvelle tentative dans 5 min"
+            sleep 300
+          fi
+        done
+
+  redis:
+    image: redis:7-alpine
+    container_name: drama-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - drama-prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Stockage objet temporaire (voir l'avertissement en tête de fichier). Publié UNIQUEMENT sur
+  # 127.0.0.1 : la vraie exposition publique passe par le nginx système (vhost media.*, TLS).
+  minio:
+    image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+    container_name: drama-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_DEFAULT_BUCKETS: ${S3_BUCKET:-drama-media}:download
+      MINIO_API_PORT_NUMBER: "9000"
+      MINIO_CONSOLE_PORT_NUMBER: "9001"
+      # Le nginx système sert media.<domaine> en HTTPS ; MinIO lui-même n'a besoin d'autoriser que
+      # cette origine pour les PUT directs depuis le futur back-office.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGINS:-*}
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/bitnami/minio/data
+    networks:
+      - drama-prod
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio-init:
+    image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+    container_name: drama-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${S3_BUCKET:-drama-media}
+    networks:
+      - drama-prod
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing "local/$$S3_BUCKET" &&
+        mc anonymous set download "local/$$S3_BUCKET" &&
+        echo "Bucket $$S3_BUCKET prêt"
+    restart: "no"
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: ${API_IMAGE:-drama-api}:${API_IMAGE_TAG:-latest}
+    container_name: drama-api
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env.prod
+    environment:
+      PORT: "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PORT:-3001}:3000"
+    networks:
+      - drama-prod
+    extra_hosts:
+      # S3_ENDPOINT/CDN_BASE_URL point at the public media domain (nginx + Let's Encrypt, see
+      # docs/ops/deploiement.md): pin it to the host's own public IP so the container never depends
+      # on hairpin NAT working through the VPS's gateway. Both vars required when S3_ENDPOINT is a
+      # domain served by this same host.
+      - "${MEDIA_DOMAIN}:${PUBLIC_HOST_IP}"
+
+networks:
+  drama-prod:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  postgres-backups:
+  redis-data:
+  minio-data:

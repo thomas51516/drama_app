@@ -25,11 +25,20 @@ RUN npm run build
 FROM node:24-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+# ffmpeg/ffprobe: only needed when TRANSCODE_PROVIDER=local (no managed transcoding service
+# configured yet, docs/ops/deploiement.md §2) — harmless otherwise (TRANSCODE_PROVIDER=webhook
+# never calls FfmpegRunner).
+RUN apk add --no-cache ffmpeg
 RUN addgroup -S drama && adduser -S drama -G drama
 COPY --from=build /app/package.json /app/prisma.config.ts ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+# `prisma db seed` runs prisma/seed.ts directly through tsx (not the compiled dist/), and it
+# imports the generated client from its schema.prisma `output` path (src/generated/prisma) rather
+# than dist/generated/prisma — needed only to run the seed from this image, the compiled app under
+# dist/ never reads this copy.
+COPY --from=build /app/src/generated ./src/generated
 USER drama
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
