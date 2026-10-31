@@ -169,6 +169,28 @@ services:
       # domain served by this same host.
       - "${MEDIA_DOMAIN}:${PUBLIC_HOST_IP}"
 
+  # Site de recharge (web/apps/recharge, Nuxt SSR) — le back-office (web/apps/admin) n'a pas besoin
+  # d'un service ici : c'est un export statique servi directement par le nginx système
+  # (docs/ops/deploiement.md §9). `runtimeConfig.public` est résolu par Nitro à chaque requête à
+  # partir de ces variables NUXT_PUBLIC_* (pas figé au build, contrairement au back-office statique).
+  web-recharge:
+    build:
+      context: ../web
+      dockerfile: apps/recharge/Dockerfile
+    image: ${RECHARGE_IMAGE:-drama-recharge}:${RECHARGE_IMAGE_TAG:-latest}
+    container_name: drama-web-recharge
+    restart: unless-stopped
+    init: true
+    environment:
+      NUXT_PUBLIC_API_BASE: ${RECHARGE_API_BASE}
+      NUXT_PUBLIC_API_MOCK: "false"
+      NUXT_PUBLIC_CDN_BASE_URL: ${CDN_BASE_URL}
+      NUXT_PUBLIC_GOOGLE_CLIENT_ID: ${RECHARGE_GOOGLE_CLIENT_ID:-}
+    ports:
+      - "127.0.0.1:${RECHARGE_PORT:-3002}:3000"
+    networks:
+      - drama-prod
+
 networks:
   drama-prod:
     driver: bridge

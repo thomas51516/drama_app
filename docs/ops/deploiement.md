@@ -15,11 +15,9 @@ utilisé en vrai — voir §9 pour la variante auto-hébergée qui, elle, a tour
 
 ## 1. Portée
 
-Ce runbook couvre l'API (`backend/`). **Le back-office et le site de recharge (`web/`) ne sont pas
-couverts ici** (hors périmètre de ce ticket, qui ne touche que `backend/`, `infra/`, `docs/`) : ils
-ont leur propre pipeline (`web-ci.yml`) et leur propre choix d'hébergement à faire séparément
-(site Nuxt : hébergement statique/SSR type Vercel/Netlify, ou son propre conteneur derrière le
-même Traefik — à documenter quand ce choix sera fait).
+Ce runbook couvrait à l'origine seulement l'API (`backend/`) ; le choix d'hébergement du
+back-office et du site de recharge a été fait et déployé le 2026-10-31 sur le même hôte (§9) —
+pas sur un service type Vercel/Netlify.
 
 ## 2. Prérequis avant le premier déploiement
 
@@ -239,7 +237,38 @@ dédié. Conséquences sur le gabarit :
   API/MinIO fermés depuis l'extérieur (seuls 80/443 ouverts), parcours invité → accueil fonctionnel
   avec le contenu du seed, fichier déposé dans le bucket effectivement servi en HTTPS public.
 - **Pas encore fait** : contenu réel (les épisodes déjà ingérés en local, ex. « La Nounou », ne sont
-  pas sur cet hôte — seul le contenu du seed y est) ; back-office et site de recharge (hors périmètre
-  de ce runbook, §1) ; sauvegardes `postgres-backups` copiées hors de cet hôte (tournent déjà en
-  local au volume, voir l'avertissement dans `docker-compose.prod.selfhosted.yml`) ; supervision
-  (§7.9) ; test d'intrusion (§7.8).
+  pas sur cet hôte — seul le contenu du seed y est) ; sauvegardes `postgres-backups` copiées hors de
+  cet hôte (tournent déjà en local au volume, voir l'avertissement dans
+  `docker-compose.prod.selfhosted.yml`) ; supervision (§7.9) ; test d'intrusion (§7.8).
+
+### Back-office et site de recharge (`web/`, 2026-10-31)
+
+Déployés sur le même hôte, chacun son sous-domaine et son certificat Let's Encrypt :
+
+- **Back-office** (`web/apps/admin`, `ssr: false`) : export **statique** (`npm run generate`, pas
+  `build` — `build` seul ne produit pas de `index.html` prérendu, voir le commentaire Nitro
+  « HTML content not prerendered because ssr: false »), copié dans `/var/www/dramanye-admin` sur
+  l'hôte. Servi directement par le nginx système (`dramanye-admin.conf`, `try_files … /index.html`
+  pour les routes dynamiques type `/users/<id>`) — **aucun conteneur, aucun processus Node** pour ce
+  site : les variables `NUXT_PUBLIC_*` sont figées dans le JS au moment du `generate`, donc tout
+  changement de configuration (URL d'API, etc.) demande de relancer `generate` et de recopier
+  `.output/public/`.
+- **Site de recharge** (`web/apps/recharge`, `ssr: true`) : tourne en continu (rendu serveur Nitro),
+  conteneurisé (`web/apps/recharge/Dockerfile`, nouveau fichier, build depuis la racine `web/` pour
+  les workspaces npm) et ajouté au même `infra/docker-compose.prod.selfhosted.yml` que l'API
+  (service `web-recharge`, publié seulement sur `127.0.0.1:3002`, nginx fait la terminaison TLS).
+  Contrairement au back-office statique, ses `NUXT_PUBLIC_*` sont lus par le serveur à chaque requête
+  (pas figés au build) : un changement de configuration ne demande qu'un redémarrage du conteneur
+  (`docker compose … up -d web-recharge`), pas une reconstruction.
+- **Bug de lockfile trouvé en construisant l'image** (`web/apps/recharge/Dockerfile`) : `npm ci`
+  échoue avec `node:24-alpine` (npm embarqué plus récent que celui qui a généré
+  `web/package-lock.json`, résolution différente de dépendances optionnelles comme `@emnapi/core`)
+  → le Dockerfile épingle `npm install -g npm@11.6.2` avant `npm ci`. Si `web/package-lock.json` est
+  régénéré avec un npm plus récent, remonter cette version épinglée en conséquence (ou le constater
+  à nouveau en reconstruisant l'image).
+- `infra/.env.prod` a deux variables de plus : `RECHARGE_API_BASE` (= `API_DOMAIN` public) et
+  `TOPUP_RETURN_URL` mis à jour vers `https://recharge.dramanye.odootogo.com/retour` (était vide
+  avant que ce site existe).
+- Vérifié : les trois domaines répondent en HTTPS, le port interne du site de recharge (3002) est
+  fermé depuis l'extérieur, le repli SPA du back-office fonctionne sur une route dynamique non
+  prérendue.
