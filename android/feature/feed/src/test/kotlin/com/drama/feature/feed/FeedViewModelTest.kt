@@ -18,6 +18,7 @@ import com.drama.domain.model.Episode
 import com.drama.domain.model.EpisodeAccess
 import com.drama.domain.model.FeedItem
 import com.drama.domain.model.FeedPage
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.LikeState
 import com.drama.domain.model.PlaySession
 import com.drama.domain.model.PlaybackSource
@@ -30,6 +31,7 @@ import com.drama.domain.model.VideoQuality
 import com.drama.domain.model.WatchProgress
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.FeedRepository
+import com.drama.domain.repository.GenresRepository
 import com.drama.domain.repository.PlaybackRepository
 import com.drama.domain.repository.PlayerSettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -137,6 +139,7 @@ class FeedViewModelTest {
             engineFactory = PlaybackEngineFactory { engine },
             playerSettings = FakePlayerSettingsRepository(),
             networkStatus = FixedNetworkStatus(metered = false),
+            genres = FakeGenresRepository(),
         )
 
     @Test
@@ -455,4 +458,10 @@ private class FakePlayerSettingsRepository : PlayerSettingsRepository {
     override suspend fun setSubtitles(mode: SubtitleMode) = Unit
 
     override suspend fun setDataSaver(enabled: Boolean) = Unit
+}
+
+private class FakeGenresRepository : GenresRepository {
+    override val labels: Flow<GenreLabels> = MutableStateFlow(GenreLabels.EMPTY)
+
+    override suspend fun refresh(force: Boolean): GenreLabels = GenreLabels.EMPTY
 }

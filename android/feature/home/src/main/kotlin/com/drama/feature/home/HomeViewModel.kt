@@ -129,7 +129,12 @@ class HomeViewModel
         fun onLanguageChanged(tag: String) {
             val previous = languageTag
             languageTag = tag
-            if (previous != null && previous != tag) load()
+            if (previous != null && previous != tag) {
+                load()
+                // DEF-013 : sans cela, les libellés de genre restaient dans l'ancienne langue tant
+                // qu'un autre écran ne rafraîchissait pas le cache partagé de GenresRepository.
+                viewModelScope.launch { genres.refresh() }
+            }
         }
 
         private fun load() {

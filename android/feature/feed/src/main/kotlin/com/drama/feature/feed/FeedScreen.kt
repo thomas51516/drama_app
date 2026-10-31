@@ -76,6 +76,7 @@ import com.drama.core.ui.theme.DramaSizes
 import com.drama.core.ui.theme.DramaSpacing
 import com.drama.core.ui.window.SecureWindow
 import com.drama.domain.model.FeedItem
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.SecureScreenRules
 import kotlinx.coroutines.flow.distinctUntilChanged
 import com.drama.core.ui.R as CoreR
@@ -188,6 +189,7 @@ fun FeedContent(
                         isMuted = state.isMuted,
                         isFavorite = state.isFavorite(item),
                         progress = if (isCurrent) state.position.fraction else 0f,
+                        genreLabels = state.genreLabels,
                         actions = actions,
                     )
                 }
@@ -225,6 +227,7 @@ private fun FeedPage(
     isMuted: Boolean,
     isFavorite: Boolean,
     progress: Float,
+    genreLabels: GenreLabels,
     actions: FeedActions,
 ) {
     Box(
@@ -366,9 +369,10 @@ private fun FeedPage(
                     val episodeCount = item.series.episodeCount
                     val meta =
                         listOfNotNull(
-                            item.series.genres
-                                .take(2)
-                                .joinToString(" · ") { it.replaceFirstChar(Char::titlecase) }
+                            // DEF-014 : libellés localisés (GET /genres?lang) au lieu de la clé capitalisée.
+                            genreLabels
+                                .labels(item.series.genres.take(2))
+                                .joinToString(" · ")
                                 .takeIf { it.isNotBlank() },
                             pluralStringResource(CoreR.plurals.episode_count_short, episodeCount, episodeCount),
                         ).joinToString(" · ")

@@ -17,12 +17,14 @@ import com.drama.core.player.engine.PlaybackPosition
 import com.drama.core.ui.text.UiText
 import com.drama.domain.model.DataSaverRules
 import com.drama.domain.model.FeedItem
+import com.drama.domain.model.GenreLabels
 import com.drama.domain.model.PlaybackSource
 import com.drama.domain.model.SignedUrlPolicy
 import com.drama.domain.model.StreamFormat
 import com.drama.domain.model.VideoQuality
 import com.drama.domain.repository.FavoritesRepository
 import com.drama.domain.repository.FeedRepository
+import com.drama.domain.repository.GenresRepository
 import com.drama.domain.repository.PlaybackRepository
 import com.drama.domain.repository.PlayerSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -65,6 +67,8 @@ data class FeedUiState(
     val favoriteIds: Set<String> = emptySet(),
     val pages: Map<Int, FeedPageState> = emptyMap(),
     val position: PlaybackPosition = PlaybackPosition(),
+    /** DEF-014 : libellés de genre localisés (`GET /genres?lang`), repli sur la clé capitalisée tant qu'ils ne sont pas chargés. */
+    val genreLabels: GenreLabels = GenreLabels.EMPTY,
 ) {
     val currentItem: FeedItem? get() = items.getOrNull(currentIndex)
     val showError: Boolean get() = error != null && items.isEmpty()
@@ -100,6 +104,7 @@ class FeedViewModel
         engineFactory: PlaybackEngineFactory,
         private val playerSettings: PlayerSettingsRepository,
         private val networkStatus: NetworkStatusProvider,
+        private val genres: GenresRepository,
     ) : ViewModel() {
         private val engine: PlaybackEngine = engineFactory.create()
         val activePlayer: StateFlow<Player?> get() = engine.activePlayer
@@ -143,6 +148,11 @@ class FeedViewModel
                 }
             }
             viewModelScope.launch { favorites.refreshFavorites() }
+            // DEF-014 : les puces de genre du flux restaient en français quelle que soit la langue de l'app.
+            viewModelScope.launch {
+                genres.labels.collect { labels -> uiStateFlow.update { it.copy(genreLabels = labels) } }
+            }
+            viewModelScope.launch { genres.refresh() }
             loadFirstPage()
         }
 
