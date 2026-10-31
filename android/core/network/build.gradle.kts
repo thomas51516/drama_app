@@ -14,9 +14,19 @@ val localProperties =
         val file = rootProject.file("local.properties")
         if (file.exists()) file.inputStream().use { load(it) }
     }
+// Pointed at the staging VPS (docs/ops/deploiement.md §9): that host generated its own
+// AD_SSV_FAKE_SECRET, different from the local dev one, so the matching key is picked by target
+// rather than passed on the command line (keeps the secret out of shell history/logs).
+val apiBaseUrlProperty = (project.findProperty("dramaApiBaseUrl") as String?)?.trim()
+val adSsvFakeSecretLocalKey =
+    if (apiBaseUrlProperty?.contains("dramanye.odootogo.com") == true) {
+        "drama.adSsvFakeSecretVps"
+    } else {
+        "drama.adSsvFakeSecret"
+    }
 val adSsvFakeSecret =
     (project.findProperty("dramaAdSsvFakeSecret") as String?)?.trim()?.takeIf { it.isNotEmpty() }
-        ?: localProperties.getProperty("drama.adSsvFakeSecret")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: localProperties.getProperty(adSsvFakeSecretLocalKey)?.trim()?.takeIf { it.isNotEmpty() }
         ?: System.getenv("DRAMA_AD_SSV_FAKE_SECRET")?.trim()?.takeIf { it.isNotEmpty() }
         ?: ""
 
