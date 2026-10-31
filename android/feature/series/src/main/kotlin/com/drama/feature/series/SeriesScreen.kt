@@ -54,6 +54,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -182,7 +183,17 @@ fun SeriesContent(
         when {
             state.isLoading -> SeriesSkeleton()
             state.showError -> ErrorState(message = state.error.toMessage().asString(), onRetry = actions.onRetry)
-            state.series != null -> SeriesBody(series = state.series, state = state, actions = actions)
+            state.series != null ->
+                // Owner feedback (31/10): without this, a newly published episode never appeared on an
+                // already-open screen — the stale-while-revalidate cache only re-checks its TTL when the
+                // view model is recreated, so an explicit pull is the only way to force it sooner.
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = actions.onRetry,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    SeriesBody(series = state.series, state = state, actions = actions)
+                }
         }
         if (state.confirmUnlockAll) {
             state.unlockAllQuote?.let { quote ->
