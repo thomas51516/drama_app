@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "DRAMA",
+    "name": "Drama Nye",
     "skipToContent": "Ir al contenido"
   },
   "common": {
@@ -33,7 +33,7 @@
     }
   },
   "recharge": {
-    "brand": "DRAMA Recarga",
+    "brand": "Drama Nye Recarga",
     "mockBanner": "Modo demostración: datos ficticios, pago simulado.",
     "language": "Idioma",
     "country": "País",
@@ -47,7 +47,7 @@
       "signIn": "Iniciar sesión"
     },
     "footer": {
-      "copyright": "© {year} DRAMA",
+      "copyright": "© {year} Drama Nye",
       "country": "País: {country}",
       "terms": "Condiciones",
       "privacy": "Privacidad",
@@ -64,9 +64,9 @@
       "fatal": "Esta página ha tenido un error"
     },
     "home": {
-      "pageTitle": "Recarga por dinero móvil — DRAMA",
+      "pageTitle": "Recarga por dinero móvil — Drama Nye",
       "title": "Recarga tus monedas con dinero móvil",
-      "subtitle": "La misma cuenta que la aplicación DRAMA: las monedas se acreditan en cuanto se confirma el pago.",
+      "subtitle": "La misma cuenta que la aplicación Drama Nye: las monedas se acreditan en cuanto se confirma el pago.",
       "operators": "Moneda: {currency}. Operadores: {operators}.",
       "ctaSignIn": "Iniciar sesión",
       "ctaPacks": "Ver los packs",
@@ -90,10 +90,10 @@
         }
       },
       "sameAccountTitle": "Una cuenta, un saldo",
-      "sameAccountText": "Las monedas compradas aquí aparecen de inmediato en la aplicación DRAMA, en la misma cuenta."
+      "sameAccountText": "Las monedas compradas aquí aparecen de inmediato en la aplicación Drama Nye, en la misma cuenta."
     },
     "login": {
-      "pageTitle": "Iniciar sesión — DRAMA Recarga",
+      "pageTitle": "Iniciar sesión — Drama Nye Recarga",
       "title": "Iniciar sesión",
       "subtitle": "Usa la misma cuenta que en la aplicación.",
       "method": "Método de acceso",
@@ -135,7 +135,7 @@
       "generic": "Se ha producido un error. Inténtalo de nuevo."
     },
     "packs": {
-      "pageTitle": "Packs de monedas — DRAMA Recarga",
+      "pageTitle": "Packs de monedas — Drama Nye Recarga",
       "title": "Packs de monedas",
       "subtitle": "Precios en moneda local. Las monedas de bono caducan; las compradas, no.",
       "bonus": "bono",
@@ -155,7 +155,7 @@
       "priceNote": "Precios en {currency}, impuestos incluidos (p. ej. {example})."
     },
     "pay": {
-      "pageTitle": "Pago — DRAMA Recarga",
+      "pageTitle": "Pago — Drama Nye Recarga",
       "title": "Pago",
       "order": "Pedido {id}",
       "pack": "Pack",
@@ -185,7 +185,7 @@
       "loadError": "Pedido no encontrado o inaccesible."
     },
     "history": {
-      "pageTitle": "Historial — DRAMA Recarga",
+      "pageTitle": "Historial — Drama Nye Recarga",
       "title": "Historial de recargas",
       "subtitle": "{count} pedido | {count} pedidos",
       "loadError": "No se pudo cargar el historial.",
@@ -194,7 +194,7 @@
       "credited": "acreditado"
     },
     "account": {
-      "pageTitle": "Mi cuenta — DRAMA Recarga",
+      "pageTitle": "Mi cuenta — Drama Nye Recarga",
       "title": "Mi cuenta",
       "subtitle": "Saldo de monedas y preferencias del sitio de recarga.",
       "balance": "Saldo de monedas",
@@ -218,7 +218,7 @@
       "terms": {
         "object": {
           "title": "Objeto",
-          "text": "Venta de monedas virtuales utilizables únicamente en la aplicación DRAMA para desbloquear episodios."
+          "text": "Venta de monedas virtuales utilizables únicamente en la aplicación Drama Nye para desbloquear episodios."
         },
         "coins": {
           "title": "Monedas",

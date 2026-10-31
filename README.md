@@ -1,4 +1,4 @@
-# DRAMA — Application de micro-séries verticales
+# Drama Nye — application de micro-séries verticales
 
 Monorepo du MVP : application Android, backend API, back-office web, infrastructure.
 

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "DRAMA",
+    "name": "Drama Nye",
     "backoffice": "Back office",
     "skipToContent": "Skip to content",
     "openMenu": "Open menu",
@@ -1384,7 +1384,7 @@
     }
   },
   "recharge": {
-    "brand": "DRAMA Top-up",
+    "brand": "Drama Nye Top-up",
     "mockBanner": "Demo mode: fake data, simulated payment.",
     "language": "Language",
     "country": "Country",
@@ -1398,7 +1398,7 @@
       "signIn": "Sign in"
     },
     "footer": {
-      "copyright": "© {year} DRAMA",
+      "copyright": "© {year} Drama Nye",
       "country": "Country: {country}",
       "terms": "Terms",
       "privacy": "Privacy",
@@ -1415,9 +1415,9 @@
       "fatal": "This page hit an error"
     },
     "home": {
-      "pageTitle": "Mobile money top-up — DRAMA",
+      "pageTitle": "Mobile money top-up — Drama Nye",
       "title": "Top up your coins with mobile money",
-      "subtitle": "Same account as the DRAMA app: coins are credited as soon as the payment is confirmed.",
+      "subtitle": "Same account as the Drama Nye app: coins are credited as soon as the payment is confirmed.",
       "operators": "Currency: {currency}. Operators: {operators}.",
       "ctaSignIn": "Sign in",
       "ctaPacks": "See the packs",
@@ -1441,10 +1441,10 @@
         }
       },
       "sameAccountTitle": "One account, one balance",
-      "sameAccountText": "Coins bought here appear immediately in the DRAMA app, on the same account."
+      "sameAccountText": "Coins bought here appear immediately in the Drama Nye app, on the same account."
     },
     "login": {
-      "pageTitle": "Sign in — DRAMA Top-up",
+      "pageTitle": "Sign in — Drama Nye Top-up",
       "title": "Sign in",
       "subtitle": "Use the same account as in the app.",
       "method": "Sign-in method",
@@ -1486,7 +1486,7 @@
       "generic": "Something went wrong. Try again."
     },
     "packs": {
-      "pageTitle": "Coin packs — DRAMA Top-up",
+      "pageTitle": "Coin packs — Drama Nye Top-up",
       "title": "Coin packs",
       "subtitle": "Prices in local currency. Bonus coins expire, purchased coins do not.",
       "bonus": "bonus",
@@ -1506,7 +1506,7 @@
       "priceNote": "Prices in {currency}, taxes included (e.g. {example})."
     },
     "pay": {
-      "pageTitle": "Payment — DRAMA Top-up",
+      "pageTitle": "Payment — Drama Nye Top-up",
       "title": "Payment",
       "order": "Order {id}",
       "pack": "Pack",
@@ -1536,7 +1536,7 @@
       "loadError": "Order not found or not accessible."
     },
     "history": {
-      "pageTitle": "History — DRAMA Top-up",
+      "pageTitle": "History — Drama Nye Top-up",
       "title": "Top-up history",
       "subtitle": "{count} order | {count} orders",
       "loadError": "Could not load the history.",
@@ -1545,7 +1545,7 @@
       "credited": "credited"
     },
     "account": {
-      "pageTitle": "My account — DRAMA Top-up",
+      "pageTitle": "My account — Drama Nye Top-up",
       "title": "My account",
       "subtitle": "Coin balance and preferences of the top-up site.",
       "balance": "Coin balance",
@@ -1569,7 +1569,7 @@
       "terms": {
         "object": {
           "title": "Purpose",
-          "text": "Sale of virtual coins usable only in the DRAMA app to unlock episodes."
+          "text": "Sale of virtual coins usable only in the Drama Nye app to unlock episodes."
         },
         "coins": {
           "title": "Coins",

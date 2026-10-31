@@ -6,7 +6,7 @@ import frLocale from 'primelocale/fr.json' with { type: 'json' }
 const currentDir = fileURLToPath(new URL('.', import.meta.url))
 
 /**
- * Base layer shared by every DRAMA web app (admin back-office, recharge site).
+ * Base layer shared by every Drama Nye web app (admin back-office, recharge site).
  * Apps extend it with `extends: ['../../layers/base']` and only add pages and overrides.
  */
 export default defineNuxtConfig({
@@ -41,7 +41,7 @@ export default defineNuxtConfig({
       apiMock: process.env.NODE_ENV === 'development',
       // Public base of media keys (HLS manifests, thumbnails): MinIO bucket in dev, CDN in prod.
       cdnBaseUrl: 'http://localhost:9000/drama-media',
-      appName: 'DRAMA',
+      appName: 'Drama Nye',
     },
   },
 

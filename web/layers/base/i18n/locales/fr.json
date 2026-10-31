@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "DRAMA",
+    "name": "Drama Nye",
     "backoffice": "Back-office",
     "skipToContent": "Aller au contenu",
     "openMenu": "Ouvrir le menu",
@@ -1384,7 +1384,7 @@
     }
   },
   "recharge": {
-    "brand": "DRAMA Recharge",
+    "brand": "Drama Nye Recharge",
     "mockBanner": "Mode démonstration : données fictives, paiement simulé.",
     "language": "Langue",
     "country": "Pays",
@@ -1398,7 +1398,7 @@
       "signIn": "Connexion"
     },
     "footer": {
-      "copyright": "© {year} DRAMA",
+      "copyright": "© {year} Drama Nye",
       "country": "Pays : {country}",
       "terms": "CGV",
       "privacy": "Confidentialité",
@@ -1415,9 +1415,9 @@
       "fatal": "Cette page a rencontré une erreur"
     },
     "home": {
-      "pageTitle": "Recharge mobile money — DRAMA",
+      "pageTitle": "Recharge mobile money — Drama Nye",
       "title": "Rechargez vos pièces par mobile money",
-      "subtitle": "Même compte que l’application DRAMA : les pièces sont créditées dès la confirmation du paiement.",
+      "subtitle": "Même compte que l’application Drama Nye : les pièces sont créditées dès la confirmation du paiement.",
       "operators": "Devise : {currency}. Opérateurs : {operators}.",
       "ctaSignIn": "Se connecter",
       "ctaPacks": "Voir les packs",
@@ -1441,10 +1441,10 @@
         }
       },
       "sameAccountTitle": "Un seul compte, un seul solde",
-      "sameAccountText": "Les pièces achetées ici apparaissent immédiatement dans l’application DRAMA, sur le même compte."
+      "sameAccountText": "Les pièces achetées ici apparaissent immédiatement dans l’application Drama Nye, sur le même compte."
     },
     "login": {
-      "pageTitle": "Connexion — DRAMA Recharge",
+      "pageTitle": "Connexion — Drama Nye Recharge",
       "title": "Connexion",
       "subtitle": "Utilisez le même compte que dans l’application.",
       "method": "Méthode de connexion",
@@ -1486,7 +1486,7 @@
       "generic": "Une erreur est survenue. Réessayez."
     },
     "packs": {
-      "pageTitle": "Packs de pièces — DRAMA Recharge",
+      "pageTitle": "Packs de pièces — Drama Nye Recharge",
       "title": "Packs de pièces",
       "subtitle": "Prix en devise locale. Les pièces bonus expirent, les pièces achetées non.",
       "bonus": "bonus",
@@ -1506,7 +1506,7 @@
       "priceNote": "Prix en {currency}, taxes incluses (ex. {example})."
     },
     "pay": {
-      "pageTitle": "Paiement — DRAMA Recharge",
+      "pageTitle": "Paiement — Drama Nye Recharge",
       "title": "Paiement",
       "order": "Commande {id}",
       "pack": "Pack",
@@ -1536,7 +1536,7 @@
       "loadError": "Commande introuvable ou inaccessible."
     },
     "history": {
-      "pageTitle": "Historique — DRAMA Recharge",
+      "pageTitle": "Historique — Drama Nye Recharge",
       "title": "Historique des recharges",
       "subtitle": "{count} commande | {count} commandes",
       "loadError": "Impossible de charger l’historique.",
@@ -1545,7 +1545,7 @@
       "credited": "créditée"
     },
     "account": {
-      "pageTitle": "Mon compte — DRAMA Recharge",
+      "pageTitle": "Mon compte — Drama Nye Recharge",
       "title": "Mon compte",
       "subtitle": "Solde de pièces et préférences du site de recharge.",
       "balance": "Solde de pièces",
@@ -1569,7 +1569,7 @@
       "terms": {
         "object": {
           "title": "Objet",
-          "text": "Vente de pièces virtuelles utilisables uniquement dans l’application DRAMA pour débloquer des épisodes."
+          "text": "Vente de pièces virtuelles utilisables uniquement dans l’application Drama Nye pour débloquer des épisodes."
         },
         "coins": {
           "title": "Pièces",

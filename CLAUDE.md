@@ -1,4 +1,4 @@
-# DRAMA — micro-séries verticales (monorepo)
+# Drama Nye — micro-séries verticales (monorepo)
 
 Application Android de micro-séries verticales, monétisée par pièces, VIP et pub récompensée.
 Source de vérité fonctionnelle : `docs/Cahier des charges — Application de micro-séries verticales (Android).md`.

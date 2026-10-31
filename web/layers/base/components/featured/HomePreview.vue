@@ -88,7 +88,7 @@ function markBroken(key: string): void {
       data-testid="home-preview"
     >
       <div class="flex items-center justify-between px-4 py-3 text-xs text-white/70">
-        <span class="font-semibold tracking-wide text-white">DRAMA</span>
+        <span class="font-semibold tracking-wide text-white">Drama Nye</span>
         <span>{{ country }} · {{ lang.toUpperCase() }}</span>
       </div>
 
