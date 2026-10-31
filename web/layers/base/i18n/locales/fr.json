@@ -221,7 +221,9 @@
       "publishedAt": "Publication programmée",
       "publishedAtHint": "Facultatif. Une date future masque la série dans l'application jusqu'à cette date ; vide = publication manuelle. Heure de Lomé (Africa/Lome, UTC+0), stockée en UTC.",
       "publishedAtScheduled": "Programmée le {date} (heure de Lomé)",
-      "publishedAtPast": "Publiée le {date} (heure de Lomé)"
+      "publishedAtPast": "Publiée le {date} (heure de Lomé)",
+      "adUnlockEnabled": "Déblocage par publicité",
+      "adUnlockHint": "Autorise le déblocage de cette série en regardant une publicité récompensée."
     },
     "actions": {
       "create": "Créer la série",

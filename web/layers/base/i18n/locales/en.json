@@ -221,7 +221,9 @@
       "publishedAt": "Scheduled publication",
       "publishedAtHint": "Optional. A future date hides the series in the app until then; empty = manual publication. Lomé time (Africa/Lome, UTC+0), stored in UTC.",
       "publishedAtScheduled": "Scheduled on {date} (Lomé time)",
-      "publishedAtPast": "Published on {date} (Lomé time)"
+      "publishedAtPast": "Published on {date} (Lomé time)",
+      "adUnlockEnabled": "Rewarded-ad unlock",
+      "adUnlockHint": "Allow unlocking this series by watching a rewarded ad."
     },
     "actions": {
       "create": "Create series",
