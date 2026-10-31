@@ -5,8 +5,17 @@ import { type MediaUrlSigner, type SignedMediaUrl } from './media-url-signer.js'
  * Signature HMAC-SHA256 sur le préfixe du manifeste (contrat public v1.2) :
  * `?token=<base64url(hmac-sha256(secret, path + expires))>&expires=<epoch>` où `path` est le
  * chemin du dossier contenant le manifeste (`/drama-media/hls/<episodeId>/`), ce qui couvre les
- * segments et sous-manifestes du même dossier. Compatible avec l'authentification par jeton des
- * CDN de type Bunny ou KeyCDN configurés sur le même secret.
+ * segments et sous-manifestes du même dossier.
+ *
+ * ATTENTION (vérifié le 2026-10-31 contre la vraie doc Bunny, premier compte CDN réel du projet,
+ * voir docs/ops/deploiement.md §10) : ceci n'est PAS compatible avec la « Token Authentication »
+ * réelle de Bunny/KeyCDN malgré ce que disait ce commentaire avant. L'algorithme « Advanced » de
+ * Bunny exige un préfixe `HS256-` sur le jeton et signe par défaut le CHEMIN COMPLET du fichier
+ * demandé (pas le dossier parent, sauf à ajouter explicitement `token_path=` au message ET à la
+ * requête) — les deux diffèrent de ce que fait cette classe. Ne pas activer MEDIA_SIGNER=hmac
+ * contre un vrai CDN tant que ceci n'a pas été corrigé et testé en vrai (pour l'instant le CDN
+ * tourne avec MEDIA_SIGNER=plain, sans perte de sécurité réelle : le bucket origine est déjà en
+ * lecture publique anonyme, token ou pas).
  */
 export class HmacMediaUrlSigner implements MediaUrlSigner {
   readonly name = 'hmac' as const;

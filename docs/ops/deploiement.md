@@ -272,3 +272,32 @@ Déployés sur le même hôte, chacun son sous-domaine et son certificat Let's E
 - Vérifié : les trois domaines répondent en HTTPS, le port interne du site de recharge (3002) est
   fermé depuis l'extérieur, le repli SPA du back-office fonctionne sur une route dynamique non
   prérendue.
+
+## 10. CDN devant le stockage (2026-10-31)
+
+Constat : le VPS est en réalité hébergé au Canada (OVH) alors que l'utilisation réelle visée est
+le Togo — ~195 ms d'aller-retour mesurés, contre une charge serveur quasi nulle (CPU < 1 %
+confirmé par `docker stats`). Le chargement vidéo lent observé était donc un problème de distance
+réseau, pas de dimensionnement serveur ; cahier des charges §9 avait déjà prévu un CDN pour cette
+raison précise.
+
+- **bunny.net** choisi (compte créé par le client), pull zone pointant sur `media.dramanye.odootogo.com`
+  comme origine — **aucune migration de stockage** : MinIO reste le stockage réel, le CDN ne fait
+  que mettre les objets en cache plus près des utilisateurs. `CDN_BASE_URL` dans `infra/.env.prod`
+  pointe maintenant sur le nom d'hôte bunny (`https://<zone>.b-cdn.net/drama-media`, redémarrage de
+  `api` et `web-recharge` pour prendre effet — rien à changer côté Android, l'URL vient de la
+  réponse `/play`, pas d'une valeur compilée dans l'APK).
+- **`MEDIA_SIGNER` reste `plain`** (pas `hmac`) : en vérifiant l'algorithme réel de la « Token
+  Authentication » de Bunny (leur doc officielle, pas une supposition) contre
+  `backend/src/media/hmac-media-url-signer.ts`, les deux ne correspondent PAS — jeton sans préfixe
+  `HS256-` attendu par Bunny, et chemin signé différent (dossier parent ici, fichier exact chez
+  Bunny par défaut). Le commentaire de ce fichier affirmait à tort une compatibilité jamais testée
+  contre un vrai compte — corrigé. Pas de régression de sécurité à rester en `plain` pour l'instant :
+  le bucket origine est déjà en lecture anonyme (`infra/docker-compose.prod.selfhosted.yml`,
+  `mc anonymous set download`), token ou pas. **À faire avant de vraiment compter sur le jeton** :
+  réécrire `HmacMediaUrlSigner` selon l'algorithme Advanced de Bunny (préfixe `HS256-`, message
+  signé = chemin exact + expires + `token_path` explicite si on veut garder un jeton par dossier) et
+  le vérifier contre le vrai compte, pas seulement contre un test unitaire interne.
+- Vérifié : la pull zone sert bien le contenu de l'origine (`cdn-cache: HIT`/`cdn-requestpullsuccess:
+  True` dans les en-têtes de réponse), chargement perçu plus rapide confirmé par le client sur le
+  vrai téléphone après redéploiement.
