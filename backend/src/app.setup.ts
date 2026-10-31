@@ -16,6 +16,16 @@ export function configureApp(app: INestApplication, config: AppConfig): INestApp
       // L'API ne sert que du JSON ; la CSP ne bloquerait que l'interface Swagger.
       contentSecurityPolicy: config.swaggerEnabled ? false : undefined,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      // HSTS explicite (audit sécurité S10-OPS, cahier des charges §12 : « HTTPS partout, HSTS »).
+      // `preload: true` suppose un domaine stable soumis à hstspreload.org avant d'activer vraiment
+      // le préchargement ; à retirer si ce n'est pas fait. N'a d'effet qu'une fois servi derrière
+      // TLS : en dev (HTTP) le navigateur ignore cet en-tête — voir infra/traefik/ pour la
+      // terminaison TLS réelle en production.
+      strictTransportSecurity: {
+        maxAge: 31_536_000, // 1 an
+        includeSubDomains: true,
+        preload: true,
+      },
     }),
   );
   app.enableCors({

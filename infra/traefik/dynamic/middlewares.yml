@@ -1,0 +1,19 @@
+# Middlewares HTTP partagés (S10-OPS). Rechargé à chaud par Traefik (`providers.file.watch`).
+#
+# `secure-headers` : en-têtes de sécurité posés par le reverse proxy lui-même, en plus de ceux que
+# l'API ajoute déjà avec helmet (src/app.setup.ts) — utile surtout pour tout service fronté par
+# Traefik qui n'a pas sa propre protection applicative (ex. un futur service statique). Appliqué à
+# un routeur par le label `traefik.http.routers.<nom>.middlewares=secure-headers@file`.
+http:
+  middlewares:
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        # Mêmes réserves que dans src/app.setup.ts : ne demander le préchargement HSTS
+        # (hstspreload.org) qu'une fois certain que TOUS les sous-domaines tournent en HTTPS.
+        stsPreload: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: 'strict-origin-when-cross-origin'
+        browserXssFilter: true

@@ -43,6 +43,10 @@ export class AppConfig {
     return this.env.DATABASE_URL;
   }
 
+  get databasePoolSize(): number {
+    return this.env.DATABASE_POOL_SIZE;
+  }
+
   get redisUrl(): string {
     return this.env.REDIS_URL;
   }

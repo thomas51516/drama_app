@@ -16,6 +16,10 @@ export const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .regex(/^postgres(ql)?:\/\//, 'DATABASE_URL must be a postgresql:// connection string'),
+  // Taille du pool de connexions `pg` utilisé par l'adaptateur Prisma (S10-OPS-01 : le défaut de la
+  // librairie `pg` est 10, trop bas et source de mise en file sous charge réelle). Rester sous
+  // `max_connections` de Postgres moins la marge des autres clients (sauvegarde, admin, migrations).
+  DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(500).default(20),
   REDIS_URL: z.string().regex(/^rediss?:\/\//, 'REDIS_URL must be a redis:// URL'),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
@@ -177,6 +181,16 @@ const envSchemaWithRules = envSchema.superRefine((env, ctx) => {
         message: 'GOOGLE_PLAY_PACKAGE_NAME is required when BILLING_VERIFIER=google',
       });
     }
+  }
+  // Sans ce jeton, `POST /webhooks/google-rtdn` n'a AUCUN contrôle d'authenticité en production
+  // (audit sécurité S10-OPS) : n'importe qui pourrait rejouer un `purchaseToken` connu pour
+  // déclencher un remboursement (lignes REFUND) ou une resynchronisation d'abonnement.
+  if (env.NODE_ENV === 'production' && !env.GOOGLE_RTDN_AUTH_TOKEN) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['GOOGLE_RTDN_AUTH_TOKEN'],
+      message: 'GOOGLE_RTDN_AUTH_TOKEN is required in production (POST /webhooks/google-rtdn)',
+    });
   }
   if (env.AD_PROVIDER === 'fake' && env.NODE_ENV === 'production') {
     ctx.addIssue({

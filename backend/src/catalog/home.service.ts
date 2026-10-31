@@ -20,6 +20,7 @@ import {
   type HomeItemDto,
   type HomeResponseDto,
   type HomeRowDto,
+  type SeriesSummaryDto,
 } from './dto/catalog.dto.js';
 
 /** Nombre maximal de séries par rangée. */
@@ -91,21 +92,40 @@ export class HomeService {
     return this.personalize(viewer.userId, { banners: shared.banners, rows });
   }
 
-  /** `isFavorite` / `likes` par spectateur, calculés après le cache (S05-BE-05). */
+  /**
+   * `isFavorite` / `likes` par spectateur, calculés après le cache (S05-BE-05).
+   *
+   * Un seul appel à `PersonalizationService.decorate()` pour les bannières ET toutes les rangées
+   * (au lieu d'un appel par rangée, trouvé lors du test de charge S10-OPS-01 : avec N rangées,
+   * l'ancien code faisait N+1 aller-retours Postgres *séquentiels*, ce qui dominait le p95 de
+   * `/home` sous charge — `decorate()` ne coûte que deux requêtes, déjà groupées par identifiants,
+   * donc les regrouper sur l'ensemble de la page les ramène à deux requêtes au total).
+   */
   private async personalize(
     userId: string | undefined,
     home: HomeResponseDto,
   ): Promise<HomeResponseDto> {
     if (!userId) return home;
-    const banners = await this.personalization.decorate(userId, home.banners);
-    const rows: HomeRowDto[] = [];
-    for (const row of home.rows) {
-      const series = await this.personalization.decorate(
-        userId,
-        row.items.map((i) => i.series),
-      );
-      rows.push({ ...row, items: row.items.map((item, i) => ({ ...item, series: series[i] })) });
-    }
+    const rowSizes = home.rows.map((row) => row.items.length);
+    const combined: SeriesSummaryDto[] = [
+      ...home.banners,
+      ...home.rows.flatMap((row) => row.items.map((item) => item.series)),
+    ];
+    const decorated = await this.personalization.decorate(userId, combined);
+    // `decorate()` ne fait que lire `s.id` et étaler `...s` : les champs propres à `HomeBannerDto`
+    // (bannerId, imageUrl, ...) traversent intacts, seul le type statique les perd en fusionnant
+    // avec `SeriesSummaryDto[]` ci-dessus.
+    const banners = decorated.slice(0, home.banners.length) as HomeBannerDto[];
+    let cursor = home.banners.length;
+    const rows: HomeRowDto[] = home.rows.map((row, index) => {
+      const size = rowSizes[index];
+      const seriesSlice = decorated.slice(cursor, cursor + size);
+      cursor += size;
+      return {
+        ...row,
+        items: row.items.map((item, i) => ({ ...item, series: seriesSlice[i] })),
+      };
+    });
     return { banners, rows };
   }
 

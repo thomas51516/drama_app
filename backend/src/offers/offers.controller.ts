@@ -10,6 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
+import { RateLimit } from '../common/rate-limit/rate-limit.decorator.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
 import { OffersDto, RedeemPromoDto, RedeemPromoResultDto } from './dto/offers.dto.js';
 import { OffersService } from './offers.service.js';
@@ -35,6 +36,9 @@ export class OffersController {
 
   @Post('promo/redeem')
   @HttpCode(HttpStatus.OK)
+  // Protège contre le bruteforce de codes (S10-OPS sécurité) : sans limite, un code promo court
+  // se devine par essais répétés bien plus vite que son espace de combinaisons ne le permettrait.
+  @RateLimit({ name: 'promo_redeem', limit: 10, windowSeconds: 900, scope: 'ip' })
   @ApiOperation({
     summary: 'Utiliser un code promo (M-24)',
     description:

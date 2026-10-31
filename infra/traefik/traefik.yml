@@ -1,0 +1,45 @@
+# Configuration statique de Traefik (S10-OPS, déploiement production — docs/ops/deploiement.md).
+# Rien de secret ici : l'adresse e-mail ACME et le domaine sont passés en argument de commande
+# par infra/docker-compose.prod.yml, lus depuis infra/.env.prod (jamais committé).
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      # Tout le trafic HTTP est redirigé en HTTPS (cahier des charges §12 : « HTTPS partout »).
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+
+providers:
+  # Découvre les conteneurs à exposer par leurs labels `traefik.*` (docker-compose.prod.yml).
+  docker:
+    exposedByDefault: false
+  # En-têtes de sécurité et autres middlewares partagés (infra/traefik/dynamic/).
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      storage: /letsencrypt/acme.json
+      # Défi HTTP-01 : le port 80 (entryPoint `web`) doit être joignable depuis Internet par
+      # Let's Encrypt. Alternative si le port 80 ne peut pas être ouvert (ex. derrière un autre
+      # reverse proxy) : passer à un défi DNS-01, ce qui demande les identifiants de l'API DNS du
+      # registraire — non configuré ici par défaut.
+      httpChallenge:
+        entryPoint: web
+
+api:
+  # Pas de tableau de bord Traefik exposé publiquement au MVP.
+  dashboard: false
+
+log:
+  level: INFO
+
+accessLog: {}

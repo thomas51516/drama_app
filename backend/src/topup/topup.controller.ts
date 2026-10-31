@@ -31,6 +31,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
 import { UuidPipe } from '../common/pipes/uuid.pipe.js';
+import { RateLimit } from '../common/rate-limit/rate-limit.decorator.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
 import { AppConfig } from '../config/app-config.js';
 import {
@@ -57,6 +58,10 @@ export class TopupController {
   @Post('topup/orders')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
+  // Limite la création de commandes (S10-OPS sécurité) : sans elle, un client pourrait créer un
+  // nombre illimité de commandes en attente (bruit en base, et des appels facturés à l'agrégateur
+  // en mode `cinetpay`).
+  @RateLimit({ name: 'topup_orders', limit: 20, windowSeconds: 900, scope: 'ip' })
   @ApiOperation({
     summary: 'Créer une commande de recharge mobile money',
     description:

@@ -17,6 +17,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { ViewerCountry } from '../common/decorators/viewer-country.decorator.js';
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
 import { UuidPipe } from '../common/pipes/uuid.pipe.js';
+import { RateLimit } from '../common/rate-limit/rate-limit.decorator.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
 import {
   SeriesUnlocksDto,
@@ -39,6 +40,9 @@ export class UnlockController {
   @Post('episodes/:id/unlock')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
+  // Limite les tentatives de déblocage (S10-OPS sécurité) : la transaction débite le portefeuille,
+  // pas de raison de la laisser sans limite même si elle est idempotente.
+  @RateLimit({ name: 'episode_unlock', limit: 30, windowSeconds: 900, scope: 'ip' })
   @ApiOperation({
     summary: 'Débloquer un épisode avec des pièces (M-21)',
     description:
@@ -99,6 +103,7 @@ export class UnlockController {
   @Post('series/:id/unlock-all')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
+  @RateLimit({ name: 'series_unlock_all', limit: 30, windowSeconds: 900, scope: 'ip' })
   @ApiOperation({
     summary: 'Débloquer tous les épisodes verrouillés de la série (M-23)',
     description:

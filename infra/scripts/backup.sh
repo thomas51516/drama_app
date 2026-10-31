@@ -38,3 +38,9 @@ echo "[backup] $(date -u +%FT%TZ) $target ($size)"
 # Rétention : suppression des sauvegardes plus anciennes que N jours.
 find "$BACKUP_DIR" -name "${PGDATABASE}-*.dump" -type f -mtime "+$BACKUP_RETENTION_DAYS" -print -delete \
   | sed 's/^/[backup] purge /' || true
+
+# Nettoyage des fichiers `.part` abandonnés par une tentative précédente échouée avant la fin du
+# `pg_dump` (plus d'une heure : le dump de cette base ne prend jamais aussi longtemps, donc tout
+# `.part` aussi vieux est mort, pas une sauvegarde en cours — S10-OPS-03).
+find "$BACKUP_DIR" -name "${PGDATABASE}-*.dump.part" -type f -mmin +60 -print -delete \
+  | sed 's/^/[backup] purge (partiel abandonné) /' || true

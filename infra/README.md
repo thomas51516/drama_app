@@ -123,9 +123,21 @@ docker compose -f infra/docker-compose.monitoring.yml up -d
 - Sentry : côté API uniquement (`SENTRY_DSN`), rien à déployer ici.
 - Loki / Promtail : non inclus pour l'instant (l'API tourne sur l'hôte en dev, ses logs ne transitent pas par Docker) ; à ajouter avec le déploiement staging (S02-OPS-01) où l'API sera conteneurisée.
 
+## Production (gabarits, S10-OPS)
+
+`docker-compose.prod.yml` (API + Traefik, TLS Let's Encrypt automatique), `traefik/` (config
+Traefik, en-têtes de sécurité) et `.env.prod.example` (toutes les variables de production,
+reprenant les noms de `backend/.env.example`) sont des **gabarits non encore déployés contre un
+vrai hébergeur** (aucun domaine ni machine réelle disponible pendant ce sprint) : syntaxiquement
+validés (`docker compose -f infra/docker-compose.prod.yml config`) et l'image API testée en
+local avec succès, mais jamais testés contre un vrai certificat ni un vrai domaine. Runbook complet
+(prérequis, premier déploiement, mise à jour, retour en arrière, origine des secrets) :
+`docs/ops/deploiement.md`.
+
 ## À venir
 
-- `S01-OPS-03` / `S02-OPS-01` : VPS staging, DNS, Traefik + TLS, déploiement automatique, Loki + Promtail.
+- DNS, hébergeur réel, premier déploiement effectif (voir `docs/ops/deploiement.md` §7 pour ce
+  qu'il reste à revérifier une fois un hôte choisi), Loki + Promtail.
 
 ## Épisodes de test verticaux (`media-samples/`)
 

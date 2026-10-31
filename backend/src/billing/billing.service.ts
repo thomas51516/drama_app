@@ -6,6 +6,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { timingSafeEqual } from 'node:crypto';
 import { currencyForCountry } from '../common/money/currency.js';
 import { AppConfig } from '../config/app-config.js';
 import {
@@ -294,7 +295,7 @@ export class BillingService {
    */
   async handleGoogleRtdn(body: GoogleRtdnDto, presentedToken?: string): Promise<void> {
     const expected = this.config.billing.rtdnAuthToken;
-    if (expected && presentedToken !== expected) {
+    if (expected && !safeTokenEquals(expected, presentedToken)) {
       throw new UnauthorizedException({
         code: 'INVALID_WEBHOOK_SIGNATURE',
         message: 'Invalid RTDN token',
@@ -406,6 +407,14 @@ export class BillingService {
 
 function isCredited(p: Pick<Purchase, 'status'>): boolean {
   return p.status === 'CREDITED' || p.status === 'ACKNOWLEDGED' || p.status === 'REFUNDED';
+}
+
+/** Comparaison à temps constant du jeton RTDN (évite une fuite par mesure de temps). */
+function safeTokenEquals(expected: string, presented: string | undefined): boolean {
+  if (!presented) return false;
+  const expectedBuf = Buffer.from(expected);
+  const presentedBuf = Buffer.from(presented);
+  return expectedBuf.length === presentedBuf.length && timingSafeEqual(expectedBuf, presentedBuf);
 }
 
 function invalid(reason: string): BadRequestException {

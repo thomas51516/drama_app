@@ -2,6 +2,9 @@ name: backend-ci
 
 on:
   push:
+    # Les tags v* (S10-OPS, image de production) déclenchent le job `release-image` ci-dessous
+    # même sans changement sous backend/ — même convention que .github/workflows/android-ci.yml.
+    tags: ['v*']
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
@@ -13,6 +16,9 @@ on:
 concurrency:
   group: backend-ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   ci:
@@ -128,3 +134,41 @@ jobs:
         run: |
           node dist/openapi-export.js /tmp/openapi.v1.json
           diff -u ../docs/api/openapi.v1.json /tmp/openapi.v1.json
+
+  # S10-OPS : sur un tag de version (v1.2.3), construit l'image de production (backend/Dockerfile)
+  # et la publie sur GitHub Container Registry — même convention que le job `bundle` de
+  # android-ci.yml (gated `startsWith(github.ref, 'refs/tags/v')`). N'utilise que des secrets
+  # GitHub Actions (ici seulement le `GITHUB_TOKEN` intégré, aucun secret à créer) et ne touche
+  # jamais la base de données de développement : ce job ne fait que construire une image Docker et
+  # la publier, il ne déploie nulle part (pas d'hôte réel à déployer dessus pendant ce sprint — voir
+  # docs/ops/deploiement.md). Le déploiement effectif reste une étape manuelle du runbook pour
+  # l'instant.
+  release-image:
+    name: Build and publish production image (tags v*)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/drama-api:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/drama-api:latest

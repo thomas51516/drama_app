@@ -46,10 +46,19 @@ services:
       - ./scripts/backup.sh:/usr/local/bin/drama-backup.sh:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
+      # En cas d'échec (ex. Postgres pas encore prêt après un redémarrage du conteneur : `depends_on`
+      # n'est réévalué qu'au `docker compose up`, pas par la politique `restart` native), on retente
+      # après 5 min plutôt que d'attendre tout l'intervalle de 24 h — sinon un échec transitoire creuse
+      # un trou d'une journée dans les sauvegardes (trouvé en drill S10-OPS-03 : un essai raté laissait
+      # un `.dump.part` de 0 octet et la prochaine tentative n'était prévue que 24 h plus tard).
       - |
         while true; do
-          sh /usr/local/bin/drama-backup.sh "$$BACKUP_DIR" || echo "[backup] échec $$(date -u +%FT%TZ)"
-          sleep "$$BACKUP_INTERVAL_SECONDS"
+          if sh /usr/local/bin/drama-backup.sh "$$BACKUP_DIR"; then
+            sleep "$$BACKUP_INTERVAL_SECONDS"
+          else
+            echo "[backup] échec $$(date -u +%FT%TZ), nouvelle tentative dans 5 min"
+            sleep 300
+          fi
         done
 
   redis:

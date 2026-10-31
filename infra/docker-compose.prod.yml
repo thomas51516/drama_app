@@ -1,0 +1,106 @@
+# DRAMA — gabarit de déploiement production (S10-OPS-01..05, cahier des charges §12).
+#
+# Lecture d'abord : docs/ops/deploiement.md (prérequis, premier déploiement, mise à jour,
+# retour en arrière). Démarrage en une commande une fois infra/.env.prod rempli :
+#
+#   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d --build
+#
+# Hypothèses assumées par ce gabarit (cahier des charges §12 : « base de données managée »,
+# « CDN, pas les serveurs applicatifs ») :
+#   * PostgreSQL et Redis sont des services MANAGÉS externes (DATABASE_URL / REDIS_URL pointent
+#     hors de cette pile) — PAS de conteneur postgres/redis ici. Alternative auto-hébergée
+#     documentée dans docs/ops/deploiement.md §3 si aucun service managé n'est disponible.
+#   * Le stockage vidéo et les posters sont un vrai S3 (ou R2/Wasabi) + CDN en production — PAS
+#     MinIO, qui n'existe que pour le développement local (infra/docker-compose.dev.yml). MinIO
+#     n'a ni réplication, ni durabilité garantie, ni CDN devant lui : impropre à la production.
+#   * Le transcodage vidéo est un service géré externe (TRANSCODE_PROVIDER=webhook) — pas de
+#     worker ffmpeg local par défaut (voir le service `worker`, profil optionnel, plus bas).
+#
+# Non testé contre un vrai hébergeur (pas de domaine ni de machine réelle disponible pendant ce
+# sprint) : `docker compose -f infra/docker-compose.prod.yml config` valide la syntaxe, et l'image
+# `api` a été construite et exécutée avec succès en local (voir docs/ops/deploiement.md §6) contre
+# les PostgreSQL/Redis de développement — mais jamais contre Traefik, un vrai certificat, ni un
+# nom de domaine public. Le premier déploiement réel doit tout revérifier (§7 du runbook).
+
+name: drama-prod
+
+services:
+  traefik:
+    image: traefik:v3.2
+    container_name: drama-traefik
+    restart: unless-stopped
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-certs:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - drama-prod
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: ${API_IMAGE:-drama-api}:${API_IMAGE_TAG:-latest}
+    container_name: drama-api
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+    networks:
+      - drama-prod
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.drama-api.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.drama-api.entrypoints=websecure
+      - traefik.http.routers.drama-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.drama-api.middlewares=secure-headers@file
+      - traefik.http.services.drama-api.loadbalancer.server.port=3000
+      # `/metrics` n'est volontairement exposé par aucun routeur Traefik public (infra/README.md :
+      # « endpoint interne : ne pas l'exposer par le reverse proxy, ou définir METRICS_TOKEN »).
+      # Le scraper Prometheus de recette/production doit soit atteindre le conteneur directement
+      # sur le réseau interne, soit passer par un routeur dédié protégé par METRICS_TOKEN.
+
+  # Optionnel — seulement si TRANSCODE_PROVIDER=local est vraiment utilisé en production (non
+  # recommandé : le cahier des charges §9/§12 attend un service de transcodage géré et un CDN).
+  # Isolé dans son propre conteneur pour que les pics CPU ffmpeg ne dégradent pas la latence des
+  # requêtes HTTP de `api`. Démarré uniquement avec `--profile worker` :
+  #   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod --profile worker up -d
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: ${API_IMAGE:-drama-api}:${API_IMAGE_TAG:-latest}
+    container_name: drama-worker
+    restart: unless-stopped
+    init: true
+    profiles: ['worker']
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      TRANSCODE_WORKER_ENABLED: 'true'
+      # Ce réplica ne sert pas de trafic HTTP public (pas de label Traefik) ; il ne fait tourner
+      # que le worker BullMQ de transcodage dans le même process Nest (voir backend/CLAUDE.md,
+      # `jobs/` et `transcode/`). SCHEDULER_ENABLED peut rester `true` sur toutes les instances
+      # (verrou Redis `lock:job:*`, pas de double exécution).
+    command: ['sh', '-c', 'npx prisma migrate deploy && node dist/main.js']
+    networks:
+      - drama-prod
+
+networks:
+  drama-prod:
+    driver: bridge
+
+volumes:
+  traefik-certs:

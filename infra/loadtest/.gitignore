@@ -1,0 +1,4 @@
+# Jetons d'accès signés pour les comptes de test jetables (backend/scripts/loadtest-seed-users.ts).
+# Les comptes eux-mêmes sont supprimés après chaque campagne de mesure ; inutile et pas souhaitable
+# de committer des JWT signés, même pour des comptes jetables.
+.tokens.json

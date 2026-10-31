@@ -31,6 +31,7 @@ import { ViewerCountry } from '../common/decorators/viewer-country.decorator.js'
 import { ApiErrorDto } from '../common/dto/api-error.dto.js';
 import { UuidPipe } from '../common/pipes/uuid.pipe.js';
 import { type AuthenticatedUser } from '../common/request-context.js';
+import { RateLimit } from '../common/rate-limit/rate-limit.decorator.js';
 import { AdsService } from './ads.service.js';
 import {
   AdEligibilityDto,
@@ -77,6 +78,7 @@ export class AdsController {
   @Post('sessions')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
+  @RateLimit({ name: 'ads_sessions', limit: 20, windowSeconds: 900, scope: 'ip' })
   @ApiOperation({
     summary: 'Ouvrir une session de pub récompensée (10 min)',
     description:

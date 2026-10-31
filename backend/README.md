@@ -55,6 +55,7 @@ Toutes les variables sont documentées dans **`.env.example`** et validées au d
 | --- | --- | --- |
 | `NODE_ENV`, `PORT`, `LOG_LEVEL`, `CORS_ORIGINS`, `SWAGGER_ENABLED` | non | Application |
 | `DATABASE_URL` | **oui** | Connexion PostgreSQL |
+| `DATABASE_POOL_SIZE` | non | Taille du pool de connexions `pg` (défaut 20 ; le défaut de la librairie `pg` est 10, trop bas sous charge — S10-OPS-01) |
 | `REDIS_URL` | **oui** | Connexion Redis |
 | `JWT_ACCESS_SECRET`, `JWT_ACCESS_TTL_SECONDS` | **oui** / non | JWT d'accès (HS256, 15 min par défaut) |
 | `JWT_REFRESH_SECRET`, `JWT_REFRESH_TTL_DAYS` | **oui** / non | Pepper de hachage des jetons de rafraîchissement, durée de vie (30 j) |
