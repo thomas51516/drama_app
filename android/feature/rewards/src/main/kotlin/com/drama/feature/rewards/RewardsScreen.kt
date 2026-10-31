@@ -315,7 +315,7 @@ private fun DayCell(
                 .heightIn(min = 64.dp)
                 .background(
                     when {
-                        today -> DramaColors.CrimsonSoft
+                        today -> DramaColors.EmeraldSoft
                         claimed -> MaterialTheme.colorScheme.surfaceContainerHighest
                         else -> MaterialTheme.colorScheme.surfaceContainer
                     },

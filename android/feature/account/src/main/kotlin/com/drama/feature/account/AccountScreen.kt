@@ -781,7 +781,7 @@ private fun Avatar(
         modifier =
             Modifier
                 .size(64.dp)
-                .background(DramaColors.CrimsonSoft, CircleShape)
+                .background(DramaColors.EmeraldSoft, CircleShape)
                 .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {

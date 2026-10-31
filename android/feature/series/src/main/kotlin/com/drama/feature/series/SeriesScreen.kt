@@ -572,7 +572,7 @@ private fun LikeButton(
         modifier =
             modifier
                 .clip(shape)
-                .background(if (liked) DramaColors.CrimsonSoft else MaterialTheme.colorScheme.surfaceContainerHigh)
+                .background(if (liked) DramaColors.EmeraldSoft else MaterialTheme.colorScheme.surfaceContainerHigh)
                 .then(if (liked) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
                 .toggleable(value = liked, onValueChange = { onClick() }, role = Role.Checkbox)
                 .semantics { contentDescription = description }
@@ -618,7 +618,7 @@ private fun Chip(
                         Modifier.border(1.dp, MaterialTheme.colorScheme.outline, shape)
                     } else {
                         Modifier.background(
-                            if (accent) DramaColors.CrimsonSoft else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            if (accent) DramaColors.EmeraldSoft else MaterialTheme.colorScheme.surfaceContainerHigh,
                             shape,
                         )
                     },
@@ -688,7 +688,7 @@ private fun EpisodeCell(
     val shape = RoundedCornerShape(10.dp)
     val container =
         when {
-            highlighted -> DramaColors.CrimsonSoft
+            highlighted -> DramaColors.EmeraldSoft
             else -> MaterialTheme.colorScheme.surfaceContainerHigh
         }
     val statusLabel =

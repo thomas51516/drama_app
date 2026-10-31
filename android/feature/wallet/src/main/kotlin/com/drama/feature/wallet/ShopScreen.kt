@@ -340,7 +340,7 @@ private fun WelcomeOfferBanner(offer: WelcomeOffer) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(DramaColors.CrimsonSoft, RoundedCornerShape(12.dp))
+                .background(DramaColors.EmeraldSoft, RoundedCornerShape(12.dp))
                 .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
                 .padding(DramaSpacing.md)
                 .semantics(mergeDescendants = true) {},
@@ -452,7 +452,7 @@ private fun PackCard(
                     color = MaterialTheme.colorScheme.primary,
                     modifier =
                         Modifier
-                            .background(DramaColors.CrimsonSoft, RoundedCornerShape(6.dp))
+                            .background(DramaColors.EmeraldSoft, RoundedCornerShape(6.dp))
                             .padding(horizontal = DramaSpacing.sm, vertical = DramaSpacing.xxs),
                 )
             }
@@ -532,7 +532,7 @@ private fun PlanCard(
                     color = MaterialTheme.colorScheme.primary,
                     modifier =
                         Modifier
-                            .background(DramaColors.CrimsonSoft, RoundedCornerShape(6.dp))
+                            .background(DramaColors.EmeraldSoft, RoundedCornerShape(6.dp))
                             .padding(horizontal = DramaSpacing.sm, vertical = DramaSpacing.xxs),
                 )
             }
@@ -568,7 +568,7 @@ private fun VipStatusCard(subscription: Subscription) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(DramaColors.CrimsonSoft, RoundedCornerShape(14.dp))
+                .background(DramaColors.EmeraldSoft, RoundedCornerShape(14.dp))
                 .padding(DramaSpacing.md)
                 .semantics(mergeDescendants = true) {},
     ) {

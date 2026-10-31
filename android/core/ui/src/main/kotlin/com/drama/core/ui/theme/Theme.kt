@@ -9,9 +9,9 @@ import androidx.compose.ui.unit.dp
 
 private val DarkColorScheme =
     darkColorScheme(
-        primary = DramaColors.Crimson,
+        primary = DramaColors.Emerald,
         onPrimary = DramaColors.OnInk,
-        primaryContainer = DramaColors.CrimsonDark,
+        primaryContainer = DramaColors.EmeraldDark,
         onPrimaryContainer = DramaColors.OnInk,
         secondary = DramaColors.Gold,
         onSecondary = DramaColors.Ink,

@@ -3,13 +3,15 @@ package com.drama.core.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Provisional dark palette (S03-UX-01 pending): near-black canvas, pink/red accent, white text.
- * Keep every colour behind these tokens so the designer's system can replace them in one place.
+ * Provisional dark palette (S03-UX-01 pending): near-black canvas, white text, emerald accent
+ * aligned with the back-office's PrimeVue Aura theme (#10b981) so the brand reads consistently
+ * across the app and the admin tools. Keep every colour behind these tokens so the designer's
+ * system can replace them in one place.
  */
 object DramaColors {
-    val Crimson = Color(0xFFFF3B6B)
-    val CrimsonDark = Color(0xFFC9204C)
-    val CrimsonSoft = Color(0x33FF3B6B)
+    val Emerald = Color(0xFF10B981)
+    val EmeraldDark = Color(0xFF047857)
+    val EmeraldSoft = Color(0x3310B981)
     val Gold = Color(0xFFF2B33D)
     val Ink = Color(0xFF09090C)
     val Surface = Color(0xFF131318)

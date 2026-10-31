@@ -90,14 +90,14 @@
     <string name="settings_language">Langue</string>
     <string name="settings_language_hint">Appliquée immédiatement à toute l\'application.</string>
     <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_hint">Choisissez ce que DRAMA peut vous envoyer.</string>
+    <string name="settings_notifications_hint">Choisissez ce que Drama Nye peut vous envoyer.</string>
     <string name="settings_notif_new_episodes">Nouveaux épisodes</string>
     <string name="settings_notif_new_episodes_hint">Quand une série de Ma liste publie un épisode.</string>
     <string name="settings_notif_offers">Offres</string>
     <string name="settings_notif_offers_hint">Promotions sur les pièces et le VIP.</string>
     <string name="settings_notif_checkin">Rappel quotidien</string>
     <string name="settings_notif_checkin_hint">Un rappel pour votre bonus de connexion.</string>
-    <string name="settings_notif_permission_off">Les notifications sont désactivées pour DRAMA sur ce téléphone.</string>
+    <string name="settings_notif_permission_off">Les notifications sont désactivées pour Drama Nye sur ce téléphone.</string>
     <string name="settings_notif_permission_allow">Autoriser les notifications</string>
     <string name="settings_notif_permission_system">Ouvrir les réglages du téléphone</string>
     <string name="settings_data_saver">Économiseur de données</string>
