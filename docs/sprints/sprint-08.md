@@ -18,11 +18,11 @@ une question de configuration, pas de développement.
 
 | ID | Ticket | Statut |
 | --- | --- | --- |
-| S10-OPS-01 | Test de charge à 5 000 utilisateurs simultanés sur les endpoints de lecture, correctifs si p95 > 300 ms | En cours |
-| S10-OPS-03 | Restauration complète de la base testée en conditions réelles, RPO et RTO mesurés | En cours |
-| Sécurité | Audit : limitation de débit, signatures de webhooks, secrets, en-têtes HTTP, autodiagnostic façon test d'intrusion (le vrai test reste un prestataire externe avant lancement) | En cours |
-| Déploiement | Gabarits `docker-compose.prod.yml`, Traefik avec TLS Let's Encrypt, variables de production documentées, pour un déploiement en une commande une fois l'hébergeur choisi | En cours |
-| CI/CD | Secrets du pipeline, revue des permissions, validation du build de production | En cours |
+| S10-OPS-01 | Test de charge à 5 000 utilisateurs simultanés sur les endpoints de lecture, correctifs si p95 > 300 ms | Terminé, vérifié, commité |
+| S10-OPS-03 | Restauration complète de la base testée en conditions réelles, RPO et RTO mesurés | Terminé, vérifié, commité |
+| Sécurité | Audit : limitation de débit, signatures de webhooks, secrets, en-têtes HTTP, autodiagnostic façon test d'intrusion (le vrai test reste un prestataire externe avant lancement) | Terminé, vérifié, commité |
+| Déploiement | Gabarits `docker-compose.prod.yml`, Traefik avec TLS Let's Encrypt, variables de production documentées, pour un déploiement en une commande une fois l'hébergeur choisi | Terminé, vérifié, commité |
+| CI/CD | Secrets du pipeline, revue des permissions, validation du build de production | Terminé, vérifié, commité |
 
 ## Reporté à un sprint ultérieur
 
@@ -30,6 +30,20 @@ une question de configuration, pas de développement.
 - Vrai test d'intrusion par un prestataire : nécessite un environnement accessible depuis l'extérieur.
 - Disponibilité 99,5 % et charge réelle : seulement mesurables une fois en production.
 
-## Compte rendu de fin de sprint
+## Compte rendu de fin de sprint (31 octobre 2026)
 
-À compléter.
+Tous les tickets livrés, vérifiés et commités, par un seul agent sur Sonnet.
+
+- **Charge** : deux vrais bugs trouvés et corrigés (requêtes N+1 de l'accueil, pool de connexions trop petit).
+  p95 < 300 ms jusqu'à 400 utilisateurs simultanés sur ce poste. Les 5 000 du cahier des charges
+  restent à valider sur un vrai staging, voir `docs/ops/charge.md`.
+- **Reprise** : sauvegarde et restauration exercées sur une base jetable, bascule de secours corrigée.
+  Voir `docs/ops/reprise.md`.
+- **Sécurité** : 5 routes sans limitation de débit corrigées, jeton RTDN rendu obligatoire et comparé
+  en temps constant, HSTS explicite. Le vrai test d'intrusion par un prestataire reste nécessaire
+  avant le lancement. Voir `docs/ops/securite.md`.
+- **Déploiement** : Dockerfile testé de bout en bout, gabarit `docker-compose.prod.yml` avec Traefik
+  et TLS, non encore déployé faute d'hébergeur. Voir `docs/ops/deploiement.md`.
+
+Reporté : certificate pinning et Play Integrity côté Android, vrai test d'intrusion, validation de
+charge et de disponibilité en conditions réelles.
