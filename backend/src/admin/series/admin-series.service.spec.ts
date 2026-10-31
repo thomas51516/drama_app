@@ -34,6 +34,7 @@ function series(partial: Partial<AdminSeriesRecord> = {}): AdminSeriesRecord {
     createdAt: new Date(),
     updatedAt: new Date(),
     _count: { episodes: 2 },
+    rightsContract: null,
     ...partial,
   };
 }
@@ -168,7 +169,10 @@ describe('AdminSeriesService.publish / archive', () => {
         data: { status: 'PUBLISHED', publishedAt: expect.any(Date) },
       }),
     );
-    expect(audit.record.mock.calls[0]?.[0]).toMatchObject({
+    const publishEntry = audit.record.mock.calls.find(
+      (c) => (c[0] as Record<string, unknown>).action === 'series.publish',
+    )?.[0];
+    expect(publishEntry).toMatchObject({
       action: 'series.publish',
       oldValue: { status: 'DRAFT' },
       newValue: { status: 'PUBLISHED' },
@@ -180,5 +184,42 @@ describe('AdminSeriesService.publish / archive', () => {
     const { service } = makeService(series({ status: 'PUBLISHED', publishedAt: new Date() }));
     const archived = await service.archive(series().id, admin('ADMIN'));
     expect(archived.status).toBe('ARCHIVED');
+  });
+
+  it('B-12: publishes without a rights contract and records an audit warning, never a block', async () => {
+    const { service, audit } = makeService(series({ rightsContract: null }), 1);
+    const published = await service.publish(series().id, admin('ADMIN'));
+    expect(published.status).toBe('PUBLISHED');
+    expect(published.rightsStatus).toBe('NONE');
+    const warning = audit.record.mock.calls.find(
+      (c) => (c[0] as Record<string, unknown>).action === 'series.publish_rights_warning',
+    )?.[0] as Record<string, unknown>;
+    expect(warning).toMatchObject({ newValue: { rightsStatus: 'NONE' }, targetType: 'series' });
+  });
+
+  it('B-12: no audit warning when the rights contract is active', async () => {
+    const { service, audit } = makeService(
+      series({
+        rightsContract: {
+          id: 'c1',
+          seriesId: series().id,
+          rightsHolder: 'Le client',
+          territories: [],
+          licenseStartsAt: new Date('2020-01-01T00:00:00Z'),
+          licenseEndsAt: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }),
+      1,
+    );
+    const published = await service.publish(series().id, admin('ADMIN'));
+    expect(published.rightsStatus).toBe('ACTIVE');
+    expect(
+      audit.record.mock.calls.some(
+        (c) => (c[0] as Record<string, unknown>).action === 'series.publish_rights_warning',
+      ),
+    ).toBe(false);
   });
 });

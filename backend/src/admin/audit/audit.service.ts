@@ -24,6 +24,7 @@ export const AUDIT_TARGET_TYPES = [
   'promo_code',
   'limited_offer',
   'topup_order',
+  'rights_contract',
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

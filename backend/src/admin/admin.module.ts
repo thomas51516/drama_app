@@ -5,6 +5,7 @@ import { AdminAuthModule } from './auth/admin-auth.module.js';
 import { AdminCampaignsModule } from './campaigns/admin-campaigns.module.js';
 import { AdminEpisodesModule } from './episodes/admin-episodes.module.js';
 import { AdminHomeModule } from './home/admin-home.module.js';
+import { AdminRightsModule } from './rights/admin-rights.module.js';
 import { AdminScheduleModule } from './schedule/admin-schedule.module.js';
 import { AdminSeriesModule } from './series/admin-series.module.js';
 import { AdminStatsModule } from './stats/admin-stats.module.js';
@@ -15,14 +16,16 @@ import { AdminUsersModule } from './users/admin-users.module.js';
  * Back-office (§5, §8.2) : endpoints /admin/* réservés aux comptes internes, contrôlés par rôle
  * (EDITOR, MONETIZATION, SUPPORT, ADMIN) et tracés dans `audit_logs`.
  * Livré : séries (B-01), épisodes (B-02), sous-titres (B-03), publication programmée (B-04), mise en
- * avant (B-05), campagnes push (B-10), tableau de bord v0 (B-11), comptes, appareils de confiance et
- * audit (B-13), utilisateurs et support (B-09). Monétisation (B-06) et récompenses (B-08) : `monetization/`.
+ * avant (B-05), campagnes push (B-10), tableau de bord (B-11), comptes, appareils de confiance et
+ * audit (B-13), utilisateurs et support (B-09), droits et contrats (B-12). Monétisation (B-06) et
+ * récompenses (B-08) : `monetization/`.
  */
 @Module({
   imports: [
     AuditModule,
     AdminAuthModule,
     AdminSeriesModule,
+    AdminRightsModule,
     AdminEpisodesModule,
     AdminSubtitlesModule,
     AdminHomeModule,

@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CatalogCacheService } from '../../cache/catalog-cache.service.js';
@@ -10,6 +11,7 @@ import { type Prisma, type Series } from '../../generated/prisma/client.js';
 import { MonetizationSettingsService } from '../../monetization/monetization-settings.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService, diffChanges } from '../audit/audit.service.js';
+import { computeRightsStatus } from '../rights/rights-status.js';
 import { slugify } from '../shared/slug.js';
 import {
   type AdminSeriesRecord,
@@ -53,6 +55,8 @@ type AuditedSeries = Pick<Series, (typeof AUDITED_FIELDS)[number]>;
 
 @Injectable()
 export class AdminSeriesService {
+  private readonly logger = new Logger(AdminSeriesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -80,7 +84,12 @@ export class AdminSeriesService {
       }),
       this.prisma.series.count({ where }),
     ]);
-    return { items: items.map(toAdminSeries), total, page: query.page, pageSize: query.pageSize };
+    return {
+      items: items.map((s) => toAdminSeries(s)),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   }
 
   async get(id: string): Promise<AdminSeriesDto> {
@@ -173,6 +182,9 @@ export class AdminSeriesService {
   /**
    * Publication : refusée (409) tant qu'aucun épisode n'est READY. Une date déjà renseignée (future :
    * publication programmée, B-04) est conservée ; sinon la série est publiée immédiatement.
+   * B-12 / S09 : l'absence (ou l'expiration) d'un contrat de droits ne bloque PAS la publication
+   * (décision du sprint 9, « La Nounou » est déjà publiée sans contrat) — seulement un avertissement
+   * dans le journal d'audit et les logs ; `rightsStatus` dans la réponse rend l'état visible.
    */
   async publish(id: string, admin: AuthenticatedAdmin, ip?: string): Promise<AdminSeriesDto> {
     const before = await this.findOrThrow(id);
@@ -184,6 +196,20 @@ export class AdminSeriesService {
       throw new ConflictException({
         code: 'SERIES_NO_READY_EPISODE',
         message: 'A series needs at least one READY episode to be published',
+      });
+    }
+    const rightsStatus = computeRightsStatus(before.rightsContract);
+    if (rightsStatus !== 'ACTIVE') {
+      this.logger.warn(
+        `Series ${id} (${before.title}) published with rightsStatus=${rightsStatus} (no enforced contract, B-12)`,
+      );
+      await this.audit.record({
+        actor: admin,
+        action: 'series.publish_rights_warning',
+        targetType: 'series',
+        targetId: id,
+        newValue: { rightsStatus },
+        ip,
       });
     }
     const published = await this.transition(before, 'PUBLISHED', 'series.publish', admin, ip, {

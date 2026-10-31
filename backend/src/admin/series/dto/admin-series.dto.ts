@@ -18,6 +18,10 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { AgeRating, SeriesStatus } from '../../../generated/prisma/client.js';
+import { RightsContractDto } from '../../rights/dto/admin-rights.dto.js';
+import { type RightsStatus } from '../../rights/rights-status.js';
+
+const RIGHTS_STATUS_VALUES: RightsStatus[] = ['NONE', 'ACTIVE', 'EXPIRED'];
 
 const trimStrings = () =>
   Transform(({ value }: { value: unknown }) =>
@@ -77,6 +81,16 @@ export class AdminSeriesDto {
 
   @ApiProperty({ type: String, nullable: true, format: 'date-time' })
   publishedAt: string | null;
+
+  @ApiProperty({
+    enum: RIGHTS_STATUS_VALUES,
+    description:
+      'Calculé (B-12) : NONE = pas de contrat, ACTIVE = dans la fenêtre de licence, EXPIRED = contrat hors fenêtre (licence terminée ou pas encore commencée). Ne bloque jamais la publication.',
+  })
+  rightsStatus: RightsStatus;
+
+  @ApiProperty({ type: RightsContractDto, nullable: true })
+  rightsContract: RightsContractDto | null;
 
   @ApiProperty({ format: 'date-time' })
   createdAt: string;

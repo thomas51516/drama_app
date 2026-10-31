@@ -576,7 +576,10 @@ describe('Sprint 5 API (e2e)', () => {
     const stats = await asAdmin(api().get('/admin/stats/overview?days=2')).expect(200);
     expect(stats.body.paywallViews).toBeGreaterThanOrEqual(1);
     expect(stats.body.pushOpens).toBeGreaterThanOrEqual(1);
-    expect(stats.body.unlocks).toBe(0);
+    // B-11 (sprint 9) : `unlocks` est désormais un vrai comptage (COUNT(*) FROM unlocks), plus un
+    // 0 figé ; il dépend des déblocages réels de la fenêtre partagée avec l'API de dev, donc on
+    // vérifie seulement la forme du champ plutôt qu'une valeur exacte.
+    expect(stats.body.unlocks).toBeGreaterThanOrEqual(0);
     await redis.client.del(statsCacheKey(2));
   });
 });

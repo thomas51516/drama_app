@@ -379,10 +379,12 @@ model Series {
   createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  episodes    Episode[]
-  favorites   Favorite[]
-  likes       Like[]
-  homeBanners HomeBanner[]
+  episodes       Episode[]
+  favorites      Favorite[]
+  likes          Like[]
+  homeBanners    HomeBanner[]
+  /// Contrat de droits courant (B-12). Au plus un par série ; voir `rights_contracts`.
+  rightsContract RightsContract?
 
   @@index([status, publishedAt(sort: Desc)])
   @@index([genres], type: Gin)
@@ -436,6 +438,32 @@ model Subtitle {
 
   @@unique([episodeId, language])
   @@map("subtitles")
+}
+
+/// Droits et contrats (B-12, S09-BE). Décision : un contrat « courant » par série (1-1, pas
+/// d'historique) ; l'édition remplace les champs en place plutôt que de créer une nouvelle ligne.
+/// `rightsStatus` (NONE | ACTIVE | EXPIRED) est calculé à la lecture, jamais stocké :
+/// NONE = pas de ligne, ACTIVE = `licenseStartsAt <= now <= licenseEndsAt` (ou pas de fin),
+/// EXPIRED = ligne présente mais hors fenêtre (licence terminée OU pas encore commencée ; l'énumération
+/// à trois états du cahier des charges n'a pas de valeur dédiée pour une licence pas encore démarrée).
+model RightsContract {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  seriesId        String    @unique @map("series_id") @db.Uuid
+  /// Ayant droit (personne ou société titulaire des droits).
+  rightsHolder    String    @map("rights_holder") @db.VarChar(200)
+  /// Territoires couverts (ISO 3166-1 alpha-2, mêmes codes que `series.territories`). Vide = monde entier.
+  territories     String[]  @default([])
+  licenseStartsAt DateTime  @map("license_starts_at") @db.Timestamptz(3)
+  /// `null` = licence à durée indéterminée.
+  licenseEndsAt   DateTime? @map("license_ends_at") @db.Timestamptz(3)
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  series Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@index([licenseEndsAt])
+  @@map("rights_contracts")
 }
 
 // -----------------------------------------------------------------------------

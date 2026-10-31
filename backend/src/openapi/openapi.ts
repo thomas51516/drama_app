@@ -24,8 +24,13 @@ import { ApiErrorDto } from '../common/dto/api-error.dto.js';
  * pub récompensée avec sessions et callback SSV `admob` | `fake` (S08-BE-03), déblocage de série entière, offre de
  * bienvenue, offres limitées et codes promo (S10-BE-02/03, B-07), recharge mobile money `fake` | `cinetpay` avec
  * réconciliation (S09-BE-01/02), classements (M-04), genres localisés (DEF-012), `series.adUnlockEnabled`.
+ * v1.6 (sprint 9) : tableau de bord complété (B-11) — revenus par source (`GET /admin/stats/overview`),
+ * rétention par épisode (`GET /admin/stats/retention`) et conversion au paywall ; droits et contrats
+ * (B-12) — `rights_contracts`, `rightsStatus` (NONE|ACTIVE|EXPIRED) sur la série, avertissement d'audit
+ * (sans blocage) à la publication sans contrat, `GET/POST/PATCH/DELETE /admin/series/{id}/rights-contract`
+ * et `GET /admin/rights-contracts` (liste de rappel).
  */
-export const OPENAPI_VERSION = '1.5.0';
+export const OPENAPI_VERSION = '1.6.0';
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()

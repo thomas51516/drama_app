@@ -6933,6 +6933,351 @@
         ]
       }
     },
+    "/admin/rights-contracts": {
+      "get": {
+        "description": "`expiringWithinDays` ne garde que ce qui demande une action : sans contrat (NONE), hors fenêtre (EXPIRED), ou contrat actif dont `licenseEndsAt` tombe dans les N jours.",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "expiringWithinDays",
+            "required": false,
+            "in": "query",
+            "description": "Ne garder que les séries nécessitant une attention : sans contrat (NONE), hors fenêtre (EXPIRED), ou dont la licence se termine dans ce nombre de jours.",
+            "schema": {
+              "minimum": 0,
+              "maximum": 3650,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsContractListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Liste de rappel pour le renouvellement : toutes les séries avec leur statut de droits",
+        "tags": [
+          "admin-rights"
+        ]
+      }
+    },
+    "/admin/series/{id}/rights-contract": {
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsContractDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND | RIGHTS_CONTRACT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Contrat de droits courant d'une série",
+        "tags": [
+          "admin-rights"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRightsContractDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsContractDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RIGHTS_CONTRACT_ALREADY_EXISTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Enregistrer le contrat de droits de la série (409 si déjà présent)",
+        "tags": [
+          "admin-rights"
+        ]
+      },
+      "patch": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRightsContractDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsContractDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND | RIGHTS_CONTRACT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Modifier le contrat de droits de la série",
+        "tags": [
+          "admin-rights"
+        ]
+      },
+      "delete": {
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ROLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND | RIGHTS_CONTRACT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Supprimer le contrat de droits de la série",
+        "tags": [
+          "admin-rights"
+        ]
+      }
+    },
     "/admin/series/{id}/episodes": {
       "get": {
         "operationId": "list",
@@ -9091,7 +9436,8 @@
                 "reward_task",
                 "promo_code",
                 "limited_offer",
-                "topup_order"
+                "topup_order",
+                "rights_contract"
               ]
             }
           },
@@ -9239,7 +9585,7 @@
     },
     "/admin/stats/overview": {
       "get": {
-        "description": "Agrégats SQL sur `users` et `watch_progress` (`days` = fenêtre pour `newUsers`, `episodesStarted`, `episodesCompleted`, `topSeries` ; `activeUsers` toujours sur 1, 7 et 30 jours). Mis en cache 5 min par fenêtre.",
+        "description": "Agrégats SQL sur `users`, `watch_progress`, `coin_ledger`/`purchases` et `analytics_events` (`days` = fenêtre pour `newUsers`, `episodesStarted`, `episodesCompleted`, `topSeries`, `unlocks`, `revenueBySource`, `paywallConversion` ; `activeUsers` toujours sur 1, 7 et 30 jours). Mis en cache 5 min par fenêtre. La rétention par épisode est un endpoint séparé (`GET /admin/stats/retention`) car elle se paramètre par série plutôt que par fenêtre de jours.",
         "operationId": "overview",
         "parameters": [
           {
@@ -9282,7 +9628,66 @@
             "admin": []
           }
         ],
-        "summary": "Vue d’ensemble : utilisateurs actifs, nouveaux comptes, épisodes vus, top séries",
+        "summary": "Vue d’ensemble : utilisateurs actifs, nouveaux comptes, épisodes vus, top séries, revenus par source, conversion au paywall",
+        "tags": [
+          "admin-stats"
+        ]
+      }
+    },
+    "/admin/stats/retention": {
+      "get": {
+        "description": "Pourcentage de la cohorte « épisode 1 » encore présente à l'épisode N, calculé depuis `watch_progress` (démarré = une ligne existe). `seriesId` restreint à une série ; absent, les cohortes de toutes les séries sont combinées (voir la description du DTO pour le détail du calcul). Pas de cache (dataset réduit, paramétrage variable).",
+        "operationId": "retention",
+        "parameters": [
+          {
+            "name": "seriesId",
+            "required": false,
+            "in": "query",
+            "description": "Série unique ; absent = toute la catalogue (cohortes combinées série par série)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionStatsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED | INVALID_ADMIN_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SERIES_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "admin": []
+          }
+        ],
+        "summary": "Courbe de rétention par épisode (B-11)",
         "tags": [
           "admin-stats"
         ]
@@ -10283,7 +10688,7 @@
   "info": {
     "title": "DRAMA API",
     "description": "API du MVP de micro-séries verticales (Android) et du back-office.\n\n**Principes** : le serveur fait foi (solde, droits, prix) ; toutes les erreurs suivent le schéma `ApiErrorDto` avec un `code` stable à localiser côté application.\n\n**Authentification app** : `POST /auth/guest` au premier lancement, puis `Authorization: Bearer <accessToken>` ; renouveler avec `POST /auth/refresh` (rotation, jeton à usage unique). Connexion Google (`/auth/google`), OTP SMS (`/auth/otp/*`) et e-mail (`/auth/email/*`) : avec le jeton du compte invité dans `Authorization`, l’invité est rattaché (inscrit en place) ou fusionné dans le compte retrouvé (`linked=true`, M-50).\n\n**Lecture** : `POST /episodes/{id}/play` et `GET /feed` renvoient des URLs signées et expirantes (`MEDIA_SIGNER=plain|hmac`) ; redemander l’URL après `expiresAt` ou sur un 403 du CDN. Épisode verrouillé : `403 EPISODE_LOCKED { coinCost, balance, canAutoUnlock }`, ou déblocage automatique dans la même requête (`unlocked: true`) quand `autoUnlock` est activé et le solde suffisant.\n\n**Pièces et achats** : le grand livre `coin_ledger` est la seule source de vérité (`GET /wallet`, `GET /wallet/transactions`) ; `POST /episodes/{id}/unlock` débite bonus puis achetées dans la même transaction que le déblocage (idempotent, `402 INSUFFICIENT_COINS`). `GET /shop` donne les prix dans la devise de `X-Country` ; `POST /billing/google/verify` vérifie le jeton côté serveur (`BILLING_VERIFIER=google|fake`), crédite une seule fois par `purchaseToken` et acquitte ; `POST /webhooks/google-rtdn` traite renouvellements, annulations et remboursements.\n\n**Authentification back-office** : `POST /admin/auth/login` (mot de passe) puis `POST /admin/auth/totp/verify` (code TOTP, 2FA obligatoire) ; le JWT admin (`aud: admin`) est distinct du JWT utilisateur. `rememberDevice: true` renvoie un `deviceToken` (30 jours) qui, présenté au login, dispense du TOTP (`status: ok`).\n\n**Notifications** : `PUT /me/devices/push` enregistre le jeton FCM ; `GET /me/notifications` est l’historique in-app (`new_episode`, `support_reply`, `campaign`). Plafond : 2 push par utilisateur et par jour, préférences `notificationPreferences` de `PATCH /me` respectées. `POST /events` reçoit le plan de marquage du §13.\n\n**Récompenses et pub** : `GET/POST /rewards/checkin` (barème sur 7 jours, jour civil du fuseau du pays, `409 CHECKIN_ALREADY_CLAIMED`), `GET /rewards/tasks` + `POST /rewards/tasks/{id}/claim` (progression calculée côté serveur) ; pub récompensée : `GET /ads/eligibility`, `POST /ads/sessions` → `customData` à passer à la régie, callback SSV `GET|POST /ads/reward` (signature ECDSA AdMob ou HMAC `fake`) qui crée le déblocage `method: ad`, `GET /ads/sessions/{id}` pour le sondage.\n\n**Série entière, offres, recharge** : `GET /series/{id}/unlock-all/quote` et `POST /series/{id}/unlock-all` (remise `seriesUnlockDiscountPercent`, une transaction) ; `GET /offers` (bienvenue, offres limitées) et `POST /promo/redeem` ; recharge mobile money `POST /topup/orders` → `paymentUrl`, `GET /topup/orders/{id}`, webhook signé `POST /webhooks/mobile-money/{provider}` (crédit idempotent), réconciliation `GET /admin/topup/reconciliation?date`. `GET /rankings?period` (spectateurs distincts, cache 10 min) et `GET /genres?lang` (libellés localisés).\n\n**Limitation de débit** : `/auth/*` (par IP, par e-mail, 3 OTP par numéro et 15 min) et `/admin/auth/*` renvoient `429 RATE_LIMITED` (en-têtes `Retry-After`, `X-RateLimit-*`).\n\n**Catalogue** : `X-Country` (ISO 3166-1 alpha-2) et `Accept-Language` (fr, en, es, pt) personnalisent `GET /home` et les filtres territoriaux ; `GET /home` est mis en cache 60 s par pays et langue, `GET /series/{id}` et `/episodes` 120 s (variante anonyme), invalidés à chaque modification en back-office et quand une publication programmée est atteinte. Avec un jeton, les résumés de séries portent `isFavorite` et `likes` (calculés hors cache).",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "contact": {
       "name": "Équipe backend DRAMA",
       "url": "",
@@ -14921,6 +15326,64 @@
           "transcodeStatus"
         ]
       },
+      "RightsContractDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rightsHolder": {
+            "type": "string",
+            "example": "Le client"
+          },
+          "territories": {
+            "example": [],
+            "description": "ISO 3166-1 alpha-2 ; vide = monde",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "licenseStartsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "licenseEndsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "null = durée indéterminée"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "seriesId",
+          "rightsHolder",
+          "territories",
+          "licenseStartsAt",
+          "licenseEndsAt",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "AdminSeriesDto": {
         "type": "object",
         "properties": {
@@ -15019,6 +15482,24 @@
             "nullable": true,
             "format": "date-time"
           },
+          "rightsStatus": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "ACTIVE",
+              "EXPIRED"
+            ],
+            "description": "Calculé (B-12) : NONE = pas de contrat, ACTIVE = dans la fenêtre de licence, EXPIRED = contrat hors fenêtre (licence terminée ou pas encore commencée). Ne bloque jamais la publication."
+          },
+          "rightsContract": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RightsContractDto"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -15046,6 +15527,8 @@
           "territories",
           "episodeCount",
           "publishedAt",
+          "rightsStatus",
+          "rightsContract",
           "createdAt",
           "updatedAt"
         ]
@@ -15252,6 +15735,140 @@
             "nullable": true,
             "format": "date-time",
             "description": "Date de publication, future acceptée (publication programmée, B-04) : une série publiée reste invisible du public tant que la date n’est pas atteinte ; `null` efface la date (la série publiée redevient invisible)."
+          }
+        }
+      },
+      "RightsContractListItemDto": {
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesTitle": {
+            "type": "string",
+            "example": "La Nounou"
+          },
+          "seriesStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "rightsStatus": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "ACTIVE",
+              "EXPIRED"
+            ]
+          },
+          "contract": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RightsContractDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "seriesId",
+          "seriesTitle",
+          "seriesStatus",
+          "rightsStatus",
+          "contract"
+        ]
+      },
+      "RightsContractListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RightsContractListItemDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "CreateRightsContractDto": {
+        "type": "object",
+        "properties": {
+          "rightsHolder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Le client"
+          },
+          "territories": {
+            "example": [],
+            "description": "ISO 3166-1 alpha-2 ; vide = monde",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "licenseStartsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-31T00:00:00.000Z"
+          },
+          "licenseEndsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "null ou absent = durée indéterminée"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "rightsHolder",
+          "licenseStartsAt"
+        ]
+      },
+      "UpdateRightsContractDto": {
+        "type": "object",
+        "properties": {
+          "rightsHolder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Le client"
+          },
+          "territories": {
+            "description": "ISO 3166-1 alpha-2 ; vide = monde",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "licenseStartsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "licenseEndsAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "null = durée indéterminée"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
           }
         }
       },
@@ -16172,7 +16789,8 @@
               "reward_task",
               "promo_code",
               "limited_offer",
-              "topup_order"
+              "topup_order",
+              "rights_contract"
             ]
           },
           "targetId": {
@@ -16392,6 +17010,69 @@
           "completions"
         ]
       },
+      "RevenueBySourceDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "GOOGLE_PLAY",
+              "MOBILE_MONEY"
+            ],
+            "example": "MOBILE_MONEY"
+          },
+          "currency": {
+            "type": "string",
+            "example": "XOF",
+            "description": "ISO 4217"
+          },
+          "amountMinor": {
+            "type": "number",
+            "example": 150000,
+            "description": "Unité mineure de la devise (centimes ; FCFA sans décimale)"
+          },
+          "orderCount": {
+            "type": "number",
+            "description": "Nombre de paiements (lignes `purchases`) agrégés",
+            "example": 12
+          }
+        },
+        "required": [
+          "source",
+          "currency",
+          "amountMinor",
+          "orderCount"
+        ]
+      },
+      "PaywallConversionDto": {
+        "type": "object",
+        "properties": {
+          "paywallViewers": {
+            "type": "number",
+            "description": "Utilisateurs distincts ayant vu le paywall (`paywall_view`) sur la fenêtre"
+          },
+          "convertedViewers": {
+            "type": "number",
+            "description": "Parmi eux, ceux ayant débloqué un épisode (toute méthode) dans les `windowHours` heures suivant une vue"
+          },
+          "conversionRate": {
+            "type": "number",
+            "description": "convertedViewers / paywallViewers, 0 si aucune vue",
+            "example": 0.34
+          },
+          "windowHours": {
+            "type": "number",
+            "description": "Fenêtre d'attribution utilisée (approximation : pas de session partagée entre `analytics_events` et `unlocks`, donc un déblocage dans les N h qui suivent une vue est compté comme une conversion, même hors session)",
+            "example": 24
+          }
+        },
+        "required": [
+          "paywallViewers",
+          "convertedViewers",
+          "conversionRate",
+          "windowHours"
+        ]
+      },
       "StatsOverviewDto": {
         "type": "object",
         "properties": {
@@ -16434,11 +17115,26 @@
           },
           "unlocks": {
             "type": "number",
-            "description": "Déblocages sur la fenêtre (0 tant que la monétisation n’est pas livrée)"
+            "description": "Déblocages sur la fenêtre, toute méthode (`unlocks.created_at`)"
           },
           "pushOpens": {
             "type": "number",
             "description": "Ouvertures de notification sur la fenêtre (événement `push_open`)"
+          },
+          "revenueBySource": {
+            "description": "Revenus réels (hors codes promo) sur la fenêtre, par source et par devise (B-11). Calculé depuis `coin_ledger` (type PURCHASE) joint à `purchases`, jamais depuis la projection `wallets`. Les achats Google Play vérifiés par `BILLING_VERIFIER=fake` (environnement de développement) n'ont pas de montant réel (`amountMinor` toujours `null`) : seule l'intégration `google` en production renseigne le prix, donc `GOOGLE_PLAY` peut apparaître vide en dev même avec des achats crédités.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevenueBySourceDto"
+            }
+          },
+          "paywallConversion": {
+            "description": "Conversion du paywall sur la fenêtre (B-11)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaywallConversionDto"
+              }
+            ]
           },
           "days": {
             "type": "number",
@@ -16462,7 +17158,64 @@
           "paywallViews",
           "unlocks",
           "pushOpens",
+          "revenueBySource",
+          "paywallConversion",
           "days",
+          "generatedAt"
+        ]
+      },
+      "RetentionPointDto": {
+        "type": "object",
+        "properties": {
+          "episodeNumber": {
+            "type": "number",
+            "example": 1
+          },
+          "viewers": {
+            "type": "number",
+            "description": "Spectateurs distincts (utilisateur × série) ayant atteint cet épisode",
+            "example": 120
+          },
+          "retentionPercent": {
+            "type": "number",
+            "description": "viewers / cohortSize * 100, 100 pour l’épisode 1 par construction",
+            "example": 64.2
+          }
+        },
+        "required": [
+          "episodeNumber",
+          "viewers",
+          "retentionPercent"
+        ]
+      },
+      "RetentionStatsDto": {
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "cohortSize": {
+            "type": "number",
+            "description": "Taille de la cohorte (spectateurs distincts de l'épisode 1 ; pour « toute la catalogue », somme des cohortes par série : un utilisateur qui a commencé l'épisode 1 de deux séries compte deux fois)",
+            "example": 340
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetentionPointDto"
+            }
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "seriesId",
+          "cohortSize",
+          "points",
           "generatedAt"
         ]
       },
