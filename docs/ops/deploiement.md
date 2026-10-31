@@ -217,6 +217,15 @@ dédié. Conséquences sur le gabarit :
   avec l'hôte de `S3_ENDPOINT`, qui doit donc être joignable par le navigateur de l'uploadeur.
   `extra_hosts` épingle ce domaine sur l'IP publique de l'hôte dans le conteneur `api`, pour ne pas
   dépendre du hairpin NAT du VPS.
+- **Bug trouvé via un envoi d'affiche réel depuis le back-office** (`Storage responded 403`) :
+  `dramanye-media.conf` ne fixait pas `proxy_set_header Host $host;` — nginx transmettait par défaut
+  `Host: 127.0.0.1:9000` à MinIO au lieu de `media.dramanye.odootogo.com`, alors que la signature
+  SigV4 des URLs pré-signées (`presignPut`) inclut le `Host` comme en-tête signé : MinIO refusait
+  donc toute signature avec `403 SignatureDoesNotMatch`. Invisible en lecture (`MEDIA_SIGNER=plain`,
+  aucune vérification de signature sur un GET), seuls les envois (PUT pré-signé) étaient cassés —
+  d'où une découverte tardive. Corrigé en ajoutant `proxy_set_header Host $host;`, vérifié par un
+  aller-retour PUT réel (script Node ponctuel dans le conteneur `api`, 200). À reproduire sur tout
+  futur vhost nginx devant ce MinIO.
 - **Deux bugs trouvés et corrigés dans `backend/Dockerfile` à cette occasion** (jamais détectés avant
   faute d'avoir réellement construit puis *utilisé* l'image contre une vraie base) :
   1. Pas de `ffmpeg`/`ffprobe` dans l'image runtime → `TRANSCODE_PROVIDER=local` (aucun prestataire
