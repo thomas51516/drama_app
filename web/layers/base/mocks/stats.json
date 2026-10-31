@@ -25,7 +25,20 @@
         "viewers": 640,
         "completions": 390
       }
-    ]
+    ],
+    "paywallViews": 2640,
+    "unlocks": 980,
+    "pushOpens": 410,
+    "revenueBySource": [
+      { "source": "MOBILE_MONEY", "currency": "XOF", "amountMinor": 845000, "orderCount": 62 },
+      { "source": "GOOGLE_PLAY", "currency": "EUR", "amountMinor": 128700, "orderCount": 41 }
+    ],
+    "paywallConversion": {
+      "paywallViewers": 1980,
+      "convertedViewers": 690,
+      "conversionRate": 0.3484848484848485,
+      "windowHours": 24
+    }
   },
   "30": {
     "activeUsers": { "d1": 1284, "d7": 4830, "d30": 11260 },
@@ -53,6 +66,19 @@
         "viewers": 2210,
         "completions": 1480
       }
-    ]
+    ],
+    "paywallViews": 10850,
+    "unlocks": 4120,
+    "pushOpens": 1760,
+    "revenueBySource": [
+      { "source": "MOBILE_MONEY", "currency": "XOF", "amountMinor": 3410000, "orderCount": 248 },
+      { "source": "GOOGLE_PLAY", "currency": "EUR", "amountMinor": 512300, "orderCount": 167 }
+    ],
+    "paywallConversion": {
+      "paywallViewers": 8120,
+      "convertedViewers": 3040,
+      "conversionRate": 0.3743842364532019,
+      "windowHours": 24
+    }
   }
 }

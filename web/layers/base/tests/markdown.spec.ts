@@ -89,6 +89,7 @@ describe('markdown renderer (help page)', () => {
       'Mise en avant (accueil de l’application)'.replace('’', "'"),
       'Planification des sorties',
       'Tableau de bord',
+      'Droits et contrats',
       'Comptes internes et journal d’audit'.replace('’', "'"),
       'Appareil de confiance (connexion sans code pendant 30 jours)',
       'Monétisation (paramètres, packs, formules VIP)',

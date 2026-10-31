@@ -146,6 +146,7 @@
     "columns": {
       "title": "Titre",
       "status": "Statut",
+      "rights": "Droits",
       "language": "Langue",
       "episodeCount": "Épisodes",
       "updatedAt": "Mis à jour le"
@@ -253,6 +254,59 @@
       "placeholder": "Code ou nom de pays…",
       "count": "{count} territoire | {count} territoires",
       "francophone": "+ Francophonie"
+    }
+  },
+  "rights": {
+    "title": "Droits et contrats",
+    "subtitle": "Une série publiée sans contrat enregistré n'est jamais bloquée — seulement signalée.",
+    "loadError": "Impossible de charger les droits et contrats.",
+    "count": "{count} série | {count} séries",
+    "status": {
+      "NONE": "Sans contrat",
+      "ACTIVE": "Actif",
+      "EXPIRED": "Expiré"
+    },
+    "columns": {
+      "series": "Série",
+      "seriesStatus": "Statut",
+      "rightsStatus": "Droits",
+      "rightsHolder": "Ayant droit",
+      "territories": "Territoires",
+      "licenseEndsAt": "Fin de licence"
+    },
+    "territoriesWorldwide": "Monde entier",
+    "licenseIndefinite": "Durée indéterminée",
+    "filters": {
+      "expiringSoon": "Expire bientôt (30 jours)",
+      "allStatuses": "Tous les statuts",
+      "reset": "Réinitialiser les filtres"
+    },
+    "empty": {
+      "title": "Aucune série",
+      "filtered": "Aucune série ne correspond au filtre « Expire bientôt »."
+    },
+    "banner": {
+      "none": "Aucun contrat de droits enregistré pour cette série. La publication n'est pas bloquée, mais le contrat devrait être ajouté dès que possible.",
+      "expired": "Le contrat de droits de cette série est hors de sa fenêtre de licence (terminé ou pas encore commencé). La publication n'est pas bloquée, mais le contrat devrait être mis à jour."
+    },
+    "form": {
+      "legend": "Contrat de droits",
+      "readOnly": "Votre rôle permet uniquement de consulter ce contrat.",
+      "rightsHolder": "Ayant droit",
+      "licenseStartsAt": "Début de la licence",
+      "licenseEndsAt": "Fin de la licence",
+      "licenseEndsAtHint": "Laisser vide : durée indéterminée.",
+      "notes": "Notes",
+      "create": "Enregistrer le contrat",
+      "save": "Enregistrer les modifications",
+      "delete": "Supprimer le contrat",
+      "deleteConfirm": "Supprimer le contrat de droits de cette série ? Le statut repassera à « Sans contrat ».",
+      "created": "Contrat de droits enregistré.",
+      "saved": "Modifications enregistrées.",
+      "saveFailed": "Enregistrement impossible",
+      "deleted": "Contrat de droits supprimé.",
+      "deleteFailed": "Suppression impossible",
+      "nothingToSave": "Aucune modification à enregistrer."
     }
   },
   "episodes": {
@@ -684,7 +738,7 @@
   },
   "dashboard": {
     "title": "Tableaux de bord",
-    "subtitle": "Utilisateurs, visionnage et top séries (B-11 v0). Chiffres calculés par le serveur.",
+    "subtitle": "Utilisateurs, visionnage, revenus, conversion et rétention (B-11). Chiffres calculés par le serveur.",
     "period": {
       "7": "7 derniers jours",
       "30": "30 derniers jours",
@@ -701,7 +755,9 @@
     "sections": {
       "users": "Utilisateurs",
       "viewing": "Visionnage",
-      "topSeries": "Top séries"
+      "topSeries": "Top séries",
+      "revenue": "Revenus et conversion",
+      "retention": "Rétention par épisode"
     },
     "tiles": {
       "activeD1": "Actifs sur 24 h",
@@ -735,6 +791,41 @@
         "rate": "Complétion"
       },
       "empty": "Aucune lecture sur la période."
+    },
+    "revenue": {
+      "subtitle": "Pièces réellement payées sur la période, par source et par devise (codes promo exclus).",
+      "columns": {
+        "source": "Source",
+        "amount": "Montant",
+        "orders": "Paiements"
+      },
+      "source": {
+        "GOOGLE_PLAY": "Google Play",
+        "MOBILE_MONEY": "Mobile money"
+      },
+      "empty": "Aucun paiement sur la période.",
+      "note": "Calculé depuis le grand livre (coin_ledger) et les achats, jamais depuis le solde affiché. En développement, Google Play peut rester vide : le vérificateur de test ne renseigne pas de montant réel."
+    },
+    "conversion": {
+      "title": "Conversion au paywall",
+      "hint": "{converted} / {viewers} utilisateurs ayant vu le paywall ont débloqué un épisode dans les {hours} h.",
+      "noViews": "Aucun affichage du paywall sur la période."
+    },
+    "retention": {
+      "subtitle": "Part des spectateurs de l'épisode 1 encore présents à l'épisode N.",
+      "seriesLabel": "Série",
+      "wholeCatalogue": "Toute la catalogue",
+      "episodeShort": "Ép. {n}",
+      "chartAria": "Graphique en ligne : pourcentage de rétention par numéro d'épisode.",
+      "tooltip": "{percent} % ({viewers} spectateurs)",
+      "loadError": "Impossible de charger la rétention.",
+      "empty": "Aucune lecture pour cette sélection.",
+      "columns": {
+        "episode": "Épisode",
+        "viewers": "Spectateurs",
+        "retention": "Rétention"
+      },
+      "hint": "Calculé depuis les lectures commencées (watch_progress) ; « Toute la catalogue » combine les cohortes série par série (un même utilisateur compte une fois par série)."
     }
   },
   "help": {

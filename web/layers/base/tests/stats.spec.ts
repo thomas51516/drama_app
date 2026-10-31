@@ -2,16 +2,20 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '../stores/auth'
 import { useStatsApi } from '../composables/useStatsApi'
 import { mockCredentials, mockTiming, resetMockState } from '../mocks'
-import type { StatsOverview } from '../types/api'
+import type { StatsOverview, StatsRevenueBySource } from '../types/api'
 import {
   completionRate,
+  deriveConversionView,
   deriveTiles,
   formatCount,
   formatPercent,
+  formatRevenueAmount,
   isEmptyOverview,
   isStatsPeriod,
   rankTopSeries,
+  retentionChartData,
   share,
+  sortRevenueRows,
   STATS_REFRESH_INTERVAL_MS,
   STATS_SERIES_COLORS,
   topSeriesChartData,
@@ -196,5 +200,96 @@ describe('mock admin API — stats overview (B-11)', () => {
     await expect(
       useApi().get('/admin/stats/overview', { query: { days: 14 } }),
     ).rejects.toMatchObject({ status: 400 })
+  })
+})
+
+describe('stats — revenue by source (B-11, sprint 9)', () => {
+  it('sorts rows by source then currency', () => {
+    const rows: StatsRevenueBySource[] = [
+      { source: 'MOBILE_MONEY', currency: 'XOF', amountMinor: 1000, orderCount: 1 },
+      { source: 'GOOGLE_PLAY', currency: 'EUR', amountMinor: 500, orderCount: 2 },
+      { source: 'GOOGLE_PLAY', currency: 'USD', amountMinor: 300, orderCount: 1 },
+    ]
+    expect(sortRevenueRows(rows).map((r) => `${r.source}-${r.currency}`)).toEqual([
+      'GOOGLE_PLAY-EUR',
+      'GOOGLE_PLAY-USD',
+      'MOBILE_MONEY-XOF',
+    ])
+  })
+
+  it('formats a known currency through formatPrice and falls back for an unknown one', () => {
+    expect(
+      formatRevenueAmount(
+        { source: 'MOBILE_MONEY', currency: 'XOF', amountMinor: 1500, orderCount: 1 },
+        'fr',
+      ),
+    ).toMatch(/1\s?500/)
+    // GBP is not in the app's known Currency union: falls back to a generic Intl format (cents).
+    expect(
+      formatRevenueAmount(
+        { source: 'GOOGLE_PLAY', currency: 'GBP', amountMinor: 12345, orderCount: 1 },
+        'en-US',
+      ),
+    ).toMatch(/123\.45/)
+  })
+})
+
+describe('stats — paywall conversion (B-11, sprint 9)', () => {
+  it('conversion rate is null without any paywall views, not zero', () => {
+    const view = deriveConversionView({ ...overview, paywallConversion: undefined })
+    expect(view.conversionRate).toBeNull()
+    expect(view.paywallViewers).toBe(0)
+  })
+
+  it('exposes the backend ratio and window when present', () => {
+    const view = deriveConversionView({
+      ...overview,
+      paywallConversion: {
+        paywallViewers: 200,
+        convertedViewers: 50,
+        conversionRate: 0.25,
+        windowHours: 24,
+      },
+    })
+    expect(view).toEqual({
+      conversionRate: 0.25,
+      paywallViewers: 200,
+      convertedViewers: 50,
+      windowHours: 24,
+    })
+  })
+
+  it('a conversionRate of 0 with real viewers is kept as 0, not null', () => {
+    const view = deriveConversionView({
+      ...overview,
+      paywallConversion: {
+        paywallViewers: 10,
+        convertedViewers: 0,
+        conversionRate: 0,
+        windowHours: 24,
+      },
+    })
+    expect(view.conversionRate).toBe(0)
+  })
+})
+
+describe('stats — retention per episode (B-11, sprint 9)', () => {
+  it('sorts points by episode number and extracts parallel arrays', () => {
+    const data = retentionChartData([
+      { episodeNumber: 2, viewers: 40, retentionPercent: 40 },
+      { episodeNumber: 1, viewers: 100, retentionPercent: 100 },
+      { episodeNumber: 3, viewers: 20, retentionPercent: 20 },
+    ])
+    expect(data.episodeNumbers).toEqual([1, 2, 3])
+    expect(data.viewers).toEqual([100, 40, 20])
+    expect(data.retentionPercent).toEqual([100, 40, 20])
+  })
+
+  it('an empty curve yields empty arrays', () => {
+    expect(retentionChartData([])).toEqual({
+      episodeNumbers: [],
+      retentionPercent: [],
+      viewers: [],
+    })
   })
 })

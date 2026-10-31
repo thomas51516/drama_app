@@ -113,7 +113,8 @@ const current = computed<AdminSeries | null>(() => series.value ?? null)
     >
       <template #actions>
         <template v-if="current">
-          <CatalogueSeriesStatusTag :status="current.status" class="mr-2" />
+          <CatalogueSeriesStatusTag :status="current.status" />
+          <RightsStatusTag :status="current.rightsStatus ?? 'NONE'" class="mr-2" />
           <NuxtLink :to="`/series/${current.id}/episodes`">
             <Button
               icon="pi pi-video"
@@ -172,12 +173,32 @@ const current = computed<AdminSeries | null>(() => series.value ?? null)
       <Skeleton height="8rem" />
     </div>
 
-    <CatalogueSeriesForm v-else-if="current" :series="current" :saving="saving" @submit="onSubmit">
-      <template #actions>
-        <NuxtLink to="/series">
-          <Button type="button" :label="t('common.back')" severity="secondary" text />
-        </NuxtLink>
-      </template>
-    </CatalogueSeriesForm>
+    <template v-else-if="current">
+      <Message
+        v-if="(current.rightsStatus ?? 'NONE') !== 'ACTIVE'"
+        severity="warn"
+        :closable="false"
+        class="mb-5"
+      >
+        {{
+          current.rightsStatus === 'EXPIRED' ? t('rights.banner.expired') : t('rights.banner.none')
+        }}
+      </Message>
+
+      <CatalogueSeriesForm :series="current" :saving="saving" @submit="onSubmit">
+        <template #actions>
+          <NuxtLink to="/series">
+            <Button type="button" :label="t('common.back')" severity="secondary" text />
+          </NuxtLink>
+        </template>
+      </CatalogueSeriesForm>
+
+      <RightsContractForm
+        class="mt-5"
+        :series-id="current.id"
+        :contract="current.rightsContract ?? null"
+        @changed="refresh()"
+      />
+    </template>
   </div>
 </template>

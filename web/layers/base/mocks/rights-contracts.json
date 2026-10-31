@@ -1,0 +1,24 @@
+[
+  {
+    "id": "rgt_01HZX0R0000000000000000A0",
+    "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K0",
+    "rightsHolder": "Studio Awalé Productions",
+    "territories": [],
+    "licenseStartsAt": "2026-01-01T00:00:00.000Z",
+    "licenseEndsAt": null,
+    "notes": "Licence mondiale à durée indéterminée, contrat cadre signé en janvier.",
+    "createdAt": "2026-01-02T09:00:00.000Z",
+    "updatedAt": "2026-01-02T09:00:00.000Z"
+  },
+  {
+    "id": "rgt_01HZX0R0000000000000000A1",
+    "seriesId": "ser_01HZX0A1B2C3D4E5F6G7H8J9K1",
+    "rightsHolder": "Agence Lomé Créations",
+    "territories": ["TG", "CI", "SN"],
+    "licenseStartsAt": "2025-06-01T00:00:00.000Z",
+    "licenseEndsAt": "__PAST_10D__",
+    "notes": "Licence Afrique de l'Ouest francophone, échue : renouvellement à négocier.",
+    "createdAt": "2025-06-02T09:00:00.000Z",
+    "updatedAt": "2025-06-02T09:00:00.000Z"
+  }
+]

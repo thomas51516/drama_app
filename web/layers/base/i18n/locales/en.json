@@ -146,6 +146,7 @@
     "columns": {
       "title": "Title",
       "status": "Status",
+      "rights": "Rights",
       "language": "Language",
       "episodeCount": "Episodes",
       "updatedAt": "Updated at"
@@ -253,6 +254,59 @@
       "placeholder": "Country code or name…",
       "count": "{count} territory | {count} territories",
       "francophone": "+ Francophone"
+    }
+  },
+  "rights": {
+    "title": "Rights and contracts",
+    "subtitle": "A published series without a registered contract is never blocked — only flagged.",
+    "loadError": "Could not load rights and contracts.",
+    "count": "{count} series | {count} series",
+    "status": {
+      "NONE": "No contract",
+      "ACTIVE": "Active",
+      "EXPIRED": "Expired"
+    },
+    "columns": {
+      "series": "Series",
+      "seriesStatus": "Status",
+      "rightsStatus": "Rights",
+      "rightsHolder": "Rights holder",
+      "territories": "Territories",
+      "licenseEndsAt": "License ends"
+    },
+    "territoriesWorldwide": "Worldwide",
+    "licenseIndefinite": "Indefinite",
+    "filters": {
+      "expiringSoon": "Expiring soon (30 days)",
+      "allStatuses": "All statuses",
+      "reset": "Reset filters"
+    },
+    "empty": {
+      "title": "No series",
+      "filtered": "No series matches the \"Expiring soon\" filter."
+    },
+    "banner": {
+      "none": "No rights contract registered for this series. Publishing is not blocked, but a contract should be added as soon as possible.",
+      "expired": "This series' rights contract is outside its license window (ended, or not yet started). Publishing is not blocked, but the contract should be updated."
+    },
+    "form": {
+      "legend": "Rights contract",
+      "readOnly": "Your role only allows you to view this contract.",
+      "rightsHolder": "Rights holder",
+      "licenseStartsAt": "License starts",
+      "licenseEndsAt": "License ends",
+      "licenseEndsAtHint": "Leave empty for an indefinite license.",
+      "notes": "Notes",
+      "create": "Save contract",
+      "save": "Save changes",
+      "delete": "Delete contract",
+      "deleteConfirm": "Delete this series' rights contract? Its status will go back to \"No contract\".",
+      "created": "Rights contract registered.",
+      "saved": "Changes saved.",
+      "saveFailed": "Could not save",
+      "deleted": "Rights contract deleted.",
+      "deleteFailed": "Could not delete",
+      "nothingToSave": "No changes to save."
     }
   },
   "episodes": {
@@ -684,7 +738,7 @@
   },
   "dashboard": {
     "title": "Dashboards",
-    "subtitle": "Users, viewing and top series (B-11 v0). Figures computed by the server.",
+    "subtitle": "Users, viewing, revenue, conversion and retention (B-11). Figures computed by the server.",
     "period": {
       "7": "Last 7 days",
       "30": "Last 30 days",
@@ -701,7 +755,9 @@
     "sections": {
       "users": "Users",
       "viewing": "Viewing",
-      "topSeries": "Top series"
+      "topSeries": "Top series",
+      "revenue": "Revenue and conversion",
+      "retention": "Retention per episode"
     },
     "tiles": {
       "activeD1": "Active in 24 h",
@@ -735,6 +791,41 @@
         "rate": "Completion"
       },
       "empty": "No plays over the period."
+    },
+    "revenue": {
+      "subtitle": "Coins actually paid for over the period, by source and currency (promo codes excluded).",
+      "columns": {
+        "source": "Source",
+        "amount": "Amount",
+        "orders": "Payments"
+      },
+      "source": {
+        "GOOGLE_PLAY": "Google Play",
+        "MOBILE_MONEY": "Mobile money"
+      },
+      "empty": "No payment over the period.",
+      "note": "Computed from the ledger (coin_ledger) and purchases, never from the displayed balance. In development, Google Play can stay empty: the fake verifier never fills in a real amount."
+    },
+    "conversion": {
+      "title": "Paywall conversion",
+      "hint": "{converted} / {viewers} users who saw the paywall unlocked an episode within {hours} h.",
+      "noViews": "No paywall view over the period."
+    },
+    "retention": {
+      "subtitle": "Share of episode-1 viewers still present at episode N.",
+      "seriesLabel": "Series",
+      "wholeCatalogue": "Whole catalogue",
+      "episodeShort": "Ep. {n}",
+      "chartAria": "Line chart: retention percentage by episode number.",
+      "tooltip": "{percent}% ({viewers} viewers)",
+      "loadError": "Could not load retention.",
+      "empty": "No plays for this selection.",
+      "columns": {
+        "episode": "Episode",
+        "viewers": "Viewers",
+        "retention": "Retention"
+      },
+      "hint": "Computed from started plays (watch_progress); \"Whole catalogue\" combines cohorts series by series (the same user counts once per series)."
     }
   },
   "help": {

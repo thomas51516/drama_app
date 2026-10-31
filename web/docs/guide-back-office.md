@@ -211,8 +211,22 @@ comptes et des lectures, mis en cache 5 minutes et **actualisés automatiquement
 - Le sélecteur **7 / 30 derniers jours** s'applique aux nouveaux utilisateurs, au visionnage et au
   top séries.
 
-Les revenus par source, la rétention par épisode et la conversion au paywall arriveront avec la
-monétisation.
+### Revenus, conversion et rétention
+
+Trois ajouts (sprint 9) viennent compléter les trois sections ci-dessus :
+
+- **Revenus par source** : un tableau (pas un graphique) listant, pour chaque moyen de paiement
+  (Google Play, mobile money) et chaque devise, le montant réellement encaissé sur la période et le
+  nombre de paiements. Les **codes promo ne sont jamais comptés** : ce ne sont pas des revenus. En
+  environnement de test, Google Play peut rester vide : seul l'achat réel (production) renseigne un
+  montant.
+- **Conversion au paywall** : une tuile indiquant le pourcentage d'utilisateurs ayant vu l'écran de
+  paiement puis débloqué un épisode (toute méthode) dans les heures qui suivent, avec le détail
+  « X sur Y utilisateurs ». C'est une estimation : le serveur ne peut pas toujours relier
+  exactement une vue du paywall au déblocage qui a suivi.
+- **Rétention par épisode** : une courbe et un tableau montrant la part des spectateurs de
+  l'épisode 1 encore présents à l'épisode 2, 3, etc. Un sélecteur permet de choisir une série ou
+  « toute la catalogue ». Utile pour repérer l'épisode où le public décroche.
 
 ### Réconciliation des recharges
 
@@ -229,6 +243,30 @@ précédent/suivant et bouton « Aujourd'hui », jamais de date future) :
   quotidienne du serveur journalise les mêmes écarts.
 - **Exporter les écarts (CSV)** télécharge le tableau du jour pour l'envoyer à la comptabilité ou à
   l'agrégateur mobile money.
+
+## Droits et contrats
+
+Menu **Droits et contrats**, ouvert en lecture à tous les rôles ; la création, la modification et
+la suppression d'un contrat sont réservées à Monétisation et Administrateur.
+
+- La page liste **toutes les séries** avec leur statut de droits :
+  - **Sans contrat** : aucun contrat n'a été enregistré pour cette série.
+  - **Actif** : un contrat est enregistré et la date du jour est dans sa fenêtre de licence.
+  - **Expiré** : un contrat est enregistré mais hors de sa fenêtre (licence terminée, ou — plus
+    rare — pas encore commencée).
+- Le filtre **Expire bientôt (30 jours)** ne garde que ce qui demande une action : les séries sans
+  contrat, celles dont le contrat est expiré, et celles dont le contrat actif se termine dans les
+  30 jours. La liste est triée pour faire remonter ces cas en premier.
+- **Important : publier une série sans contrat (ou avec un contrat expiré) n'est jamais bloqué.**
+  C'est un choix délibéré pour ne pas casser du contenu déjà en ligne sans contrat enregistré. Un
+  bandeau jaune apparaît sur la fiche de la série pour le signaler, et l'action est tracée dans le
+  journal d'audit (lisible par les administrateurs) — mais la publication réussit normalement.
+- Sur la fiche d'une série (`/series/{id}`), le bloc **Contrat de droits** permet d'enregistrer
+  l'ayant droit, les territoires couverts (vide = monde entier, mêmes codes pays que la série
+  elle-même), la date de début et de fin de licence (heure de Lomé ; laisser la fin vide pour une
+  durée indéterminée) et des notes libres. Une série n'a **qu'un seul contrat courant** : le
+  modifier remplace les informations en place, il n'y a pas d'historique des contrats précédents.
+  Un bouton **Supprimer le contrat** remet la série à l'état « Sans contrat ».
 
 ## Comptes internes et journal d'audit
 

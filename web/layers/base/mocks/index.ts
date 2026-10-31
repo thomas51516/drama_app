@@ -53,11 +53,18 @@ import type {
   PublicFaqResponse,
   PublicHomeResponse,
   PublicSeriesSummary,
+  RightsContract,
+  RightsContractInput,
+  RightsContractListItem,
+  RightsContractUpdateInput,
+  RightsStatus,
   ScheduleApiItem,
   ScheduleApiResponse,
   SeriesStatus,
   StatsOverview,
   StatsPeriod,
+  StatsRetention,
+  StatsRetentionPoint,
   Subtitle,
   SupportTicket,
   SupportTicketStatus,
@@ -121,6 +128,7 @@ import monetizationFixture from './monetization.json'
 import usersFixture from './users.json'
 import offersFixture from './offers.json'
 import topupFixture from './topup.json'
+import rightsContractsFixture from './rights-contracts.json'
 import {
   currencyForCountry,
   isCurrency,
@@ -287,6 +295,8 @@ const fixtureAccounts = authFixture.users as MockAccount[]
 interface MockState {
   series: AdminSeries[]
   episodes: AdminEpisode[]
+  /** B-12: at most one per series, keyed by `seriesId` (mirrors the backend's 1-1 rule). */
+  rightsContracts: RightsContract[]
   subtitles: Subtitle[]
   banners: HomeBanner[]
   rows: HomeRow[]
@@ -386,6 +396,7 @@ function initialState(): MockState {
   return {
     series,
     episodes,
+    rightsContracts: resolveFutureDates(clone(rightsContractsFixture) as RightsContract[]),
     subtitles,
     banners: clone(homeFixture.banners) as HomeBanner[],
     rows: clone(homeFixture.rows) as HomeRow[],
@@ -583,6 +594,28 @@ function findSeries(context: MockContext, id: string): AdminSeries {
   const series = state.series.find((item) => item.id === id)
   if (!series) fail(404, 'SERIES_NOT_FOUND', `Series ${id} not found`, context.path)
   return series
+}
+
+/** Mirrors the backend's `computeRightsStatus()` (B-12): computed at read time, never stored. */
+function computeRightsStatus(contract: RightsContract | null, now = new Date()): RightsStatus {
+  if (!contract) return 'NONE'
+  const started = new Date(contract.licenseStartsAt) <= now
+  const notEnded = contract.licenseEndsAt === null || new Date(contract.licenseEndsAt) >= now
+  return started && notEnded ? 'ACTIVE' : 'EXPIRED'
+}
+
+function findRightsContract(seriesId: string): RightsContract | null {
+  return state.rightsContracts.find((item) => item.seriesId === seriesId) ?? null
+}
+
+/** Attaches the live-computed `rightsStatus` / `rightsContract` to a series response. */
+function decorateSeries(series: AdminSeries): AdminSeries {
+  const contract = findRightsContract(series.id)
+  return {
+    ...clone(series),
+    rightsStatus: computeRightsStatus(contract),
+    rightsContract: contract ? clone(contract) : null,
+  }
 }
 
 function findEpisode(context: MockContext, id: string): AdminEpisode {
@@ -901,7 +934,7 @@ route('GET', '/admin/series', (context): Paginated<AdminSeries> => {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   const start = (page - 1) * pageSize
   return {
-    items: clone(filtered.slice(start, start + pageSize)),
+    items: filtered.slice(start, start + pageSize).map(decorateSeries),
     total: filtered.length,
     page,
     pageSize,
@@ -934,12 +967,12 @@ route('POST', '/admin/series', (context): AdminSeries => {
   series.slug = slugify(series.title) || series.id.toLowerCase()
   state.series.unshift(series)
   audit(context, 'series.create', 'series', series.id, null, input)
-  return clone(series)
+  return decorateSeries(series)
 })
 
 route('GET', '/admin/series/:id', (context): AdminSeries => {
   requireAuth(context)
-  return clone(findSeries(context, context.params.id as string))
+  return decorateSeries(findSeries(context, context.params.id as string))
 })
 
 route('PATCH', '/admin/series/:id', (context): AdminSeries => {
@@ -962,7 +995,7 @@ route('PATCH', '/admin/series/:id', (context): AdminSeries => {
     Object.fromEntries(changedKeys.map((key) => [key, before[key]])),
     Object.fromEntries(changedKeys.map((key) => [key, series[key]])),
   )
-  return clone(series)
+  return decorateSeries(series)
 })
 
 route('POST', '/admin/series/:id/publish', (context): AdminSeries => {
@@ -977,6 +1010,11 @@ route('POST', '/admin/series/:id/publish', (context): AdminSeries => {
       context.path,
     )
   }
+  // B-12: an absent/expired contract never blocks publication, only an audit warning (sprint 9).
+  const rightsStatus = computeRightsStatus(findRightsContract(series.id))
+  if (rightsStatus !== 'ACTIVE') {
+    audit(context, 'series.publish_rights_warning', 'series', series.id, null, { rightsStatus })
+  }
   const previous = series.status
   series.status = 'PUBLISHED'
   series.publishedAt = series.publishedAt ?? now()
@@ -989,7 +1027,7 @@ route('POST', '/admin/series/:id/publish', (context): AdminSeries => {
     { status: previous },
     { status: 'PUBLISHED' },
   )
-  return clone(series)
+  return decorateSeries(series)
 })
 
 route('POST', '/admin/series/:id/archive', (context): AdminSeries => {
@@ -1006,7 +1044,7 @@ route('POST', '/admin/series/:id/archive', (context): AdminSeries => {
     { status: previous },
     { status: 'ARCHIVED' },
   )
-  return clone(series)
+  return decorateSeries(series)
 })
 
 // --- episodes ---------------------------------------------------------------
@@ -1861,14 +1899,167 @@ route('GET', '/admin/stats/overview', (context): StatsOverview => {
     fail(400, 'VALIDATION_ERROR', 'days must be 7 or 30', context.path)
   }
   const period = String(Number(raw) as StatsPeriod) as keyof typeof statsFixture
-  const overview = clone(statsFixture[period]) as Omit<StatsOverview, 'generatedAt'>
+  const overview = clone(statsFixture[period]) as Omit<StatsOverview, 'generatedAt' | 'days'>
   // Keep the titles in sync with the (editable) mock catalogue.
   for (const row of overview.topSeries) {
     const series = state.series.find((item) => item.id === row.seriesId)
     if (series) row.title = series.title
   }
-  return { ...overview, generatedAt: now() }
+  return { ...overview, days: Number(period), generatedAt: now() }
 })
+
+/**
+ * Synthetic decreasing curve (B-11, sprint 9): no mock `watch_progress` store, so the fixture
+ * fabricates a plausible drop-off from a cohort of 200, ~18% lost per episode, bounded by the
+ * mock catalogue's actual episode numbers.
+ */
+route('GET', '/admin/stats/retention', (context): StatsRetention => {
+  requireAuth(context)
+  const seriesId = context.query.get('seriesId')
+  if (seriesId) findSeries(context, seriesId)
+  const relevant = seriesId ? seriesEpisodes(seriesId) : state.episodes
+  const maxNumber = relevant.reduce((max, episode) => Math.max(max, episode.number), 0) || 5
+  const cohortSize = 200
+  const points: StatsRetentionPoint[] = []
+  let viewers = cohortSize
+  for (let n = 1; n <= maxNumber; n += 1) {
+    points.push({
+      episodeNumber: n,
+      viewers: Math.round(viewers),
+      retentionPercent: (Math.round(viewers) / cohortSize) * 100,
+    })
+    viewers *= 0.82
+  }
+  return { seriesId: seriesId ?? null, cohortSize, points, generatedAt: now() }
+})
+
+// --- rights and contracts (B-12, sprint 9) ----------------------------------
+
+route('GET', '/admin/series/:id/rights-contract', (context): RightsContract => {
+  requireAuth(context)
+  const series = findSeries(context, context.params.id as string)
+  const contract = findRightsContract(series.id)
+  if (!contract) {
+    fail(
+      404,
+      'RIGHTS_CONTRACT_NOT_FOUND',
+      'No rights contract registered for this series',
+      context.path,
+    )
+  }
+  return clone(contract)
+})
+
+route('POST', '/admin/series/:id/rights-contract', (context): RightsContract => {
+  requireRole(context, ['MONETIZATION', 'ADMIN'])
+  const series = findSeries(context, context.params.id as string)
+  if (findRightsContract(series.id)) {
+    fail(
+      409,
+      'RIGHTS_CONTRACT_ALREADY_EXISTS',
+      'A rights contract already exists for this series',
+      context.path,
+    )
+  }
+  const input = (context.body ?? {}) as Partial<RightsContractInput>
+  if (!input.rightsHolder?.trim()) {
+    fail(400, 'VALIDATION_ERROR', 'rightsHolder is required', context.path)
+  }
+  if (!input.licenseStartsAt || Number.isNaN(new Date(input.licenseStartsAt).getTime())) {
+    fail(400, 'VALIDATION_ERROR', 'licenseStartsAt must be a valid ISO date-time', context.path)
+  }
+  const contract: RightsContract = {
+    id: newId('rgt'),
+    seriesId: series.id,
+    rightsHolder: input.rightsHolder.trim(),
+    territories: input.territories ?? [],
+    licenseStartsAt: new Date(input.licenseStartsAt).toISOString(),
+    licenseEndsAt: input.licenseEndsAt ? new Date(input.licenseEndsAt).toISOString() : null,
+    notes: input.notes ?? null,
+    createdAt: now(),
+    updatedAt: now(),
+  }
+  state.rightsContracts.push(contract)
+  audit(context, 'rights_contract.create', 'rights_contract', contract.id, null, contract)
+  return clone(contract)
+})
+
+route('PATCH', '/admin/series/:id/rights-contract', (context): RightsContract => {
+  requireRole(context, ['MONETIZATION', 'ADMIN'])
+  const series = findSeries(context, context.params.id as string)
+  const contract = findRightsContract(series.id)
+  if (!contract) {
+    fail(
+      404,
+      'RIGHTS_CONTRACT_NOT_FOUND',
+      'No rights contract registered for this series; use POST to create one',
+      context.path,
+    )
+  }
+  const before = clone(contract)
+  const input = (context.body ?? {}) as Partial<RightsContractUpdateInput>
+  if (input.rightsHolder !== undefined) contract.rightsHolder = input.rightsHolder.trim()
+  if (input.territories !== undefined) contract.territories = input.territories
+  if (input.licenseStartsAt !== undefined) {
+    contract.licenseStartsAt = new Date(input.licenseStartsAt).toISOString()
+  }
+  if (input.licenseEndsAt !== undefined) {
+    contract.licenseEndsAt = input.licenseEndsAt
+      ? new Date(input.licenseEndsAt).toISOString()
+      : null
+  }
+  if (input.notes !== undefined) contract.notes = input.notes
+  contract.updatedAt = now()
+  audit(context, 'rights_contract.update', 'rights_contract', contract.id, before, contract)
+  return clone(contract)
+})
+
+route('DELETE', '/admin/series/:id/rights-contract', (context) => {
+  requireRole(context, ['MONETIZATION', 'ADMIN'])
+  const series = findSeries(context, context.params.id as string)
+  const index = state.rightsContracts.findIndex((item) => item.seriesId === series.id)
+  if (index === -1) {
+    fail(
+      404,
+      'RIGHTS_CONTRACT_NOT_FOUND',
+      'No rights contract registered for this series',
+      context.path,
+    )
+  }
+  const [removed] = state.rightsContracts.splice(index, 1)
+  audit(context, 'rights_contract.delete', 'rights_contract', removed.id, removed, null)
+  return null
+})
+
+/** Renewal reminder list (B-12): every series with its computed status; `expiringWithinDays`
+ * keeps only NONE, EXPIRED, or ACTIVE ending within the window (mirrors the backend exactly). */
+route(
+  'GET',
+  '/admin/rights-contracts',
+  (context): { items: RightsContractListItem[]; total: number } => {
+    requireAuth(context)
+    const raw = context.query.get('expiringWithinDays')
+    const horizon = raw !== null ? new Date(Date.now() + Number(raw) * 86_400_000) : null
+    const items = state.series
+      .map((series) => {
+        const contract = findRightsContract(series.id)
+        return {
+          seriesId: series.id,
+          seriesTitle: series.title,
+          seriesStatus: series.status,
+          rightsStatus: computeRightsStatus(contract),
+          contract: contract ? clone(contract) : null,
+        }
+      })
+      .filter((item) => {
+        if (!horizon) return true
+        if (item.rightsStatus !== 'ACTIVE') return true
+        const endsAt = item.contract?.licenseEndsAt
+        return endsAt != null && new Date(endsAt) <= horizon
+      })
+    return { items, total: items.length }
+  },
+)
 
 // ---------------------------------------------------------------------------
 // Dispatcher

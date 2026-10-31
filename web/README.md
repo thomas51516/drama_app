@@ -3,11 +3,11 @@
 Espace de travail npm (workspaces) regroupant les applications web du projet, conformément au
 cahier des charges (§11) : **une base Nuxt 3 commune, deux applications distinctes**.
 
-| Dossier         | Rôle                                                                                                                                                                                                                                                                                  | Tickets                                                                                 |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `layers/base`   | Couche Nuxt partagée : Tailwind CSS, PrimeVue (thème Aura), Pinia, i18n (FR par défaut), client API typé `useApi()`, store d'authentification, layouts et composants de mise en page, fixtures de démonstration                                                                       | S03-WEB-01                                                                              |
-| `apps/admin`    | Back-office (comptes internes, JWT + TOTP obligatoire, appareil de confiance) : catalogue B-01, épisodes et upload B-02, sous-titres B-03, mise en avant B-05, monétisation B-06, récompenses B-08, utilisateurs B-09, notifications B-10, centre d'aide B-03bis, administration B-13 | S03-WEB-01 à 03, S04-WEB-01 à 03, S05-WEB-01/02, B-13+, B-10, B-03bis, B-06, B-08, B-09 |
-| `apps/recharge` | Site de recharge mobile money (SSR, mobile d'abord, FR/EN/ES/PT, < 300 Ko gzip par page) : connexion par le même compte (OTP, e-mail, Google), packs avec offres, paiement, historique, compte                                                                                        | S09-WEB-01/02                                                                           |
+| Dossier         | Rôle                                                                                                                                                                                                                                                                                                                                         | Tickets                                                                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `layers/base`   | Couche Nuxt partagée : Tailwind CSS, PrimeVue (thème Aura), Pinia, i18n (FR par défaut), client API typé `useApi()`, store d'authentification, layouts et composants de mise en page, fixtures de démonstration                                                                                                                              | S03-WEB-01                                                                                          |
+| `apps/admin`    | Back-office (comptes internes, JWT + TOTP obligatoire, appareil de confiance) : catalogue B-01, épisodes et upload B-02, sous-titres B-03, mise en avant B-05, monétisation B-06, récompenses B-08, utilisateurs B-09, notifications B-10, tableau de bord complet B-11, droits et contrats B-12, centre d'aide B-03bis, administration B-13 | S03-WEB-01 à 03, S04-WEB-01 à 03, S05-WEB-01/02, B-13+, B-10, B-03bis, B-06, B-08, B-09, B-11, B-12 |
+| `apps/recharge` | Site de recharge mobile money (SSR, mobile d'abord, FR/EN/ES/PT, < 300 Ko gzip par page) : connexion par le même compte (OTP, e-mail, Google), packs avec offres, paiement, historique, compte                                                                                                                                               | S09-WEB-01/02                                                                                       |
 
 ## Versions retenues
 
@@ -76,7 +76,8 @@ web/
 │   ├── assets/css/main.css  # @import "tailwindcss" + plugin PrimeUI
 │   ├── composables/         # useApi (client HTTP, session interchangeable), useCatalogueApi (B-01/B-02),
 │   │                        # useSubtitlesApi (B-03), useFeaturedApi (B-05), useScheduleApi (B-04),
-│   │                        # useStatsApi (B-11), useAdministrationApi (B-13), useAccountApi (appareils de
+│   │                        # useStatsApi (B-11, overview + retention), useRightsApi (B-12),
+│   │                        # useAdministrationApi (B-13), useAccountApi (appareils de
 │   │                        # confiance), useCampaignsApi (B-10), useHelpCenterApi (FAQ, tickets),
 │   │                        # useMonetizationApi (B-06, B-08 check-in + tâches), useOffersApi (B-07),
 │   │                        # useTopupApi (B-11 réconciliation + routes publiques du site de recharge),
@@ -95,7 +96,9 @@ web/
 │   │                        # EpisodeStatusTag, SubtitlesPanel, SeriesPicker, PublicationTag,
 │   │                        # PublishDateDialog, DailyReleaseDialog (B-04)
 │   ├── components/schedule/ # MonthCalendar, AgendaList (B-04)
-│   ├── components/dashboard/# StatTile, TopSeriesChart (B-11, Chart.js via PrimeVue Chart)
+│   ├── components/dashboard/# StatTile, TopSeriesChart, RevenueBreakdown, ConversionTile,
+│   │                        # RetentionChart (B-11, Chart.js via PrimeVue Chart)
+│   ├── components/rights/   # ContractForm, StatusTag (B-12)
 │   ├── components/featured/ # BannersPanel, RowsPanel, BannerDialog, RowDialog, SeriesPicker,
 │   │                        # SeriesListEditor, HomePreview
 │   ├── components/administration/ # AccountsPanel, AccountCreateDialog, AccountEditDialog,
@@ -113,7 +116,7 @@ web/
 │   │                        # CoinAdjustmentDialog, BlockUserDialog (B-09)
 │   ├── i18n/locales/        # fr.json (référence), en.json
 │   ├── mocks/               # index.ts (API simulée avec état), assets.ts, fixtures JSON (stats, campaigns,
-│   │                        # faq, tickets, monetization, users…)
+│   │                        # faq, tickets, monetization, users, rights-contracts…)
 │   ├── types/api.ts         # contrats de l'API : docs/api/admin-contract-v1.md + section back-office de
 │   │                        # public-contract-v1.2.md + contract-v1.3-sprint5.md + contract-v1.4-sprint6.md
 │   │                        # + contract-v1.5-sprint7.md (tâches B-08, offres/promos B-07, recharge/
@@ -128,6 +131,7 @@ web/
 │   │                        # + générateur, B-07), reconciliation (compteurs, CSV, B-11), topup (pays/devises,
 │   │                        # machine à états de la commande, téléphone/OTP/e-mail, site de recharge),
 │   │                        # users (ajustement de pièces, erreurs 4xx B-09), auth-errors (DEF-005),
+│   │                        # rights (formulaire, validation, tri/filtre de la liste de rappel, B-12),
 │   │                        # registre des modules B-01…B-13 (+ B-03bis, rôles, badge, sous-pages)
 │   └── tests/
 ├── docs/guide-back-office.md # guide v1 de l'équipe éditoriale (S06-WEB-02, étendu B-07/Tâches/Réconciliation
@@ -142,7 +146,7 @@ web/
     │   │                    # featured (B-05), monetization (B-06), offers (B-07), rewards (B-08),
     │   │                    # users (B-09), campaigns (B-10), help-center (B-03bis), dashboard (B-11),
     │   │                    # topup-reconciliation (B-11, sous le menu Tableaux de bord),
-    │   │                    # administration (B-13), account (Mon compte), help (guide),
+    │   │                    # rights (B-12), administration (B-13), account (Mon compte), help (guide),
     │   │                    # [module] (« Module à venir »)
     │   └── tests/
     └── recharge/            # site de recharge mobile money (SSR, S09-WEB-01/02)
@@ -292,7 +296,7 @@ Contrat : section « Back-office (B-04, B-11 v0) » de `docs/api/public-contract
   reçoivent au chargement des dates futures (épisodes 2 à 5 de « Mariage sous contrat » à J+1…J+4
   18 h, brouillon « La Revanche de l'héritière » à J+7).
 
-### Tableau de bord v0 (B-11)
+### Tableau de bord (B-11)
 
 - `/dashboard` (barre latérale « Tableaux de bord ») : `GET /admin/stats/overview?days=7|30`.
   Tuiles utilisateurs (actifs 24 h / 7 j / 30 j, nouveaux, inscrits et invités avec leur part),
@@ -302,9 +306,29 @@ Contrat : section « Back-office (B-04, B-11 v0) » de `docs/api/public-contract
   `#eb6834`) et en tableau (référence accessible, lien vers la fiche série). Sélecteur 7 / 30 jours
   (dans l'URL), bouton Actualiser, **actualisation automatique toutes les 5 minutes**
   (`createPoller`), états vide / chargement / erreur / droits insuffisants.
+- **Revenus, conversion et rétention (sprint 9)** : trois ajouts au tableau de bord, cahier des
+  charges §5.
+  - **Revenus par source** (`overview.revenueBySource`) : tableau (pas un graphique — des montants
+    de devises différentes ne s'empilent pas dans une seule barre), une ligne par source
+    (`GOOGLE_PLAY`, `MOBILE_MONEY`) et par devise. Calculé côté serveur depuis le grand livre, jamais
+    depuis le solde ; en développement, Google Play peut rester vide (le vérificateur `fake` ne
+    renseigne pas de montant réel). Composant `DashboardRevenueBreakdown`.
+  - **Conversion au paywall** (`overview.paywallConversion`) : tuile (même anatomie que les tuiles
+    KPI) montrant le taux et les deux compteurs (`convertedViewers` / `paywallViewers`), avec la
+    fenêtre d'attribution (24 h par défaut) en légende — c'est une approximation documentée, faute
+    de session partagée entre les événements et les déblocages. Composant `DashboardConversionTile`.
+  - **Rétention par épisode** (`GET /admin/stats/retention?seriesId`) : courbe (ligne, une seule
+    série — pas de légende, le titre de la figure suffit) + tableau, sélecteur de série (« toute la
+    catalogue » combine les cohortes série par série). Composant `DashboardRetentionChart`,
+    dérivations dans `utils/stats.ts` (`deriveConversionView`, `sortRevenueRows`,
+    `formatRevenueAmount`, `retentionChartData`). Appel API séparé (`useStatsApi().retention()`),
+    sans cache côté page (le dataset est petit et le paramétrage variable).
 - Dérivations pures dans `utils/stats.ts` (`deriveTiles`, `completionRate` avec gardes zéro,
-  `rankTopSeries`, `topSeriesChartData`, formats compacts FR).
-- Mock : `mocks/stats.json` (chiffres plausibles par période), `generatedAt` = maintenant.
+  `rankTopSeries`, `topSeriesChartData`, formats compacts FR, plus les dérivations sprint 9
+  ci-dessus).
+- Mock : `mocks/stats.json` (chiffres plausibles par période, y compris revenus et conversion),
+  `generatedAt` = maintenant ; `GET /admin/stats/retention` fabrique une courbe décroissante
+  plausible (pas de table `watch_progress` simulée).
 
 ### Réconciliation des recharges (B-11, contrat v1.5)
 
@@ -321,6 +345,28 @@ Contrat : section « Back-office (B-04, B-11 v0) » de `docs/api/public-contract
   une ligne par écart) pour la comptabilité ou l'agrégateur.
 - Mock : `GET /admin/topup/reconciliation` regroupe les commandes du jour par statut et par
   devise à partir de `mocks/topup.json` (une commande `PAID` sans `creditedAt` simule un écart).
+
+### Droits et contrats (B-12, sprint 9)
+
+- `/rights` (barre latérale « Droits et contrats », ouvert à tous les rôles en lecture) : toutes
+  les séries avec leur statut de droits calculé (`NONE` sans contrat, `ACTIVE` dans la fenêtre de
+  licence, `EXPIRED` hors fenêtre), filtre « Expire bientôt (30 jours) » qui reproduit exactement
+  `expiringWithinDays` côté backend (`needsAttention()` dans `utils/rights.ts`). Table triée pour
+  faire remonter ce qui demande une action : `NONE`, puis `EXPIRED`, puis `ACTIVE` par date de fin
+  la plus proche (`decorateRenewalRows`).
+- Fiche série (`/series/{id}`) : bandeau jaune quand le statut n'est pas `ACTIVE` (texte différent
+  pour « sans contrat » et « contrat hors fenêtre »), `RightsStatusTag` près du statut de la série,
+  et un nouveau bloc « Contrat de droits » sous le formulaire (`RightsContractForm`, dates saisies
+  en heure de Lomé comme le reste du back-office via `toPickerDate`/`fromPickerDate`) : créer,
+  modifier, supprimer. Écriture réservée à MONETIZATION et ADMIN (`canManageRights`) ; EDITOR voit
+  le contrat en lecture seule. Liste des séries (`/series`) : colonne « Droits ».
+- Composables `useRightsApi()` (`getContract`, `createContract`, `updateContract`,
+  `deleteContract`, `listContracts`) et utils purs `utils/rights.ts` (formulaire, validation,
+  diff création/édition, sévérité du tag, tri et filtre de la liste de rappel).
+- Mock : `mocks/rights-contracts.json` (Le Prince oublié = contrat actif indéterminé, Mariage sous
+  contrat = contrat expiré) ; `computeRightsStatus()` recalculé à chaque lecture d'une série,
+  jamais stocké, exactement comme le backend. `POST /admin/series/{id}/publish` audite
+  `series.publish_rights_warning` sans jamais bloquer, même dans le mock.
 
 ### Aide en ligne (S06-WEB-02)
 

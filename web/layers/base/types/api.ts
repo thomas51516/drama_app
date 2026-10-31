@@ -127,6 +127,13 @@ export interface AdminSeries {
   territories: string[]
   episodeCount: number
   publishedAt: string | null
+  /**
+   * B-12, contract v1.6. Computed server-side, never stored: NONE (no contract), ACTIVE (inside the
+   * license window), EXPIRED (contract outside the window — ended, or not yet started). Optional
+   * for older payloads/fixtures; treat a missing value as `NONE`.
+   */
+  rightsStatus?: RightsStatus
+  rightsContract?: RightsContract | null
   createdAt: string
   updatedAt: string
 }
@@ -175,6 +182,53 @@ export interface Paginated<T> {
   total: number
   page: number
   pageSize: number
+}
+
+// ---------------------------------------------------------------------------
+// Rights and contracts (B-12) — contract v1.6
+// ---------------------------------------------------------------------------
+
+export type RightsStatus = 'NONE' | 'ACTIVE' | 'EXPIRED'
+export const RIGHTS_STATUSES: readonly RightsStatus[] = ['NONE', 'ACTIVE', 'EXPIRED']
+
+/**
+ * At most one current contract per series (1-1, no history — editing replaces the fields in
+ * place). `licenseEndsAt: null` means an indefinite license.
+ */
+export interface RightsContract {
+  id: string
+  seriesId: string
+  rightsHolder: string
+  /** ISO 3166-1 alpha-2, same codes as `AdminSeries.territories`. Empty = worldwide. */
+  territories: string[]
+  licenseStartsAt: string
+  licenseEndsAt: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** POST /admin/series/{id}/rights-contract (409 RIGHTS_CONTRACT_ALREADY_EXISTS if one exists). */
+export type RightsContractInput = Pick<
+  RightsContract,
+  'rightsHolder' | 'territories' | 'licenseStartsAt' | 'licenseEndsAt' | 'notes'
+>
+
+/** PATCH /admin/series/{id}/rights-contract: changed fields only (404 if none registered). */
+export type RightsContractUpdateInput = Partial<RightsContractInput>
+
+/** GET /admin/rights-contracts?expiringWithinDays — renewal reminder list, one row per series. */
+export interface RightsContractListItem {
+  seriesId: string
+  seriesTitle: string
+  seriesStatus: SeriesStatus
+  rightsStatus: RightsStatus
+  contract: RightsContract | null
+}
+
+export interface RightsContractListQuery {
+  /** Keep only NONE, EXPIRED, or ACTIVE ending within this many days. */
+  expiringWithinDays?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -527,6 +581,33 @@ export interface StatsTopSeries {
   completions: number
 }
 
+/** Real money source of a `coin_ledger` PURCHASE line (never a promo code — that's BONUS). */
+export type RevenueSource = 'GOOGLE_PLAY' | 'MOBILE_MONEY'
+
+/**
+ * B-11 (sprint 9): gross revenue credited on the window, by source and currency, from
+ * `coin_ledger`/`purchases` — never the `wallets` projection. `GOOGLE_PLAY` can be empty in dev:
+ * the `fake` billing verifier never fills `amountMinor` (only the real `google` verifier does).
+ */
+export interface StatsRevenueBySource {
+  source: RevenueSource
+  currency: string
+  amountMinor: number
+  orderCount: number
+}
+
+/**
+ * B-11 (sprint 9): approximate paywall conversion. A user counts as converted when an `unlocks`
+ * row (any method) falls within `windowHours` after one of their `paywall_view` events — there is
+ * no shared session between `analytics_events` and `unlocks` to attribute this more precisely.
+ */
+export interface StatsPaywallConversion {
+  paywallViewers: number
+  convertedViewers: number
+  conversionRate: number
+  windowHours: number
+}
+
 /** GET /admin/stats/overview?days=7|30 (computed from `users` and `watch_progress`, cached 5 min). */
 export interface StatsOverview {
   activeUsers: { d1: number; d7: number; d30: number }
@@ -536,6 +617,30 @@ export interface StatsOverview {
   episodesStarted: number
   episodesCompleted: number
   topSeries: StatsTopSeries[]
+  /** Optional for older fixtures/mocks; the real API always sends them. */
+  paywallViews?: number
+  unlocks?: number
+  pushOpens?: number
+  revenueBySource?: StatsRevenueBySource[]
+  paywallConversion?: StatsPaywallConversion
+  days?: number
+  generatedAt: string
+}
+
+// ---------------------------------------------------------------------------
+// Retention per episode (B-11, sprint 9) — GET /admin/stats/retention?seriesId
+// ---------------------------------------------------------------------------
+
+export interface StatsRetentionPoint {
+  episodeNumber: number
+  viewers: number
+  retentionPercent: number
+}
+
+export interface StatsRetention {
+  seriesId: string | null
+  cohortSize: number
+  points: StatsRetentionPoint[]
   generatedAt: string
 }
 

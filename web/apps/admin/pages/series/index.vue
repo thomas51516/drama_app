@@ -196,6 +196,12 @@ function languageLabel(code: string): string {
         </template>
       </Column>
 
+      <Column :header="t('series.columns.rights')" class="w-32">
+        <template #body="{ data: row }: { data: AdminSeries }">
+          <RightsStatusTag :status="row.rightsStatus ?? 'NONE'" />
+        </template>
+      </Column>
+
       <Column :header="t('series.columns.language')" class="w-28">
         <template #body="{ data: row }: { data: AdminSeries }">
           {{ languageLabel(row.language) }}
