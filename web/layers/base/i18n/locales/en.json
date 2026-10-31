@@ -57,6 +57,7 @@
     "users": "Users",
     "notifications": "Notifications",
     "dashboards": "Dashboards",
+    "topupReconciliation": "Top-up reconciliation",
     "rights": "Rights and contracts",
     "administration": "Administration",
     "helpCenter": "Help center",
@@ -828,6 +829,56 @@
         "retention": "Retention"
       },
       "hint": "Computed from started plays (watch_progress); \"Whole catalogue\" combines cohorts series by series (the same user counts once per series)."
+    }
+  },
+  "reconciliation": {
+    "title": "Top-up reconciliation",
+    "subtitle": "Orders, payments and credited coins for a Lomé calendar day (B-11). Figures computed by the server.",
+    "day": "Day",
+    "today": "Today",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "timezoneNote": "Lomé calendar day (UTC, no daylight saving).",
+    "exportCsv": "Export CSV",
+    "exported": "{count} mismatch exported to CSV. | {count} mismatches exported to CSV.",
+    "restricted": "Restricted to the Monetization and Administration roles.",
+    "loadError": "Could not load the reconciliation for this day.",
+    "tiles": {
+      "orders": "Orders",
+      "paid": "Paid",
+      "credited": "Credited",
+      "mismatches": "Mismatches"
+    },
+    "ratios": {
+      "paid": "{percent} of orders",
+      "credited": "{percent} of payments"
+    },
+    "amountPaid": "{amount} collected",
+    "noMismatch": "No mismatch",
+    "hasMismatch": "Mismatches to review",
+    "allGood": "{date} is reconciled: every payment matches a coin credit.",
+    "mismatchHint": "{count} mismatch found for this day, see below. | {count} mismatches found for this day, see below.",
+    "provider": "Provider",
+    "empty": {
+      "title": "No mismatch",
+      "hint": "Every order paid that day was correctly credited."
+    },
+    "columns": {
+      "order": "Order",
+      "user": "User",
+      "pack": "Pack",
+      "amount": "Amount",
+      "status": "Status",
+      "coins": "Coins credited / expected",
+      "reason": "Mismatch"
+    },
+    "reasons": {
+      "PAID_NOT_CREDITED": "Paid but not credited",
+      "CREDITED_NOT_PAID": "Credited without a confirmed payment",
+      "AMOUNT_MISMATCH": "Amount differs from the order",
+      "COINS_MISMATCH": "Coins credited differ from the pack",
+      "DUPLICATE_CREDIT": "Duplicate credit",
+      "PROVIDER_UNKNOWN": "Unknown status at the provider"
     }
   },
   "help": {

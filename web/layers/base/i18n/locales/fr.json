@@ -57,6 +57,7 @@
     "users": "Utilisateurs",
     "notifications": "Notifications",
     "dashboards": "Tableaux de bord",
+    "topupReconciliation": "Réconciliation des recharges",
     "rights": "Droits et contrats",
     "administration": "Administration",
     "helpCenter": "Centre d'aide",
@@ -828,6 +829,56 @@
         "retention": "Rétention"
       },
       "hint": "Calculé depuis les lectures commencées (watch_progress) ; « Toute la catalogue » combine les cohortes série par série (un même utilisateur compte une fois par série)."
+    }
+  },
+  "reconciliation": {
+    "title": "Réconciliation des recharges",
+    "subtitle": "Commandes, paiements et pièces créditées pour une journée calendaire à Lomé (B-11). Chiffres calculés par le serveur.",
+    "day": "Journée",
+    "today": "Aujourd'hui",
+    "previousDay": "Jour précédent",
+    "nextDay": "Jour suivant",
+    "timezoneNote": "Journée calendaire à Lomé (UTC, sans heure d'été).",
+    "exportCsv": "Exporter en CSV",
+    "exported": "{count} écart exporté dans le CSV. | {count} écarts exportés dans le CSV.",
+    "restricted": "Réservé aux rôles Monétisation et Administration.",
+    "loadError": "Impossible de charger la réconciliation de cette journée.",
+    "tiles": {
+      "orders": "Commandes",
+      "paid": "Payées",
+      "credited": "Créditées",
+      "mismatches": "Écarts"
+    },
+    "ratios": {
+      "paid": "{percent} des commandes",
+      "credited": "{percent} des paiements"
+    },
+    "amountPaid": "{amount} encaissés",
+    "noMismatch": "Aucun écart",
+    "hasMismatch": "Écarts à vérifier",
+    "allGood": "Journée du {date} réconciliée : chaque paiement correspond à un crédit de pièces.",
+    "mismatchHint": "{count} écart détecté pour cette journée, à vérifier ci-dessous. | {count} écarts détectés pour cette journée, à vérifier ci-dessous.",
+    "provider": "Prestataire",
+    "empty": {
+      "title": "Aucun écart",
+      "hint": "Toutes les commandes payées ce jour-là ont été correctement créditées."
+    },
+    "columns": {
+      "order": "Commande",
+      "user": "Utilisateur",
+      "pack": "Pack",
+      "amount": "Montant",
+      "status": "Statut",
+      "coins": "Pièces créditées / attendues",
+      "reason": "Écart"
+    },
+    "reasons": {
+      "PAID_NOT_CREDITED": "Payé mais non crédité",
+      "CREDITED_NOT_PAID": "Crédité sans paiement confirmé",
+      "AMOUNT_MISMATCH": "Montant différent de la commande",
+      "COINS_MISMATCH": "Pièces créditées différentes du pack",
+      "DUPLICATE_CREDIT": "Crédit en double",
+      "PROVIDER_UNKNOWN": "Statut inconnu chez le prestataire"
     }
   },
   "help": {
