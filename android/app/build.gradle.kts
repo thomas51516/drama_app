@@ -39,8 +39,12 @@ val releaseKeyAlias = signingValue("DRAMA_KEY_ALIAS")
 val releaseKeyPassword = signingValue("DRAMA_KEY_PASSWORD")
 val releaseKeystoreFile =
     releaseKeystorePath?.let { path ->
-        file(path).takeIf { it.isAbsolute }
-            ?: rootProject.file(path)
+        // `Project.file(path)` always returns an absolute File even for a relative input (it resolves
+        // immediately against this module's directory), so checking `.isAbsolute` on its result is
+        // always true and never falls back to rootProject — check the raw path string instead. A
+        // relative DRAMA_KEYSTORE_PATH (the common case: local.properties points at the repo-root
+        // keystore/ directory) must resolve against rootProject, not :app's own directory.
+        if (File(path).isAbsolute) file(path) else rootProject.file(path)
     }
 val releaseSigningConfigured =
     releaseKeystoreFile?.exists() == true &&
