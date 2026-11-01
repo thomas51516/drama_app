@@ -29,11 +29,17 @@ class GetSeriesEpisodesUseCaseTest {
 
     private val repository =
         object : CatalogRepository {
-            override fun observeHome(): Flow<Resource<HomeContent>> = emptyFlow()
+            override fun observeHome(force: Boolean): Flow<Resource<HomeContent>> = emptyFlow()
 
-            override fun observeSeries(seriesId: String): Flow<Resource<Series>> = emptyFlow()
+            override fun observeSeries(
+                seriesId: String,
+                force: Boolean,
+            ): Flow<Resource<Series>> = emptyFlow()
 
-            override fun observeEpisodes(seriesId: String): Flow<Resource<List<Episode>>> = emptyFlow()
+            override fun observeEpisodes(
+                seriesId: String,
+                force: Boolean,
+            ): Flow<Resource<List<Episode>>> = emptyFlow()
 
             override suspend fun getSeries(seriesId: String): AppResult<Series> =
                 AppResult.Failure(AppError.NotFound(seriesId))
