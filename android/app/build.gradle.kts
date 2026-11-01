@@ -94,7 +94,9 @@ android {
         // on purpose — it's only the :app module's internal R-class/source package, invisible to
         // the Store and to users, so there was no reason to touch every file that references it.
         applicationId = "com.dramanye.app"
-        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 1
+        // Play Console requires a strictly increasing versionCode per upload (2 = fixes the
+        // api.drama.example placeholder that made the first internal-test upload unusable).
+        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 2
         versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.0"
         buildConfigField("boolean", "FIREBASE_CONFIGURED", "$firebaseConfigured")
         buildConfigField("String", "APP_LINKS_HOST", "\"$appLinksHost\"")

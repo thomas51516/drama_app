@@ -63,8 +63,15 @@ android {
             buildConfigField("String", "AD_SSV_FAKE_SECRET", "\"$adSsvFakeSecret\"")
         }
         release {
-            buildConfigField("String", "API_BASE_URL", "\"https://api.drama.example/\"")
-            buildConfigField("String", "MEDIA_BASE_URL", "\"https://cdn.drama.example\"")
+            // Real backend since S10-OPS (docs/ops/deploiement.md §9/§10): api.drama.example was a
+            // placeholder domain that never existed — a Play Store internal-test install silently
+            // failed every request (UnknownHostException), found on the real phone 2026-11-01.
+            buildConfigField("String", "API_BASE_URL", "\"https://dramanye.odootogo.com/\"")
+            buildConfigField(
+                "String",
+                "MEDIA_BASE_URL",
+                "\"https://dramaapp.b-cdn.net/drama-media\"",
+            )
             buildConfigField("boolean", "USE_FAKE_CATALOG", "false")
             buildConfigField("String", "AD_SSV_FAKE_SECRET", "\"\"")
         }
