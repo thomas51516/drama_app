@@ -151,6 +151,10 @@ services:
       - .env.prod
     environment:
       PORT: "3000"
+    volumes:
+      # Google Play service account key (GOOGLE_PLAY_SERVICE_ACCOUNT_FILE) — never baked into the
+      # image, never committed; lives only in infra/secrets/ on this host (gitignored).
+      - ./secrets/google-play-service-account.json:/run/secrets/google-play-service-account.json:ro
     depends_on:
       postgres:
         condition: service_healthy
