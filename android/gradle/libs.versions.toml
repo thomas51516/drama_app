@@ -46,8 +46,9 @@ firebaseBom = "35.1.0"
 googleServices = "4.5.0"
 crashlyticsPlugin = "3.0.8"
 
-# Google Play Billing (M-31). 7.x is the minimum Google accepts for new submissions since 2025.
-playBilling = "7.1.1"
+# Google Play Billing (M-31). 8.0.0 is the minimum Google accepts for new submissions (found while
+# creating the real Play Console release, 2026-11-01 — Play Console rejected 7.1.1 outright).
+playBilling = "8.3.0"
 
 # Google Mobile Ads (M-22): rewarded ads with server-side verification; wrapped by :core:ads only.
 playServicesAds = "24.4.0"
