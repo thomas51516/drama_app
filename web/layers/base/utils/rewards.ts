@@ -89,8 +89,8 @@ export function taskLabelKey(key: string): string | null {
 /** Period of a task when the backend does not send it: inferred from the MVP keys. */
 export function taskPeriod(task: Pick<RewardTaskAdmin, 'key' | 'period'>): RewardTaskPeriod {
   if (task.period) return task.period
-  if (task.key === 'watch_3_episodes') return 'DAILY'
-  if (task.key === 'watch_10_episodes') return 'WEEKLY'
+  if (task.key === 'watch_3_episodes') return 'DAY'
+  if (task.key === 'watch_10_episodes') return 'WEEK'
   return 'ONCE'
 }
 
@@ -136,6 +136,6 @@ export function weeklyTaskPotential(tasks: readonly RewardTaskAdmin[]): number {
     .filter((task) => task.isActive)
     .reduce((sum, task) => {
       const period = taskPeriod(task)
-      return sum + task.coins * (period === 'DAILY' ? 7 : 1)
+      return sum + task.coins * (period === 'DAY' ? 7 : 1)
     }, 0)
 }

@@ -1053,7 +1053,7 @@ export const REWARD_TASK_KEYS = [
 export type RewardTaskKey = (typeof REWARD_TASK_KEYS)[number]
 
 /** Recurrence of a task as the backend reports it (`daily` = reset every day…). */
-export type RewardTaskPeriod = 'DAILY' | 'WEEKLY' | 'ONCE'
+export type RewardTaskPeriod = 'DAY' | 'WEEK' | 'ONCE'
 
 /** Item of GET /admin/rewards/tasks. */
 export interface RewardTaskAdmin {

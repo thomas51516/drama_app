@@ -63,7 +63,7 @@ describe('rewards — tasks (M-41, contract v1.5)', () => {
     coins: 5,
     target: 3,
     isActive: true,
-    period: 'DAILY' as const,
+    period: 'DAY' as const,
     ...overrides,
   })
 
@@ -108,8 +108,8 @@ describe('rewards — tasks (M-41, contract v1.5)', () => {
 
   it('sums a weekly potential: daily tasks count 7x, others once, inactive tasks excluded', () => {
     const tasks = [
-      makeTask({ key: 'watch_3_episodes', coins: 5, period: 'DAILY', isActive: true }),
-      makeTask({ key: 'watch_10_episodes', coins: 20, period: 'WEEKLY', isActive: true }),
+      makeTask({ key: 'watch_3_episodes', coins: 5, period: 'DAY', isActive: true }),
+      makeTask({ key: 'watch_10_episodes', coins: 20, period: 'WEEK', isActive: true }),
       makeTask({ key: 'share_series', coins: 10, period: 'ONCE', isActive: true }),
       makeTask({ key: 'add_favorite', coins: 1000, period: 'ONCE', isActive: false }),
     ]
@@ -117,9 +117,9 @@ describe('rewards — tasks (M-41, contract v1.5)', () => {
   })
 
   it('infers the period of the fixed MVP keys when the backend omits it', () => {
-    expect(taskPeriod({ key: 'watch_3_episodes' })).toBe('DAILY')
-    expect(taskPeriod({ key: 'watch_10_episodes' })).toBe('WEEKLY')
+    expect(taskPeriod({ key: 'watch_3_episodes' })).toBe('DAY')
+    expect(taskPeriod({ key: 'watch_10_episodes' })).toBe('WEEK')
     expect(taskPeriod({ key: 'share_series' })).toBe('ONCE')
-    expect(taskPeriod({ key: 'watch_3_episodes', period: 'WEEKLY' })).toBe('WEEKLY')
+    expect(taskPeriod({ key: 'watch_3_episodes', period: 'WEEK' })).toBe('WEEK')
   })
 })

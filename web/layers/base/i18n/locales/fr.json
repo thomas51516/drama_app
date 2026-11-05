@@ -1486,8 +1486,8 @@
         "add_favorite": "Ajouter un favori"
       },
       "period": {
-        "DAILY": "Quotidienne",
-        "WEEKLY": "Hebdomadaire",
+        "DAY": "Quotidienne",
+        "WEEK": "Hebdomadaire",
         "ONCE": "Unique"
       },
       "form": {
