@@ -626,9 +626,35 @@
       "policy": "Au moins {min} caractères, avec majuscules, minuscules et chiffres."
     },
     "accounts": {
+      "summary": "{count} compte interne, dont {active} actif | {count} comptes internes, dont {active} actifs",
+      "loadError": "Impossible de charger les comptes.",
+      "create": "Créer un compte",
+      "createAction": "Créer",
+      "edit": "Modifier le compte",
+      "you": "Vous",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "neverLoggedIn": "Jamais connecté",
+      "totpEnrolled": "Double authentification activée",
+      "totpPending": "Double authentification en attente",
+      "firstLoginHint": "Le mot de passe devra être changé à la première connexion.",
+      "resetPassword": "Réinitialiser le mot de passe",
+      "resetPasswordAction": "Réinitialiser",
+      "resetPasswordHint": "Un nouveau mot de passe sera défini pour {email}.",
+      "resetTotp": "Réinitialiser la double authentification",
+      "resetTotpAction": "Réinitialiser",
+      "resetTotpConfirm": "Réinitialiser la double authentification de {email} ? Un nouveau code QR lui sera présenté à sa prochaine connexion.",
       "revokeDevices": "Révoquer les appareils de confiance",
       "revokeDevicesConfirm": "Révoquer tous les appareils de confiance de {email} ? Un code sera demandé à sa prochaine connexion.",
-      "devicesRevoked": "Appareils de confiance révoqués."
+      "devicesRevoked": "Appareils de confiance révoqués.",
+      "columns": {
+        "email": "E-mail",
+        "displayName": "Nom affiché",
+        "role": "Rôle",
+        "active": "Statut",
+        "totp": "Double authentification",
+        "lastLogin": "Dernière connexion"
+      }
     },
     "lockout": {
       "selfDeactivate": "Vous ne pouvez pas désactiver votre propre compte.",
@@ -1293,6 +1319,117 @@
       "phoneFrame": "Aperçu téléphone de la boutique"
     }
   },
+  "offers": {
+    "title": "Offres et promotions",
+    "subtitle": "Offre de bienvenue, offres limitées et codes promo (B-07).",
+    "restricted": "Cette page est réservée aux rôles Monétisation et Administrateur.",
+    "loadError": "Impossible de charger les offres.",
+    "tabs": {
+      "offers": "Offres",
+      "promo": "Codes promo"
+    },
+    "welcome": {
+      "title": "Offre de bienvenue",
+      "hint": "Bonus de pièces sur le tout premier achat, pendant une durée limitée après l'inscription.",
+      "active": "Offre active",
+      "activeHint": "Active le bonus sur le premier achat suivant l'inscription.",
+      "pack": "Pack concerné",
+      "packHint": "Pack sur lequel le bonus s'applique (tous les packs actifs si aucun n'est choisi).",
+      "hours": "Durée de validité",
+      "hoursHint": "Délai après l'inscription pendant lequel l'offre reste proposée.",
+      "hoursUnit": "h",
+      "preview": "Aperçu dans l'application",
+      "previewHint": "+{bonus} pièces bonus, offre valable {hours} h après l'inscription (+{percent} %).",
+      "nothingToSave": "Aucune modification à enregistrer.",
+      "confirmHeader": "Enregistrer l'offre de bienvenue ?",
+      "confirmActive": "L'offre de bienvenue (+{percent} % sur le premier achat, pendant {hours} h après l'inscription) sera active immédiatement.",
+      "confirmInactive": "L'offre de bienvenue sera désactivée.",
+      "saved": "Offre de bienvenue enregistrée.",
+      "saveFailed": "Enregistrement impossible"
+    },
+    "limited": {
+      "title": "Offres limitées",
+      "summary": "{count} offre limitée, dont {live} en cours | {count} offres limitées, dont {live} en cours",
+      "create": "Créer une offre",
+      "created": "Offre « {title} » créée.",
+      "edit": "Modifier l'offre",
+      "delete": "Supprimer l'offre",
+      "deleteConfirm": "Supprimer l'offre « {title} » ? Cette action est définitive.",
+      "deleted": "Offre supprimée.",
+      "deleteFailed": "Suppression impossible",
+      "saved": "Offre enregistrée.",
+      "saveFailed": "Enregistrement impossible",
+      "now": "Maintenant",
+      "preview": "{sku} : {coins} pièces + {bonus} pièces bonus",
+      "titlePlaceholder": "ex. Pack du week-end",
+      "columns": {
+        "title": "Titre",
+        "pack": "Pack"
+      },
+      "empty": {
+        "title": "Aucune offre limitée",
+        "hint": "Créez une offre limitée pour proposer un bonus temporaire sur un pack."
+      }
+    },
+    "promo": {
+      "title": "Codes promo",
+      "summary": "{count} code promo, dont {live} en cours | {count} codes promo, dont {live} en cours",
+      "create": "Créer un code",
+      "created": "Code « {code} » créé.",
+      "edit": "Modifier le code",
+      "saved": "Code mis à jour.",
+      "saveFailed": "Enregistrement impossible",
+      "generate": "Générer",
+      "prefix": "Préfixe",
+      "codeHint": "Lettres et chiffres uniquement, sans O/0 ni I/1 pour éviter toute confusion.",
+      "codeLocked": "Le code ne peut plus être modifié une fois créé.",
+      "codeTaken": "Ce code est déjà utilisé.",
+      "copyFailed": "Copie impossible : sélectionnez le code manuellement.",
+      "coinsHint": "Pièces bonus créditées à chaque utilisation du code.",
+      "maxUses": "Utilisations maximum",
+      "unlimited": "Illimité",
+      "perUserUses": "Utilisations par utilisateur",
+      "perUser": "{count} utilisation par utilisateur | {count} utilisations par utilisateur",
+      "usage": "{used} / {max} utilisations",
+      "usageUnlimited": "{used} utilisations",
+      "noDates": "Sans limite de dates",
+      "redemptions": "Utilisations",
+      "redemptionsSummary": "{count} utilisation, {coins} pièces offertes à chaque fois | {count} utilisations, {coins} pièces offertes à chaque fois",
+      "noRedemptions": "Ce code n'a pas encore été utilisé.",
+      "columns": {
+        "code": "Code",
+        "coins": "Pièces",
+        "usage": "Utilisation",
+        "user": "Utilisateur",
+        "redeemedAt": "Utilisé le"
+      },
+      "empty": {
+        "title": "Aucun code promo",
+        "hint": "Créez un code promo pour offrir des pièces bonus à son utilisation."
+      }
+    },
+    "packs": {
+      "all": "Tous les packs",
+      "none": "Aucun pack actif",
+      "inactive": "inactif",
+      "placeholder": "Choisir un pack"
+    },
+    "form": {
+      "bonusPercent": "Bonus",
+      "startsAt": "Début",
+      "startsAtHint": "Laisser vide pour démarrer immédiatement.",
+      "endsAt": "Fin",
+      "lomeTime": "Heure de Lomé",
+      "reset": "Annuler les modifications"
+    },
+    "state": {
+      "live": "En cours",
+      "scheduled": "Programmée",
+      "ended": "Terminée",
+      "exhausted": "Épuisé",
+      "inactive": "Inactive"
+    }
+  },
   "rewards": {
     "title": "Récompenses",
     "subtitle": "Barème du check-in quotidien, tâches et validité des pièces bonus (B-08).",
@@ -1323,8 +1460,49 @@
     },
     "tasks": {
       "title": "Tâches récompensées",
-      "hint": "Regarder N épisodes, partager une série, inviter un ami… Ce module arrive au sprint 8 (M-41).",
-      "placeholder": "Sprint 8"
+      "hint": "Pièces bonus gagnées en regardant des épisodes, en partageant une série ou en complétant son profil.",
+      "weekly": "Potentiel hebdomadaire",
+      "weeklyHint": "{active} tâche(s) active(s) · pièces valables {days} jours.",
+      "loadError": "Impossible de charger les tâches.",
+      "edit": "Modifier la tâche",
+      "serverNote": "Les tâches sont des clés fixes définies par le serveur : seuls l'objectif, les pièces et l'activation se modifient ici.",
+      "empty": {
+        "title": "Aucune tâche",
+        "hint": "Les tâches récompensées apparaîtront ici une fois configurées côté serveur."
+      },
+      "columns": {
+        "task": "Tâche",
+        "period": "Période",
+        "target": "Objectif",
+        "coins": "Pièces",
+        "active": "Active"
+      },
+      "keys": {
+        "watch_3_episodes": "Regarder 3 épisodes",
+        "watch_10_episodes": "Regarder 10 épisodes",
+        "enable_notifications": "Activer les notifications",
+        "share_series": "Partager une série",
+        "complete_profile": "Compléter son profil",
+        "add_favorite": "Ajouter un favori"
+      },
+      "period": {
+        "DAILY": "Quotidienne",
+        "WEEKLY": "Hebdomadaire",
+        "ONCE": "Unique"
+      },
+      "form": {
+        "target": "Objectif",
+        "targetHint": "Nombre d'actions nécessaires pour valider la tâche.",
+        "coins": "Pièces offertes",
+        "coinsHint": "Pièces bonus créditées à la validation de la tâche.",
+        "active": "Tâche active"
+      },
+      "toasts": {
+        "activated": "Tâche « {task} » activée.",
+        "deactivated": "Tâche « {task} » désactivée.",
+        "saved": "Tâche « {task} » mise à jour.",
+        "saveFailed": "Enregistrement impossible"
+      }
     },
     "validation": {
       "sevenDays": "Le barème comporte exactement 7 jours.",
