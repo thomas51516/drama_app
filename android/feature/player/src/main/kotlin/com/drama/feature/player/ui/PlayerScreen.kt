@@ -3,6 +3,7 @@ package com.drama.feature.player.ui
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.pm.ApplicationInfo
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -682,13 +683,16 @@ private fun PauseBadge(modifier: Modifier = Modifier) {
 
 /**
  * One-line startup measurement (S01-A2-01 spike instrumentation), kept discreet under the top bar.
- * Developer information: not translated, hidden from accessibility services.
+ * Developer information: not translated, hidden from accessibility services, debug builds only.
  */
 @Composable
 private fun StartupBadge(
     state: PlayerUiState,
     modifier: Modifier = Modifier,
 ) {
+    val isDebuggable =
+        (LocalContext.current.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    if (!isDebuggable) return
     val last = state.lastStartup ?: return
     val mode = stringResource(if (last.wasPreloaded) R.string.player_debug_preloaded else R.string.player_debug_cold)
     Text(
