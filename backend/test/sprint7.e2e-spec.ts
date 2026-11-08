@@ -7,7 +7,7 @@ import 'dotenv/config';
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { buildSsvQuery } from '../src/ads/ssv/ad-ssv-verifier.js';
+import { buildSsvQuery, parseSsvQuery } from '../src/ads/ssv/ad-ssv-verifier.js';
 import { signFakeSsv } from '../src/ads/ssv/fake-ad-ssv.verifier.js';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
@@ -191,7 +191,7 @@ describe('Sprint 7 API (e2e)', () => {
 
     const secret = config.ads.fakeSecret;
     const callback = (txId: string) => {
-      const content = buildSsvQuery({
+      const query = buildSsvQuery({
         ad_network: '0',
         ad_unit: 'fake',
         custom_data: customData,
@@ -201,8 +201,10 @@ describe('Sprint 7 API (e2e)', () => {
         transaction_id: txId,
         user_id: u.id,
       });
-      const signature = signFakeSsv(secret, content);
-      return api().get(`/ads/reward?${content}&signature=${encodeURIComponent(signature)}`);
+      // Sign the decoded content the server reconstructs (parseSsvQuery), not the encoded URL
+      // query string itself (`customData` contains `:`, sent as `%3A` on the wire).
+      const signature = signFakeSsv(secret, parseSsvQuery(query).content);
+      return api().get(`/ads/reward?${query}&signature=${encodeURIComponent(signature)}`);
     };
 
     const reward = await callback(`tx-${suffix}-1`).expect(200);

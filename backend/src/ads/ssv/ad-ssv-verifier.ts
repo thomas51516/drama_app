@@ -26,20 +26,38 @@ export interface SsvParams {
 }
 
 export interface ParsedSsv {
-  /** Partie signée : tout ce qui précède `&signature=` (ordre d'origine conservé). */
+  /**
+   * Partie signée : les paramètres autres que `signature`/`key_id`, ordre d'origine conservé,
+   * valeurs décodées (voir le commentaire de la fonction ci-dessous pour le pourquoi).
+   */
   content: string;
   params: SsvParams;
 }
 
 /**
- * Découpe la chaîne de requête brute telle que reçue : AdMob signe la requête sans les paramètres
- * `signature` et `key_id`, qui sont toujours les derniers ; le contenu signé est donc le préfixe
- * jusqu'à `signature=` exclu.
+ * Découpe la chaîne de requête brute telle que reçue : AdMob signe les paramètres autres que
+ * `signature` et `key_id` (toujours les deux derniers) — mais le contenu signé est la valeur
+ * **décodée** de chaque paramètre, pas la sous-chaîne encodée telle qu'elle apparaît dans l'URL.
+ * Vérifié contre un vrai callback AdMob (pas seulement contre la doc) : la signature ne correspond
+ * qu'après décodage de `custom_data` (`%3A` → `:`) ; un simple découpage du préfixe encodé échoue
+ * toujours en production tout en passant les tests, car ceux-ci ne faisaient que re-signer la même
+ * chaîne encodée des deux côtés (auto-cohérent, jamais comparé à une vraie signature Google).
  */
 export function parseSsvQuery(rawQuery: string): ParsedSsv {
   const query = rawQuery.startsWith('?') ? rawQuery.slice(1) : rawQuery;
-  const idx = query.search(/(^|&)signature=/);
-  const content = idx <= 0 ? (idx === 0 ? '' : query) : query.slice(0, idx);
+  const pairs = query.length > 0 ? query.split('&') : [];
+  const content = pairs
+    .filter((pair) => {
+      const key = pair.slice(0, pair.indexOf('='));
+      return key !== 'signature' && key !== 'key_id';
+    })
+    .map((pair) => {
+      const eq = pair.indexOf('=');
+      const key = pair.slice(0, eq);
+      const value = pair.slice(eq + 1);
+      return `${key}=${decodeURIComponent(value)}`;
+    })
+    .join('&');
   const sp = new URLSearchParams(query);
   const get = (k: string) => sp.get(k);
   return {

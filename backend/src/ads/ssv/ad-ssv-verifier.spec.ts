@@ -15,10 +15,16 @@ const params = {
 };
 
 describe('SSV query parsing', () => {
-  it('signs everything before &signature= and reads the AdMob parameters', () => {
-    const content = buildSsvQuery(params);
-    const parsed = parseSsvQuery(`${content}&signature=SIG&key_id=42`);
-    expect(parsed.content).toBe(content);
+  it('signs the decoded parameters other than signature/key_id and reads them back', () => {
+    const query = buildSsvQuery(params);
+    // `buildSsvQuery` percent-encodes for a real URL (`custom_data` has a `:`), but AdMob signs
+    // the decoded value: the signed content must come back with the `:` restored, not `%3A`.
+    expect(query).toContain('custom_data=session-1%3Anonce');
+    const expectedContent =
+      'ad_network=5450213213286189855&ad_unit=1234567890&custom_data=session-1:nonce' +
+      '&reward_amount=1&reward_item=episode&timestamp=1761825600000&transaction_id=tx-abc&user_id=user-1';
+    const parsed = parseSsvQuery(`${query}&signature=SIG&key_id=42`);
+    expect(parsed.content).toBe(expectedContent);
     expect(parsed.params).toMatchObject({
       customData: 'session-1:nonce',
       transactionId: 'tx-abc',
@@ -27,14 +33,15 @@ describe('SSV query parsing', () => {
       keyId: '42',
       rewardAmount: '1',
     });
-    expect(parseSsvQuery(`?${content}&signature=SIG`).content).toBe(content);
+    expect(parseSsvQuery(`?${query}&signature=SIG`).content).toBe(expectedContent);
   });
 });
 
 describe('FakeAdSsvVerifier (AD_PROVIDER=fake)', () => {
   it('accepts an HMAC-SHA256 signature of the content and rejects a tampered query', async () => {
     const verifier = new FakeAdSsvVerifier('secret-0123456789abcdef');
-    const content = buildSsvQuery(params);
+    // The decoded content a real callback resolves to (parseSsvQuery), not the encoded URL string.
+    const content = parseSsvQuery(buildSsvQuery(params)).content;
     const signature = signFakeSsv('secret-0123456789abcdef', content);
     await expect(verifier.verify(content, signature, null)).resolves.toBe(true);
     await expect(
@@ -48,7 +55,8 @@ describe('AdmobAdSsvVerifier (ECDSA P-256)', () => {
   const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
   const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
   const base64 = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
-  const content = buildSsvQuery(params);
+  // The decoded content a real callback resolves to (parseSsvQuery), not the encoded URL string.
+  const content = parseSsvQuery(buildSsvQuery(params)).content;
   const signature = sign('sha256', Buffer.from(content), {
     key: privateKey,
     dsaEncoding: 'der',
