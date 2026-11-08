@@ -105,6 +105,7 @@ class PlayerViewModel
         private val resolving = mutableMapOf<Int, Job>()
         private var progressJob: Job? = null
         private var countdownJob: Job? = null
+        private var controlsHideJob: Job? = null
         private var lastReportedPositionMs = -1L
         private var startedEpisodeId: String? = null
         private var settingsApplied = false
@@ -265,6 +266,9 @@ class PlayerViewModel
 
         fun onTap() {
             if (uiStateFlow.value.endOfEpisode != null || uiStateFlow.value.paywall != null) return
+            // Shown right away, independent of the engine round trip below: `onIsPlayingChanged` then
+            // either reschedules the auto-hide (now playing) or keeps it visible (now paused).
+            uiStateFlow.update { it.copy(controlsVisible = true) }
             if (uiStateFlow.value.isPlaying) flushProgress(completed = false)
             engine.togglePlayPause()
         }
@@ -583,6 +587,19 @@ class PlayerViewModel
                 } else {
                     null
                 }
+
+            // Controls auto-hide a few seconds into playback and stay up while paused (M-13-style UX).
+            controlsHideJob?.cancel()
+            controlsHideJob =
+                if (isPlaying) {
+                    viewModelScope.launch {
+                        delay(CONTROLS_AUTO_HIDE_MS)
+                        uiStateFlow.update { it.copy(controlsVisible = false) }
+                    }
+                } else {
+                    uiStateFlow.update { it.copy(controlsVisible = true) }
+                    null
+                }
         }
 
         /** Writes the current position locally and to the server; no-op when nothing changed. */
@@ -703,6 +720,7 @@ class PlayerViewModel
             const val SEEK_STEP_MS = 10_000L
             const val PROGRESS_INTERVAL_MS = 5_000L
             const val NEXT_COUNTDOWN_S = 3
+            const val CONTROLS_AUTO_HIDE_MS = 3_000L
             const val SHARE_SOURCE = "player"
         }
     }

@@ -6,6 +6,9 @@ import android.content.ContextWrapper
 import android.content.pm.ApplicationInfo
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -254,6 +257,7 @@ fun PlayerContent(
                         isMuted = state.isMuted,
                         position = if (isCurrent) state.position else PlaybackPosition(),
                         endOfEpisode = state.endOfEpisode.takeIf { isCurrent },
+                        controlsVisible = state.controlsVisible,
                         actions = actions,
                     )
                 }
@@ -268,21 +272,27 @@ fun PlayerContent(
             }
         }
         val context = LocalContext.current
-        PlayerTopBar(
-            state = state,
-            onBack = actions.onBack,
-            onShare = { actions.onShare()?.let { text -> context.shareText(text) } },
-            onOpenSheet = { sheet = it },
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    // Drawn last (over the pager) but read first.
-                    .semantics {
-                        isTraversalGroup = true
-                        traversalIndex = TOP_BAR_TRAVERSAL_INDEX
-                    },
-        )
+        AnimatedVisibility(
+            visible = state.controlsVisible,
+            modifier = Modifier.align(Alignment.TopCenter),
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            PlayerTopBar(
+                state = state,
+                onBack = actions.onBack,
+                onShare = { actions.onShare()?.let { text -> context.shareText(text) } },
+                onOpenSheet = { sheet = it },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        // Drawn last (over the pager) but read first.
+                        .semantics {
+                            isTraversalGroup = true
+                            traversalIndex = TOP_BAR_TRAVERSAL_INDEX
+                        },
+            )
+        }
         state.errorMessage?.takeIf { state.episodes.isNotEmpty() }?.let { message ->
             Text(
                 text = message.asString(),
@@ -462,6 +472,7 @@ private fun EpisodePage(
     isMuted: Boolean,
     position: PlaybackPosition,
     endOfEpisode: EndOfEpisode?,
+    controlsVisible: Boolean,
     actions: PlayerActions,
 ) {
     val surfaceDescription = stringResource(R.string.player_surface_description, episode.index)
@@ -548,32 +559,39 @@ private fun EpisodePage(
             )
         }
 
-        Column(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
-                    .navigationBarsPadding()
-                    .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
+        AnimatedVisibility(
+            visible = controlsVisible,
+            modifier = Modifier.align(Alignment.BottomStart),
+            enter = fadeIn(),
+            exit = fadeOut(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.player_episode_title, episode.index, episode.title),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                PillButton(
-                    text = stringResource(if (isMuted) R.string.player_muted else R.string.player_sound),
-                    contentDescription = stringResource(if (isMuted) R.string.player_unmute else R.string.player_mute),
-                    onClick = actions.onToggleMute,
-                )
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
+                        .navigationBarsPadding()
+                        .padding(horizontal = DramaSpacing.md, vertical = DramaSpacing.sm),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.player_episode_title, episode.index, episode.title),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    PillButton(
+                        text = stringResource(if (isMuted) R.string.player_muted else R.string.player_sound),
+                        contentDescription =
+                            stringResource(if (isMuted) R.string.player_unmute else R.string.player_mute),
+                        onClick = actions.onToggleMute,
+                    )
+                }
+                Spacer(Modifier.height(DramaSpacing.sm))
+                SeekBar(position = position, onSeek = actions.onSeek, modifier = Modifier.fillMaxWidth())
             }
-            Spacer(Modifier.height(DramaSpacing.sm))
-            SeekBar(position = position, onSeek = actions.onSeek, modifier = Modifier.fillMaxWidth())
         }
     }
 }

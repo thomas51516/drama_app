@@ -68,6 +68,8 @@ data class PlayerUiState(
     val autoUnlock: Boolean = false,
     /** True while the data saver lowers the rendition below the manual choice (M-17, metered network). */
     val dataSaverCapping: Boolean = false,
+    /** Top bar + bottom title/seek-bar block: shown on tap, auto-hidden a few seconds into playback. */
+    val controlsVisible: Boolean = true,
 ) {
     val currentEpisode: Episode? get() = episodes.getOrNull(currentIndex)
     val lastStartup: StartupMetric? get() = startupMetrics.lastOrNull { it.index == currentIndex }
