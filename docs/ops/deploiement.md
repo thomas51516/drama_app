@@ -310,3 +310,23 @@ raison précise.
 - Vérifié : la pull zone sert bien le contenu de l'origine (`cdn-cache: HIT`/`cdn-requestpullsuccess:
   True` dans les en-têtes de réponse), chargement perçu plus rapide confirmé par le client sur le
   vrai téléphone après redéploiement.
+
+## 11. Liens de partage (2026-11-08)
+
+`android/app/build.gradle.kts`'s `appLinksHost` pointait encore vers le placeholder jamais remplacé
+`links.drama.example` (domaine inexistant, même défaut que l'avait `API_BASE_URL` avant le fix
+du Play Store release) : chaque lien partagé depuis l'app (« Regarde « Titre » sur DRAMA : https://… »)
+était inutilisable pour le destinataire.
+
+- `appLinksHost` par défaut = `dramanye.odootogo.com` (même domaine que l'API, pas de nouveau
+  sous-domaine ni certificat à gérer).
+- Un bloc `location /s/` a été ajouté au vhost nginx `dramanye-api.conf` sur le VPS : redirige
+  (302) vers la fiche Play Store (`id=com.dramanye.app`), pour quiconque ouvre le lien sans avoir
+  l'app installée.
+- **Pas encore fait** : publier `/.well-known/assetlinks.json` sur ce domaine (empreinte SHA-256 du
+  certificat de signature **réel** Play App Signing, pas la clé d'upload — voir Play Console →
+  Protégé avec Play → Gérer la signature d'application) pour activer la vérification Android App
+  Links (`autoVerify="true"` dans le manifest) : tant que ce fichier n'existe pas, un destinataire
+  qui a l'app installée arrive quand même sur le navigateur/la redirection Play Store au lieu que le
+  lien ouvre directement l'app. Le repli web fonctionne déjà, donc partager n'est plus cassé — ceci
+  n'est qu'une amélioration de confort.
