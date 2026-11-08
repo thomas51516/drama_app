@@ -91,6 +91,7 @@ data class AccountActions(
     val onBack: () -> Unit,
     val onGoogle: () -> Unit,
     val onCountrySelected: (Country) -> Unit,
+    val onEditCountrySelected: (Country) -> Unit,
     val onPhoneChanged: (String) -> Unit,
     val onRequestOtp: () -> Unit,
     val onResendOtp: () -> Unit,
@@ -156,6 +157,7 @@ fun AccountScreen(
                         }
                     },
                     onCountrySelected = viewModel::onCountrySelected,
+                    onEditCountrySelected = viewModel::onEditCountrySelected,
                     onPhoneChanged = viewModel::onPhoneChanged,
                     onRequestOtp = viewModel::onRequestOtp,
                     onResendOtp = viewModel::onResendOtp,
@@ -731,6 +733,33 @@ private fun EditProfileStep(
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
+    Spacer(Modifier.height(DramaSpacing.md))
+    var countryPickerOpen by remember { mutableStateOf(false) }
+    Box {
+        val pickerDescription = stringResource(R.string.account_profile_country_picker)
+        val label = state.editCountry?.label ?: stringResource(R.string.account_profile_country)
+        OutlinedButton(
+            onClick = { countryPickerOpen = true },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = DramaSizes.touchTarget)
+                    .semantics { contentDescription = "$pickerDescription, $label" },
+        ) {
+            Text(label)
+        }
+        DropdownMenu(expanded = countryPickerOpen, onDismissRequest = { countryPickerOpen = false }) {
+            state.countries.forEach { country ->
+                DropdownMenuItem(
+                    text = { Text(country.label) },
+                    onClick = {
+                        actions.onEditCountrySelected(country)
+                        countryPickerOpen = false
+                    },
+                )
+            }
+        }
+    }
     Spacer(Modifier.height(DramaSpacing.lg))
     Button(
         onClick = actions.onSaveProfile,

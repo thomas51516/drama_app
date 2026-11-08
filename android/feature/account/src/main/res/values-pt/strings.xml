@@ -58,6 +58,8 @@
     <string name="account_logout">Sair</string>
     <string name="account_delete">Excluir minha conta</string>
     <string name="account_display_name">Nome exibido</string>
+    <string name="account_profile_country">País</string>
+    <string name="account_profile_country_picker">Escolher país</string>
 
     <string name="account_delete_title">Excluir minha conta?</string>
     <string name="account_delete_body">Sua conta será desativada imediatamente e seus dados apagados em 30 dias. Seu histórico, seus favoritos e suas moedas serão perdidos.</string>

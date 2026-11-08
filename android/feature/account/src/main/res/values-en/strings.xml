@@ -58,6 +58,8 @@
     <string name="account_logout">Sign out</string>
     <string name="account_delete">Delete my account</string>
     <string name="account_display_name">Display name</string>
+    <string name="account_profile_country">Country</string>
+    <string name="account_profile_country_picker">Choose country</string>
 
     <string name="account_delete_title">Delete my account?</string>
     <string name="account_delete_body">Your account will be disabled right away and your data erased within 30 days. Your history, favourites and coins will be lost.</string>

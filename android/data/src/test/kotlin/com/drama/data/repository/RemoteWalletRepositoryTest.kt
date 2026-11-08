@@ -1,6 +1,7 @@
 package com.drama.data.repository
 
 import com.drama.core.common.coroutines.DispatcherProvider
+import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.time.Clock
@@ -90,6 +91,7 @@ class RemoteWalletRepositoryTest {
                         authApi = retrofit.create(AuthApi::class.java),
                         store = sessionStore,
                         deviceIdProvider = { "d" },
+                        deviceLocale = FixedDeviceLocale(language = "fr"),
                         errorMapper = ApiErrorMapper(json),
                         clock = Clock { 0L },
                         logger = NoOpLogger,

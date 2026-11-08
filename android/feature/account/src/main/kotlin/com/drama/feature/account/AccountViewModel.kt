@@ -69,6 +69,7 @@ data class AccountUiState(
     val emailError: UiText? = null,
     // Profile edit
     val editDisplayName: String = "",
+    val editCountry: Country? = null,
     val confirmDelete: Boolean = false,
     /** One-shot snackbar text. */
     val message: UiText? = null,
@@ -130,6 +131,7 @@ class AccountViewModel
                         it.copy(
                             profile = profile,
                             editDisplayName = profile?.displayName ?: it.editDisplayName,
+                            editCountry = profile?.country?.let(Country::forIso) ?: it.editCountry,
                         )
                     }
                 }
@@ -294,12 +296,18 @@ class AccountViewModel
         fun onEditDisplayNameChanged(value: String) =
             uiStateFlow.update { it.copy(editDisplayName = value.take(MAX_NAME)) }
 
-        /** Display name only: the language moved to the settings screen (S05-A1-03). */
+        fun onEditCountrySelected(country: Country) = uiStateFlow.update { it.copy(editCountry = country) }
+
+        /** Name and country; the language moved to the settings screen (S05-A1-03). */
         fun onSaveProfile() {
             val state = uiStateFlow.value
             uiStateFlow.update { it.copy(isBusy = true) }
             viewModelScope.launch {
-                val result = account.updateProfile(displayName = state.editDisplayName.trim())
+                val result =
+                    account.updateProfile(
+                        displayName = state.editDisplayName.trim(),
+                        country = state.editCountry?.iso,
+                    )
                 uiStateFlow.update {
                     when (result) {
                         is AppResult.Success ->

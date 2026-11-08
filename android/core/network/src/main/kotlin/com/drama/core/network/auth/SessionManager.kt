@@ -1,5 +1,6 @@
 package com.drama.core.network.auth
 
+import com.drama.core.common.locale.DeviceLocaleProvider
 import com.drama.core.common.logging.Logger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
@@ -44,6 +45,7 @@ class SessionManager
         private val authApi: AuthApi,
         private val store: SessionStore,
         private val deviceIdProvider: DeviceIdProvider,
+        private val deviceLocale: DeviceLocaleProvider,
         private val errorMapper: ApiErrorMapper,
         private val clock: Clock,
         private val logger: Logger,
@@ -174,6 +176,7 @@ class SessionManager
                             deviceId = deviceId,
                             platform = "android",
                             language = Locale.getDefault().language.ifBlank { "fr" },
+                            country = deviceLocale.country,
                         ),
                     )
                 val session = response.toStoredSession(clock.nowEpochMs())

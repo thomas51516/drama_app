@@ -214,6 +214,37 @@ class AccountViewModelTest {
             assertNull(viewModel.uiState.value.profile)
         }
 
+    @Test
+    fun `editing the profile country sends it to the server and keeps it in the hydrated profile`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            session.state.value = SessionState.Authenticated("u1", isGuest = false)
+            advanceUntilIdle()
+            // Hydrated from the fake's "TG" profile, not the device-locale default.
+            assertEquals(
+                "TG",
+                viewModel.uiState.value.editCountry
+                    ?.iso,
+            )
+
+            viewModel.onEditCountrySelected(Country.forIso("FR"))
+            viewModel.onSaveProfile()
+            advanceUntilIdle()
+
+            assertEquals(listOf("FR"), account.updatedCountries)
+            assertEquals(
+                "FR",
+                viewModel.uiState.value.profile
+                    ?.country,
+            )
+            assertEquals(
+                "FR",
+                viewModel.uiState.value.editCountry
+                    ?.iso,
+            )
+        }
+
     private class FakeWalletRepository : WalletRepository {
         val state = MutableStateFlow<Wallet?>(null)
         var refreshResult: AppResult<Wallet> =
@@ -266,6 +297,7 @@ class AccountViewModelTest {
         val otpRequests = mutableListOf<String>()
         val verifications = mutableListOf<Pair<String, String>>()
         val registrations = mutableListOf<String>()
+        val updatedCountries = mutableListOf<String?>()
         var profileRefreshes = 0
         var logouts = 0
         var linked = false
@@ -340,7 +372,13 @@ class AccountViewModelTest {
             language: String?,
             country: String?,
             notificationPreferences: NotificationPreferences?,
-        ): AppResult<UserProfile> = failOr { user().copy(displayName = displayName, language = language) }
+        ): AppResult<UserProfile> {
+            updatedCountries += country
+            // Mirrors DefaultAccountRepository: a successful PATCH /me republishes through `profile`.
+            return failOr {
+                user().copy(displayName = displayName, language = language, country = country ?: user().country)
+            }.also { result -> if (result is AppResult.Success) profileFlow.value = result.value }
+        }
 
         override suspend fun logout(): AppResult<Unit> {
             logouts++

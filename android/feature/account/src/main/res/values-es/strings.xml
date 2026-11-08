@@ -58,6 +58,8 @@
     <string name="account_logout">Cerrar sesión</string>
     <string name="account_delete">Eliminar mi cuenta</string>
     <string name="account_display_name">Nombre visible</string>
+    <string name="account_profile_country">País</string>
+    <string name="account_profile_country_picker">Elegir país</string>
 
     <string name="account_delete_title">¿Eliminar mi cuenta?</string>
     <string name="account_delete_body">Tu cuenta se desactivará de inmediato y tus datos se borrarán en 30 días. Perderás tu historial, tus favoritos y tus monedas.</string>

@@ -1,5 +1,6 @@
 package com.drama.data.repository
 
+import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.time.Clock
@@ -100,6 +101,7 @@ class DefaultAccountRepositoryTest {
                 authApi = retrofit.create(AuthApi::class.java),
                 store = store,
                 deviceIdProvider = { "install-1234" },
+                deviceLocale = FixedDeviceLocale(language = "fr"),
                 errorMapper = mapper,
                 clock = Clock { 1_000L },
                 logger = NoOpLogger,

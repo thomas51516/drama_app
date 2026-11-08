@@ -1,5 +1,6 @@
 package com.drama.core.network.auth
 
+import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppResult
 import com.drama.core.common.time.Clock
@@ -89,6 +90,7 @@ class TokenAuthenticatorTest {
                 authApi = authApi,
                 store = store,
                 deviceIdProvider = { "test-device-0001" },
+                deviceLocale = FixedDeviceLocale(language = "fr"),
                 errorMapper = ApiErrorMapper(json),
                 clock = Clock { 1_000L },
                 logger = NoOpLogger,

@@ -63,6 +63,8 @@
     <string name="account_logout">Se déconnecter</string>
     <string name="account_delete">Supprimer mon compte</string>
     <string name="account_display_name">Nom affiché</string>
+    <string name="account_profile_country">Pays</string>
+    <string name="account_profile_country_picker">Choisir le pays</string>
 
     <!-- Delete dialog -->
     <string name="account_delete_title">Supprimer mon compte ?</string>

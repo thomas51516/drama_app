@@ -59,7 +59,8 @@ val releaseSigningConfigured =
 // auto-verification (opening the app directly, skipping the browser, when it's installed) isn't
 // active yet — only the web fallback works for now. Override with -PdramaAppLinksHost=....
 val appLinksHost =
-    (project.findProperty("dramaAppLinksHost") as String?)?.trim()?.takeIf { it.isNotEmpty() } ?: "dramanye.odootogo.com"
+    (project.findProperty("dramaAppLinksHost") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: "dramanye.odootogo.com"
 
 // S05-A2-01: OAuth "Web application" client id for Google sign-in (Credential Manager). Empty = the option is
 // shown as "non configuré". Sources, in order: -PdramaGoogleWebClientId, `drama.googleWebClientId` in
@@ -102,9 +103,10 @@ android {
         // api.drama.example placeholder; 3 = removed the player's startup-debug HUD that was
         // shipping unconditionally to every release build; 4 = auto-hide/tap-to-reveal player
         // controls; 5 = fixed the share-link host, another api.drama.example-style placeholder
-        // that made sharing a series produce an unresolvable link).
-        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 5
-        versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.3"
+        // that made sharing a series produce an unresolvable link; 6 = new guest accounts now get
+        // a country at creation, and it can be edited from the profile screen (M-52)).
+        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 6
+        versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.4"
         buildConfigField("boolean", "FIREBASE_CONFIGURED", "$firebaseConfigured")
         buildConfigField("String", "APP_LINKS_HOST", "\"$appLinksHost\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")

@@ -1,5 +1,6 @@
 package com.drama.data.repository
 
+import com.drama.core.common.locale.FixedDeviceLocale
 import com.drama.core.common.logging.NoOpLogger
 import com.drama.core.common.result.AppError
 import com.drama.core.common.result.AppResult
@@ -99,6 +100,7 @@ class RemoteUnlockRepositoryTest {
                 authApi = retrofit.create(AuthApi::class.java),
                 store = store,
                 deviceIdProvider = { "device" },
+                deviceLocale = FixedDeviceLocale(language = "fr"),
                 errorMapper = ApiErrorMapper(json),
                 clock = Clock { 0L },
                 logger = NoOpLogger,
