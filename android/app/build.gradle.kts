@@ -95,10 +95,11 @@ android {
         // the Store and to users, so there was no reason to touch every file that references it.
         applicationId = "com.dramanye.app"
         // Play Console requires a strictly increasing versionCode per upload (2 = fixed the
-        // api.drama.example placeholder; 3 = removes the player's startup-debug HUD that was
-        // shipping unconditionally to every release build).
-        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 3
-        versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.1"
+        // api.drama.example placeholder; 3 = removed the player's startup-debug HUD that was
+        // shipping unconditionally to every release build; 4 = auto-hide/tap-to-reveal player
+        // controls).
+        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 4
+        versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.2"
         buildConfigField("boolean", "FIREBASE_CONFIGURED", "$firebaseConfigured")
         buildConfigField("String", "APP_LINKS_HOST", "\"$appLinksHost\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
