@@ -52,10 +52,14 @@ val releaseSigningConfigured =
         releaseKeyAlias != null &&
         releaseKeyPassword != null
 
-// S04-A1-03: App Links host for share links (https://<host>/s/{seriesId}); the owner publishes
-// /.well-known/assetlinks.json on it (see README). Override with -PdramaAppLinksHost=links.example.com.
+// S04-A1-03: App Links host for share links (https://<host>/s/{seriesId}). Real backend domain
+// since S10-OPS: it was the "links.drama.example" placeholder, never a real host — every shared
+// link failed to resolve for recipients. Its nginx vhost (docs/ops/deploiement.md) redirects /s/*
+// to the Play Store listing; no /.well-known/assetlinks.json published yet, so Android App Links
+// auto-verification (opening the app directly, skipping the browser, when it's installed) isn't
+// active yet — only the web fallback works for now. Override with -PdramaAppLinksHost=....
 val appLinksHost =
-    (project.findProperty("dramaAppLinksHost") as String?)?.trim()?.takeIf { it.isNotEmpty() } ?: "links.drama.example"
+    (project.findProperty("dramaAppLinksHost") as String?)?.trim()?.takeIf { it.isNotEmpty() } ?: "dramanye.odootogo.com"
 
 // S05-A2-01: OAuth "Web application" client id for Google sign-in (Credential Manager). Empty = the option is
 // shown as "non configuré". Sources, in order: -PdramaGoogleWebClientId, `drama.googleWebClientId` in
@@ -97,9 +101,10 @@ android {
         // Play Console requires a strictly increasing versionCode per upload (2 = fixed the
         // api.drama.example placeholder; 3 = removed the player's startup-debug HUD that was
         // shipping unconditionally to every release build; 4 = auto-hide/tap-to-reveal player
-        // controls).
-        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 4
-        versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.2"
+        // controls; 5 = fixed the share-link host, another api.drama.example-style placeholder
+        // that made sharing a series produce an unresolvable link).
+        versionCode = (project.findProperty("dramaVersionCode") as String?)?.toIntOrNull() ?: 5
+        versionName = (project.findProperty("dramaVersionName") as String?) ?: "0.3.3"
         buildConfigField("boolean", "FIREBASE_CONFIGURED", "$firebaseConfigured")
         buildConfigField("String", "APP_LINKS_HOST", "\"$appLinksHost\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
