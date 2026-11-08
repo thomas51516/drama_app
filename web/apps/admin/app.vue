@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { useThemePrefs } from '#base/composables/useThemePrefs'
+
 const { t } = useI18n()
+const themePrefs = useThemePrefs()
+useHead({ htmlAttrs: { class: computed(() => (themePrefs.isDark.value ? 'app-dark' : '')) } })
 </script>
 
 <template>

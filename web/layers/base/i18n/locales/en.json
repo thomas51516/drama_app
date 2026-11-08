@@ -5,7 +5,11 @@
     "skipToContent": "Skip to content",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "help": "Help"
+    "help": "Help",
+    "theme": {
+      "switchToDark": "Switch to dark theme",
+      "switchToLight": "Switch to light theme"
+    }
   },
   "auth": {
     "title": "Back-office sign in",

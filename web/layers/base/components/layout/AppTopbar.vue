@@ -79,6 +79,8 @@ function toggleUserMenu(event: Event): void {
     </div>
     <div class="hidden flex-1 lg:block" />
 
+    <LayoutThemeToggle class="shrink-0" />
+
     <NuxtLink to="/help" class="shrink-0">
       <Button
         icon="pi pi-question-circle"

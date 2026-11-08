@@ -5,7 +5,11 @@
     "skipToContent": "Aller au contenu",
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
-    "help": "Aide"
+    "help": "Aide",
+    "theme": {
+      "switchToDark": "Passer au thème sombre",
+      "switchToLight": "Passer au thème clair"
+    }
   },
   "auth": {
     "title": "Connexion au back-office",

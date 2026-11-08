@@ -57,7 +57,8 @@ function isActive(path: string): boolean {
             {{ link.label }}
           </NuxtLink>
         </nav>
-        <RechargeLanguageSelect class="ml-auto sm:ml-2" />
+        <LayoutThemeToggle class="ml-auto sm:ml-2" />
+        <RechargeLanguageSelect class="sm:ml-2" />
       </div>
     </header>
 
